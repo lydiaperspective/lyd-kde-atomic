@@ -8,12 +8,13 @@ A minimal KDE Plasma workstation built as Fedora Atomic desktop images with Blue
 |---|---|---|
 | NVIDIA | `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest` | Proprietary NVIDIA 580.x driver included |
 | Standard | `ghcr.io/lydiaperspective/lyd-atomic-standard:latest` | Fedora in-kernel graphics stack; no proprietary NVIDIA driver by default |
+| Server | `ghcr.io/lydiaperspective/lyd-atomic-server:latest` | Headless Fedora bootc server with Podman, Cockpit, KVM and firewalld |
 
 The Standard edition is intended for Intel and AMD graphics systems, and can also be used on a system with an NVIDIA GPU. To add the proprietary NVIDIA driver after installation, run `lydsetup` and select **NVIDIA proprietary driver**. The installer adds RPM Fusion in one deployment, then layers the driver packages in a second deployment after reboot.
 
 The Standard edition's optional driver installation uses the current RPM Fusion `akmod-nvidia` package. It is not guaranteed to match the NVIDIA edition's prebuilt 580.x driver branch. Secure Boot may require additional module-signing configuration; `lydsetup` warns when it detects Secure Boot and does not enroll keys automatically.
 
-Both editions share the same KDE desktop, Waterfox Flatpak, Mystical theme, lydhelp and lydsetup commands, and optional workstation features.
+The NVIDIA and Standard editions share the same KDE desktop, Waterfox Flatpak, Mystical theme, lydhelp and lydsetup commands. The Server edition is a separate headless image with server-focused tools and Cockpit.
 
 ## Project status
 
@@ -44,9 +45,9 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 
 ## GitHub Actions
 
-- Pushes to `main` and manual dispatch build both editions in parallel.
+- Pushes to `main` and manual dispatch build all three editions in parallel.
 - Pull requests validate both recipes without publishing.
-- The **Build installable ISO** workflow lets you choose NVIDIA or Standard and a published image tag.
+- The **Build installable ISO** workflow lets you choose NVIDIA, Standard or Server and a published image tag.
 - ISO artifacts include SHA256 checksums.
 
 ## Shared desktop
@@ -59,6 +60,25 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 - AppImage support with FUSE 2 compatibility and FUSE 3 runtime support
 - Aurorae KWin decoration engine for SVG-based window decoration themes
 - `lydhelp` terminal reference and `lydsetup` optional-feature manager
+
+## Server edition
+
+The Server edition is a separate headless Fedora bootc image:
+
+- Podman, Podman Compose, Buildah and Skopeo
+- Cockpit web console with system, Podman, virtual-machine, storage, NetworkManager, SELinux and diagnostic modules
+- KVM/libvirt virtualization with UEFI firmware, TPM emulation and virtual networking components
+- OpenSSH server and client
+- firewalld enabled by default
+- `lydhelp` and `lydsetup`
+
+Cockpit is enabled through `cockpit.socket` and is available on TCP port 9090. SSH is enabled and allowed on TCP port 22. The default firewalld public zone allows only SSH, Cockpit and DHCPv6 client traffic. It deliberately does not open arbitrary container-published ports: open only the ports required by services you deploy, and prefer limiting them to the relevant network zone or source range.
+
+Podman-published ports are not automatically opened in firewalld. For example, after choosing an application port, add a permanent firewalld rule for that specific TCP or UDP port and reload firewalld. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
+
+Virtualization packages are included and `libvirtd` is enabled. Add the administrative user to the `libvirt` and `kvm` groups with `lydsetup`'s virtualization option if needed; log out and back in for group membership to apply.
+
+Tailscale can be installed on any edition from `lydsetup`. The command adds Tailscale's official Fedora repository, layers its package, and enables `tailscaled` after reboot. Zed can be installed on workstation editions from `lydsetup`; it uses Zed's official per-user Linux installer and does not alter the immutable system deployment.
 
 ## Application formats and theming
 
@@ -82,6 +102,8 @@ Run `lydsetup` as your normal user:
 - Virtualization: QEMU/KVM, libvirt, virt-manager, UEFI firmware, TPM emulation, networking and group membership
 - CoolerControl system package and daemon
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
+- Tailscale VPN client (all editions)
+- Zed editor (per-user install on workstation editions)
 
 Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
 
