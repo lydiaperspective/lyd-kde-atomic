@@ -45,7 +45,7 @@ ensure_flathub_system() {
 }
 install_flatpaks_system() {
   ensure_flathub_system
-  flatpak install --system --assumeyes --or-update flathub "$@"
+  sudo flatpak install --system --assumeyes --or-update flathub "$@"
 }
 setup_printscan() {
   echo "This enables CUPS printing, USB/network scanner support and Skanpage."
