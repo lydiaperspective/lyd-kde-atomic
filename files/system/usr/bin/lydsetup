@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.4
+VERSION=0.4.5
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -88,6 +88,44 @@ setup_mediaedit() {
     org.soundconverter.SoundConverter
   echo
   echo "Media editing applications are installed."
+}
+
+setup_gaming() {
+  local fedora free_repo nonfree_repo
+  fedora="$(rpm -E %fedora)"
+  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
+  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
+
+  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
+    echo "Steam and some gaming packages require RPM Fusion Nonfree."
+    echo "This will add the RPM Fusion Free and Nonfree repository definitions."
+    confirm "Add RPM Fusion repositories? A reboot will be required before continuing." || return 0
+    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
+    STAGED=1
+    reboot_notice
+    echo "After reboot, run: lydsetup gaming enable"
+    return 0
+  fi
+
+  echo "Installing the gaming system packages."
+  stage_packages steam steam-devices gamemode mangohud gamescope protontricks
+  reboot_notice && return 0
+  if ! rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1; then
+    echo "Gaming system packages are not all installed. If you cancelled, rerun: lydsetup gaming enable"
+    return 0
+  fi
+
+  echo "Installing Steam companion and game launchers from Flathub."
+  install_flatpaks_system \
+    com.vysp3r.ProtonPlus \
+    net.lutris.Lutris \
+    com.heroicgameslauncher.hgl
+
+  echo
+  echo "Gaming setup is complete."
+  echo "Steam is installed as a system package; ProtonPlus, Lutris and Heroic Games Launcher are installed as system Flatpaks."
+  echo "Example Steam launch option for GameMode and MangoHud:"
+  echo "  gamemoderun mangohud %command%"
 }
 
 setup_virtualization() {
@@ -402,7 +440,7 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
-    printscan|media|mediaedit)
+    printscan|media|mediaedit|gaming)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup $1 enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
@@ -411,6 +449,7 @@ main() {
         printscan) setup_printscan ;;
         media) setup_media ;;
         mediaedit) setup_mediaedit ;;
+        gaming) setup_gaming ;;
       esac
       exit 0 ;;
     solaar)
@@ -444,7 +483,7 @@ main() {
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|solaar enable|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|solaar enable|dev|development|devbox ...]
 
 Available commands:
   lydsetup                              Show this command list
@@ -453,6 +492,7 @@ Available commands:
   lydsetup printscan enable             Enable printing/scanning and install Skanpage
   lydsetup media enable                 Install media playback Flatpaks
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
+  lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup solaar enable                Install Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
   lydsetup dev devbox enable            Same as above
@@ -475,6 +515,7 @@ Features:
   Solaar Logitech device manager (system package; workstation editions)
   Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
+  Gaming (Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
 
 System package changes create a new deployment and require a reboot.
 Run lydsetup again after reboot if prompted to finish enabling this feature.
