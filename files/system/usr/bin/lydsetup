@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.3
+VERSION=0.4.4
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -76,6 +76,18 @@ setup_media() {
     org.fcast.Receiver
   echo
   echo "Media applications are installed."
+}
+
+setup_mediaedit() {
+  echo "Installing media creation and conversion applications from Flathub."
+  install_flatpaks_system \
+    org.inkscape.Inkscape \
+    org.kde.kdenlive \
+    org.kde.krita \
+    ca.littlesvr.asunder \
+    org.soundconverter.SoundConverter
+  echo
+  echo "Media editing applications are installed."
 }
 
 setup_virtualization() {
@@ -390,12 +402,12 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
-    printscan|media)
+    printscan|media|mediaedit)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup $1 enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
-      if [[ "$1" == "printscan" ]]; then setup_printscan; else setup_media; fi
+      case "$1" in\n        printscan) setup_printscan ;;\n        media) setup_media ;;\n        mediaedit) setup_mediaedit ;;\n      esac
       exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
@@ -428,7 +440,7 @@ main() {
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [printscan enable|media enable|solaar enable|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|solaar enable|dev|development|devbox ...]
 
 Development commands:
   lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
@@ -437,7 +449,7 @@ Development commands:
   lydsetup dev container enable           Set up Podman container development
   lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
   lydsetup printscan enable               Enable printing/scanning and install Skanpage
-  lydsetup media enable                   Install media Flatpaks
+  lydsetup media enable                   Install media playback Flatpaks\n  lydsetup mediaedit enable               Install media editing and conversion Flatpaks
   Use 'development' instead of 'dev' as an alias.
 
 Features:
