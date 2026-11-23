@@ -35,8 +35,12 @@ reboot_notice() {
   return 1
 }
 setup_virtualization() {
-  stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
-  reboot_notice && return 0
+  if rpm -q cockpit-machines >/dev/null 2>&1; then
+    echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
+  else
+    stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
+    reboot_notice && return 0
+  fi
   echo "Enabling libvirt and preparing the current account for virtualization."
   sudo systemctl enable --now libvirtd.service
   sudo usermod -aG libvirt,kvm "$USER"
@@ -149,6 +153,8 @@ Features:
   Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
+  Tailscale VPN client (official Fedora repository; all editions)
+  Zed editor (official per-user Linux installer; workstation editions)
 
 System package changes create a new deployment and require a reboot.
 Run lydsetup again after reboot if prompted to finish enabling this feature.
@@ -164,6 +170,8 @@ HELP
   [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
   command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
   command -v sudo >/dev/null 2>&1 || die "sudo is required."
+  local server_edition=0
+  rpm -q cockpit-machines >/dev/null 2>&1 && server_edition=1
   while true; do
     echo
     echo "  Lyd Atomic setup"
@@ -172,15 +180,23 @@ HELP
     echo "  2) Virtualization (QEMU/KVM + libvirt)"
     echo "  3) CoolerControl"
     echo "  4) TuneD + tuned-ppd"
-    echo "  5) Tailscale VPN"\n    echo "  6) Zed editor"\n    echo "  7) Exit"
+    echo "  5) Tailscale VPN"
+    if (( server_edition )); then
+      echo "  6) Exit"
+    else
+      echo "  6) Zed editor"
+      echo "  7) Exit"
+    fi
     read -r -p "Select a feature: " choice
     case "$choice" in
       1) setup_nvidia ;;
       2) setup_virtualization ;;
       3) setup_coolercontrol ;;
       4) setup_tuned ;;
-      5) break ;;
-      *) echo "Choose 1-5." ;;
+      5) setup_tailscale ;;
+      6) if (( server_edition )); then break; else setup_zed; fi ;;
+      7) break ;;
+      *) echo "Choose a listed number." ;;
     esac
   done
   echo "lydsetup finished. Log: $LOG"
