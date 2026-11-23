@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Pin the shared theme repository so image builds remain reproducible.
 THEME_REPO=https://github.com/lydiaperspective/lyd-kde-themes.git
-THEME_COMMIT=34c3f016b3461abedc1b779208f446767deb7609
+THEME_COMMIT=240a38cba36e78d2437b3f8a7f63a638741d5a53
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -25,6 +25,13 @@ cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/deskt
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
 python3 "$SOURCE/build-icon-theme.py" "$WORK/Mystical"
 cp -a "$WORK/Mystical" /usr/share/icons/Mystical
+
+# Add the coordinated GRUB, animated Plymouth and Xcursor assets from the
+# same pinned theme revision. The one-shot service applies bootloader changes
+# on the installed system, where /boot and its initramfs are available.
+bash "$WORK/theme/scripts/install-mystical-boot-assets.sh"
+systemctl enable lyd-mystical-boot-setup.service
+
 cp -a "$SOURCE/icons" /usr/share/lyd/mystical/
 install -m 0644 "$SOURCE/README.md" /usr/share/lyd/mystical/README.md
 
