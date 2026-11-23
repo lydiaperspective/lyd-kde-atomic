@@ -85,11 +85,6 @@ modules:
         - akmod-nvidia
         - xorg-x11-drv-nvidia
         - xorg-x11-drv-nvidia-cuda
-    remove:
-      packages:
-        - firefox
-        - firefox-langpacks
-        - plasma-discover-rpm-ostree
   - type: default-flatpaks
     configurations:
       - scope: system
