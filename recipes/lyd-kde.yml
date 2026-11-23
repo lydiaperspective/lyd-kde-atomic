@@ -1,0 +1,63 @@
+---
+name: lyd-kde-atomic
+description: Minimal Lyd KDE Atomic workstation with NVIDIA proprietary graphics support.
+base-image: quay.io/fedora-ostree-desktops/kinoite
+image-version: "44"
+modules:
+  - type: dnf
+    repos:
+      nonfree: rpmfusion
+      cleanup: false
+    install:
+      packages:
+        - dolphin
+        - konsole
+        - kate
+        - ark
+        - okular
+        - spectacle
+        - kcalc
+        - plasma-discover
+        - plasma-discover-flatpak
+        - flatpak
+        - git
+        - curl
+        - wget
+        - jq
+        - python3
+        - python3-pip
+        - bash-completion
+        - htop
+        - fastfetch
+        - btrfs-progs
+        - tuned
+        - tuned-ppd
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+        - plasma-discover-rpm-ostree
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+        install:
+          - net.waterfox.waterfox
+  - type: files
+    files:
+      - source: system
+        destination: /
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+      - install-mystical-theme.sh
+      - configure-workstation.sh
+  - type: systemd
+    system:
+      enabled:
+        - tuned.service
+      disabled:
+        - power-profiles-daemon.service
