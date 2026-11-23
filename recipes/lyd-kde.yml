@@ -28,6 +28,13 @@ modules:
         - fastfetch
         - btrfs-progs
         - util-linux
+        - grub2-tools
+        - grub2-tools-extra
+        - plymouth
+        - plymouth-plugin-script
+        - plymouth-scripts
+        - librsvg2-tools
+        - xcursorgen
         - aurorae
         - fuse
         - fuse-libs
