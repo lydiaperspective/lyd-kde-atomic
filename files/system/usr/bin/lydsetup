@@ -380,7 +380,8 @@ Development commands:
   lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
   lydsetup dev devbox enable              Same as above
   lydsetup dev androiddev enable          Set up Android Studio development
-  lydsetup dev container enable           Set up Podman container development\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
+  lydsetup dev container enable           Set up Podman container development
+  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
   Use 'development' instead of 'dev' as an alias.
 
 Features:
