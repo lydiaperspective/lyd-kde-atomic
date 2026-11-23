@@ -27,6 +27,13 @@ modules:
         - htop
         - fastfetch
         - btrfs-progs
+        - aurorae
+        - fuse
+        - fuse-libs
+        - fuse3
+        - fuse3-libs
+        - xdg-desktop-portal
+        - xdg-desktop-portal-kde
     remove:
       packages:
         - firefox
