@@ -7,6 +7,7 @@ from simpleline.render.widgets import CheckboxWidget, TextWidget
 
 from pyanaconda.ui.tui.spokes import NormalTUISpoke
 
+from com_lyd_atomic_edition.bootc import set_bootc_image
 from com_lyd_atomic_edition.categories.lyd_atomic import LydAtomicCategory
 
 __all__ = ["LydAtomicEditionTUISpoke"]
@@ -96,16 +97,11 @@ class LydAtomicEditionTUISpoke(NormalTUISpoke):
         if self._selected not in {entry[0] for entry in EDITIONS.values()}:
             raise ValueError("A Lyd Atomic edition must be selected")
 
-        bootc_data = getattr(self.data, "bootc", None)
-        if bootc_data is None:
-            raise RuntimeError("The installer bootc Kickstart command is missing")
-
         image = next(
             image for _, (key, image, _) in EDITIONS.items()
             if key == self._selected
         )
-        bootc_data.sourceImgRef = "registry:" + image
-        bootc_data.targetImgRef = image
+        set_bootc_image(self.data, image)
 
     def execute(self):
         pass
