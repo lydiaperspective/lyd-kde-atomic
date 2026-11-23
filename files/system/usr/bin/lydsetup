@@ -261,11 +261,9 @@ THEME_DISTROBOX_CONFIG
     origin="$(git -C "$repo_dir" remote get-url origin 2>/dev/null || true)"
     [[ "$origin" == "https://github.com/lydiaperspective/lyd-kde-themes.git" || "$origin" == "git@github.com:lydiaperspective/lyd-kde-themes.git" ]] || die "$repo_dir is a Git repository, but its origin is not lyd-kde-themes. Refusing to change it."
     if [[ -n "$(git -C "$repo_dir" status --porcelain)" ]]; then
-      echo "The existing theme checkout has local changes; leaving it untouched."
-      echo "Review or commit those changes, then run: lydsetup dev theme enable"
-    else
-      git -C "$repo_dir" pull --ff-only origin main
+      die "The existing theme checkout has local changes. Commit or stash them before updating, then rerun: lydsetup dev theme enable"
     fi
+    git -C "$repo_dir" pull --ff-only origin main
   elif [[ -e "$repo_dir" ]]; then
     die "$repo_dir already exists but is not a Git repository. Move it aside and retry."
   else
