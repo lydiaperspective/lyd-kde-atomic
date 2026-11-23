@@ -8,8 +8,6 @@ modules:
     repos:
       copr:
         - codifryed/CoolerControl
-      files:
-        - https://pkgs.tailscale.com/stable/fedora/tailscale.repo
     install:
       packages:
         - podman
