@@ -12,6 +12,7 @@ modules:
         - buildah
         - skopeo
         - cockpit
+        - cockpit-ws
         - cockpit-system
         - cockpit-podman
         - cockpit-machines
@@ -52,6 +53,7 @@ modules:
     scripts:
       - install-lyd-tools.sh
       - enable-bib-repositories.sh
+      - configure-server.sh
   - type: systemd
     system:
       enabled:
