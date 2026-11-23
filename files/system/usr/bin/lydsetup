@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.5.2
+VERSION=0.5.3
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -596,20 +596,15 @@ status_label() {
   printf '\\033[35m[%s]\\033[0m' "$state"
 }
 show_feature_status() {
-  printf '  %-12s %b\\n' "printscan" "$(status_label printscan)"
-  printf '  %-12s %b\\n' "media" "$(status_label media)"
-  printf '  %-12s %b\\n' "mediaedit" "$(status_label mediaedit)"
-  printf '  %-12s %b\\n' "gaming" "$(status_label gaming)"
-  printf '  %-12s %b\\n' "gamingui" "$(status_label gamingui)"
-  printf '  %-12s %b\\n' "steamtheme" "$(status_label steamtheme)"
-  printf '  %-12s %b\\n' "8bitdo" "$(status_label 8bitdo)"
-  printf '  %-12s %b\\n' "solaar" "$(status_label solaar)"
+  local feature
+  for feature in printscan media mediaedit gaming gamingui steamtheme 8bitdo solaar; do
+    printf '  %s\\n    Status: %b\\n' "$feature" "$(status_label "$feature")"
+  done
   echo
   echo "Development:"
-  printf '  %-12s %b\\n' "devbox" "$(status_label devbox)"
-  printf '  %-12s %b\\n' "androiddev" "$(status_label androiddev)"
-  printf '  %-12s %b\\n' "container" "$(status_label container)"
-  printf '  %-12s %b\\n' "theme" "$(status_label theme)"
+  for feature in devbox androiddev container theme; do
+    printf '  %s\\n    Status: %b\\n' "$feature" "$(status_label "$feature")"
+  done
 }
 dev_help() {
   cat <<HELP
