@@ -1,0 +1,60 @@
+---
+name: lyd-atomic-server
+description: Headless Fedora bootc server with Podman, Cockpit, KVM virtualization and firewalld.
+base-image: quay.io/fedora/fedora-bootc:45
+image-version: "45"
+modules:
+  - type: dnf
+    install:
+      packages:
+        - podman
+        - podman-compose
+        - buildah
+        - skopeo
+        - cockpit
+        - cockpit-system
+        - cockpit-podman
+        - cockpit-machines
+        - cockpit-storaged
+        - cockpit-networkmanager
+        - cockpit-selinux
+        - cockpit-sosreport
+        - firewalld
+        - openssh-server
+        - openssh-clients
+        - qemu-kvm
+        - libvirt
+        - libvirt-daemon-kvm
+        - libvirt-daemon-config-network
+        - virt-install
+        - edk2-ovmf
+        - swtpm
+        - dnsmasq
+        - btrfs-progs
+        - curl
+        - wget
+        - git
+        - jq
+        - python3
+        - bash-completion
+        - htop
+        - fastfetch
+        - tmux
+        - vim-enhanced
+        - nano
+    remove:
+      packages: []
+  - type: files
+    files:
+      - source: system
+        destination: /
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+  - type: systemd
+    system:
+      enabled:
+        - cockpit.socket
+        - firewalld.service
+        - sshd.service
+        - libvirtd.service
