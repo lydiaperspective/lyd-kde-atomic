@@ -62,6 +62,10 @@ The Standard edition can add the current RPM Fusion NVIDIA driver using `lydsetu
 
 This uses the current RPM Fusion driver branch, which may differ from the NVIDIA edition's pinned 580.x driver. If Secure Boot is enabled, the generated module may be blocked unless module signing is configured and its certificate is enrolled. `lydsetup` detects Secure Boot and warns, but does not generate or enroll signing keys. Keep a working deployment available before enabling the driver.
 
+## Mystical theme dependency
+
+The Mystical KDE theme and its supporting assets are maintained in [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes). The image build script `files/scripts/install-mystical-theme.sh` clones that repository and checks out a specific commit before installing the assets. Update the pinned commit in that script when intentionally moving the images to a newer theme revision. Do not change it to a floating branch name: commit pinning makes image builds reproducible.
+
 ## Optional feature manager
 
 `lydsetup` uses system package layering for optional RPMs. A package change creates a new deployment and normally requires a reboot before the package is available. Some setup tasks therefore require a second run after reboot to enable services or complete configuration. The utility does not reboot automatically.
