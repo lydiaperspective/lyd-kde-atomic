@@ -43,7 +43,7 @@ The default public firewalld zone permits SSH (TCP 22), Cockpit (TCP 9090) and D
 
 ## GitHub Actions
 
-Pushes to `main` and manual dispatch build the NVIDIA, Standard and Server editions in parallel. Pull requests validate both recipes without publishing. The build workflow publishes each image under its recipe name.
+Pushes to `main` and manual dispatch build the NVIDIA, Standard and Server editions in parallel. Pull requests validate all three recipes without publishing. The build workflow publishes each image under its recipe name.
 
 ## GitHub Actions signing
 
@@ -57,7 +57,7 @@ Add the contents of `cosign.key` as the repository Actions secret `COSIGN_PRIVAT
 
 ## ISO generation
 
-Run the **Build installable ISO** workflow manually after the relevant image has been published. Choose the NVIDIA or Standard edition and the image tag. The workflow downloads that image, creates an ISO and attaches a SHA256 checksum. Artifacts are retained for 14 days.
+Run the **Build installable ISO** workflow manually after the relevant image has been published. Choose the NVIDIA, Standard or Server edition and the image tag. The workflow downloads that image, creates an ISO and attaches a SHA256 checksum. Artifacts are retained for 14 days.
 
 ## Image installation
 
