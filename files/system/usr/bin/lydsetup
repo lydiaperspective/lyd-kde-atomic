@@ -561,11 +561,6 @@ feature_enabled() {
         flatpak_installed org.kde.krita &&
         flatpak_installed ca.littlesvr.asunder &&
         flatpak_installed org.soundconverter.SoundConverter ;;
-    steamtheme)
-      [[ $# -eq 1 ]] || die "Usage: lydsetup steamtheme"
-      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      setup_steamtheme
-      exit 0 ;;
     gamingui)
       rpm -q steam steam-devices gamescope >/dev/null 2>&1 &&
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
@@ -693,6 +688,11 @@ main() {
         mediaedit) setup_mediaedit ;;
         gaming) setup_gaming ;;
       esac
+      exit 0 ;;
+    steamtheme)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup steamtheme"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      setup_steamtheme
       exit 0 ;;
     gamingui)
       [[ $# -eq 1 ]] || die "Usage: lydsetup gamingui"
