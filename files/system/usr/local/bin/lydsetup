@@ -54,7 +54,7 @@ ensure_rpmfusion() {
   return 0
 }
 setup_virtualization() {
-  stage_packages qemu-kvm libvirt virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
+  stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
   reboot_notice && return 0
   echo "Enabling libvirt and preparing the current account for virtualization."
   sudo systemctl enable --now libvirtd.service
