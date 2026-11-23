@@ -47,9 +47,7 @@ if (( size_bytes > split_limit )); then
   fi
 
   for part in "${parts[@]}"; do
-    part_name="$(basename "$part")"
-    ( cd "$iso_dir" && sha256sum "$part_name" > "$part_name.sha256" )
-    assets+=( "$part" "$part.sha256" )
+    assets+=( "$part" )
   done
 
   rm -f "$iso"
@@ -88,7 +86,7 @@ echo "Reconstructed and verified: $output"
 read -r -p "Delete downloaded ISO parts and SHA-256 files? [y/N] " answer
 case "$answer" in
   y|Y|yes|YES)
-    rm -f "${parts[@]}" "${parts[@]/%/.sha256}" "$checksum"
+    rm -f "${parts[@]}" "$checksum"
     echo "Parts and checksum files deleted."
     ;;
   *)
