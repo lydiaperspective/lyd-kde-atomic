@@ -51,7 +51,7 @@ Run **Build unified installer ISO** from GitHub Actions to create one ISO contai
 - **NVIDIA KDE** — the workstation image with the proprietary NVIDIA driver included.
 - **Server** — the headless server image.
 
-The selected bootc image is downloaded from GHCR during installation; the three operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. The workflow can be configured to use Btrfs, XFS or ext4 for the installed system. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
+The selected bootc image is downloaded from GHCR during installation; the three operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. The workflow supports Btrfs, XFS or ext4 as the installed system's default filesystem. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
 
 The older **Build installable ISO** workflow remains available for generating a single-edition ISO from one published image.
 
