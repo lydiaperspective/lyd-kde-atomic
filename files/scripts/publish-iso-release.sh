@@ -63,7 +63,7 @@ if (( size_bytes > split_limit )); then
 set -Eeuo pipefail
 DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 shopt -s nullglob
-parts=( "$DIR"/*.iso.part-[0-9]* )
+parts=( "$DIR"/*.iso.part-[0-9][0-9][0-9] )
 shopt -u nullglob
 if [[ ${#parts[@]} -eq 0 ]]; then
   echo "No ISO parts found beside this script." >&2
