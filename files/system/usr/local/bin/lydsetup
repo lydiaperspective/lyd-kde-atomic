@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd KDE Atomic.
 set -Eeuo pipefail
-VERSION=0.1.2
+VERSION=0.1.3
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -39,20 +39,6 @@ reboot_notice() {
   fi
   return 1
 }
-ensure_rpmfusion() {
-  local fedora
-  fedora="$(rpm -E %fedora)"
-  if rpm -q rpmfusion-free-release rpmfusion-nonfree-release >/dev/null 2>&1; then
-    return 0
-  fi
-  echo "RPM Fusion repository release packages are not installed yet."
-  confirm "Stage RPM Fusion repositories? A reboot is required before installing Steam." || return 1
-  sudo rpm-ostree install \
-    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm" \
-    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
-  STAGED=1
-  return 0
-}
 setup_virtualization() {
   stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
   reboot_notice && return 0
@@ -64,17 +50,6 @@ setup_virtualization() {
     sudo virsh net-start default || true
   fi
   echo "Group membership takes effect after logging out and back in."
-}
-setup_steam() {
-  echo "Steam will be installed as a system RPM, not as a Flatpak."
-  confirm "Continue with Steam setup?" || return 0
-  ensure_rpmfusion || return 0
-  if (( STAGED )); then
-    reboot_notice
-    return 0
-  fi
-  stage_packages steam
-  reboot_notice || true
 }
 setup_coolercontrol() {
   local fedora repo
@@ -108,7 +83,6 @@ Usage: lydsetup
 
 Features:
   Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
-  Steam system package (RPM Fusion)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
 
@@ -129,18 +103,16 @@ HELP
     echo "  Lyd KDE Atomic setup"
     echo "  --------------------"
     echo "  1) Virtualization (QEMU/KVM + libvirt)"
-    echo "  2) Steam (system package)"
-    echo "  3) CoolerControl"
-    echo "  4) TuneD + tuned-ppd"
-    echo "  5) Exit"
+    echo "  2) CoolerControl"
+    echo "  3) TuneD + tuned-ppd"
+    echo "  4) Exit"
     read -r -p "Select a feature: " choice
     case "$choice" in
       1) setup_virtualization ;;
-      2) setup_steam ;;
-      3) setup_coolercontrol ;;
-      4) setup_tuned ;;
-      5) break ;;
-      *) echo "Choose 1-5." ;;
+      2) setup_coolercontrol ;;
+      3) setup_tuned ;;
+      4) break ;;
+      *) echo "Choose 1-4." ;;
     esac
   done
   echo "lydsetup finished. Log: $LOG"
