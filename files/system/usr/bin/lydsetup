@@ -41,10 +41,6 @@ setup_printscan() {
   echo "This enables CUPS printing, USB/network scanner support and Skanpage."
   echo "All required system packages are already included in the image."
   require_packages cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi
-  if ! rpm -q cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi >/dev/null 2>&1; then
-    echo "Printing/scanning packages were not installed. If you cancelled, rerun: lydsetup printscan enable"
-    return 0
-  fi
   echo "Enabling CUPS printing and Avahi device discovery."
   sudo systemctl enable --now cups.service
   sudo systemctl enable --now avahi-daemon.service
@@ -611,8 +607,8 @@ Available commands:
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
   lydsetup steamtheme                   Install and activate the Lyd Mystical Steam client theme
-  lydsetup 8bitdo                       Install Steam device support and 8BitDo Pro 2 udev permissions
-  lydsetup solaar enable                Install Solaar system-wide
+  lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
+  lydsetup solaar enable                Use preinstalled Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
   lydsetup dev devbox enable            Same as above
   lydsetup dev androiddev enable        Set up Android Studio development
@@ -624,7 +620,7 @@ Running lydsetup without arguments displays this list instead of opening the
 interactive feature menu. Run lydsetup with an explicit feature command to set it up.
 
 Features:
-  NVIDIA proprietary driver (preinstalled; standard edition)
+  NVIDIA proprietary driver packages (preinstalled; standard edition)
   Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
