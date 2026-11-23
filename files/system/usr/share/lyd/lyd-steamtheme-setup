@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+die() { echo "Error: $*" >&2; exit 1; }
+
+[[ $EUID -ne 0 ]] || die "Run this command as your regular desktop user, not with sudo."
+[[ "$(uname -m)" == "x86_64" ]] || die "Millennium currently supports x86_64 Linux only."
+command -v steam >/dev/null 2>&1 || die "The native Steam command is not installed."
+command -v git >/dev/null 2>&1 || die "Git is required to retrieve the Lyd Mystical theme."
+
+if command -v flatpak >/dev/null 2>&1 &&
+   flatpak list --app --columns=application 2>/dev/null | grep -Fxq com.valvesoftware.Steam &&
+   ! rpm -q steam >/dev/null 2>&1; then
+  die "Millennium does not support Flatpak Steam. Install the native Steam package to use this feature."
+fi
+
+rpm -q steam >/dev/null 2>&1 || die "The native RPM Steam package is required. Flatpak/Snap Steam is not supported by Millennium."
+
+for library in \
+  /usr/lib/millennium/libmillennium_bootstrap_x86.so \
+  /usr/lib/millennium/libmillennium_bootstrap_hhx64.so \
+  /usr/lib/millennium/libmillennium_bootstrap_x64.so; do
+  [[ -f "$library" ]] || die "Millennium is missing from this image. Update to a Lyd Atomic image that includes Millennium."
+done
+
+if command -v pgrep >/dev/null 2>&1 &&
+   { pgrep -x steam >/dev/null 2>&1 || pgrep -x steamwebhelper >/dev/null 2>&1; }; then
+  die "Fully exit Steam before applying the theme, then rerun: lydsetup steamtheme"
+fi
+
+STEAM_ROOT=""
+for candidate in "$HOME/.steam/steam" "$HOME/.steam/root" "$HOME/.local/share/Steam"; do
+  if [[ -d "$candidate/steamui" ]]; then
+    STEAM_ROOT="$(readlink -f "$candidate")"
+    break
+  fi
+done
+[[ -n "$STEAM_ROOT" && -d "$STEAM_ROOT/steamui" ]] ||
+  die "Steam has not initialized its client files yet. Launch Steam once, let it finish updating, exit it completely, then rerun lydsetup steamtheme."
+
+THEME_REPO="https://github.com/lydiaperspective/lyd-kde-themes.git"
+THEME_COMMIT="bc81f111747e10c53ad66a44041c128aa3b2abd1"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+echo "Retrieving the Lyd Mystical Steam theme..."
+git clone --quiet --filter=blob:none "$THEME_REPO" "$WORK/theme"
+git -C "$WORK/theme" checkout --quiet "$THEME_COMMIT"
+SOURCE="$WORK/theme/themes/mystical/steam"
+[[ -f "$SOURCE/skin.json" && -f "$SOURCE/libraryroot.custom.css" &&
+   -f "$SOURCE/friends.custom.css" && -f "$SOURCE/bigpicture.custom.css" &&
+   -f "$SOURCE/webkit.css" ]] || die "The pinned Lyd Mystical Steam theme is incomplete."
+
+# Install Millennium's Steam bootstrap links using the upstream Linux layout.
+mkdir -p "$STEAM_ROOT/ubuntu12_32" "$STEAM_ROOT/ubuntu12_64" "$STEAM_ROOT/steamrt64"
+ln -sfn /usr/lib/millennium/libmillennium_bootstrap_x86.so \
+  "$STEAM_ROOT/ubuntu12_32/libXtst.so.6"
+ln -sfn /usr/lib/millennium/libmillennium_bootstrap_hhx64.so \
+  "$STEAM_ROOT/ubuntu12_64/libXtst.so.6"
+ln -sfn /usr/lib/millennium/libmillennium_hhx64.so \
+  "$STEAM_ROOT/ubuntu12_64/libmillennium_hhx64.so"
+ln -sfn /run/host/usr/lib/millennium/libmillennium_bootstrap_x64.so \
+  "$STEAM_ROOT/steamrt64/libXtst.so.6"
+
+TARGET="$STEAM_ROOT/steamui/skins/lyd-mystical"
+mkdir -p "$(dirname "$TARGET")"
+rm -rf "$TARGET"
+mkdir -p "$TARGET"
+cp -a "$SOURCE/." "$TARGET/"
+
+mkdir -p "$HOME/.config/lyd"
+printf '%s\n' "$THEME_COMMIT" > "$HOME/.config/lyd/steamtheme-installed"
+
+echo
+echo "Lyd Mystical Steam theme installed."
+if command -v millennium >/dev/null 2>&1 && millennium themes use lyd-mystical; then
+  echo "Millennium selected Lyd Mystical as the active Steam theme."
+else
+  echo "The theme is installed. If it is not selected automatically:"
+  echo "  Steam menu > Millennium > Themes > select 'Lyd Mystical'."
+fi
+echo "Starting Steam's Millennium settings page..."
+steam steam://millennium/settings >/dev/null 2>&1 || true
+echo "Restart Steam if the appearance has not refreshed."
