@@ -21,6 +21,8 @@ system_update() {
   echo "Checking for and staging the latest Lyd Atomic system image..."
   echo "The update will become active after you reboot; this command will not reboot automatically."
   sudo bootc upgrade
+  echo "Reloading systemd units and mount definitions after the update..."
+  sudo systemctl daemon-reload
 }
 
 firmware_update() {
@@ -76,7 +78,13 @@ run_automatic_updates() {
 
   if command -v bootc >/dev/null 2>&1; then
     echo "===== bootc system image update ====="
-    bootc upgrade || { echo "bootc upgrade failed."; failures=$((failures + 1)); }
+    if bootc upgrade; then
+      echo "Reloading systemd units and mount definitions after the update..."
+      systemctl daemon-reload || { echo "systemd daemon-reload failed."; failures=$((failures + 1)); }
+    else
+      echo "bootc upgrade failed."
+      failures=$((failures + 1))
+    fi
   else
     echo "bootc is unavailable; skipping system image update."
   fi
