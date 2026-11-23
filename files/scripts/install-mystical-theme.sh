@@ -29,7 +29,7 @@ cp -a "$WORK/Mystical" /usr/share/icons/Mystical
 # Add coordinated GRUB, animated Plymouth and Xcursor assets. Record the
 # exact source revision so the boot setup service can detect image updates.
 bash "$WORK/theme/scripts/install-mystical-boot-assets.sh"
-printf '%s\\n' "$THEME_COMMIT" > /usr/share/lyd/mystical-theme-version
+printf '%s\n' "$THEME_COMMIT" > /usr/share/lyd/mystical-theme-version
 systemctl enable lyd-mystical-boot-setup.service
 
 cp -a "$SOURCE/icons" /usr/share/lyd/mystical/
