@@ -6,7 +6,6 @@ LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee -a "$LOG") 2>&1
-STAGED=0
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 confirm() {
@@ -47,9 +46,8 @@ install_flatpaks_system() {
 }
 setup_printscan() {
   echo "This enables CUPS printing, USB/network scanner support and Skanpage."
-  echo "System packages will be layered into a new deployment if they are missing."
+  echo "All required system packages are already included in the image."
   stage_packages cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi
-  reboot_notice && return 0
   if ! rpm -q cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi >/dev/null 2>&1; then
     echo "Printing/scanning packages were not installed. If you cancelled, rerun: lydsetup printscan enable"
     return 0
@@ -235,8 +233,7 @@ setup_devbox() {
   if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
     echo "Distrobox and Podman are required on the host. Missing packages will be layered into the next deployment."
     stage_packages distrobox podman
-    reboot_notice && return 0
-    command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
+      command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
     command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot into the new deployment, then run lydsetup again."
   fi
   config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox"
@@ -279,8 +276,7 @@ setup_androiddev() {
   if ! command -v flatpak >/dev/null 2>&1; then
     echo "Flatpak is required to install Android Studio."
     stage_packages flatpak
-    reboot_notice && return 0
-    command -v flatpak >/dev/null 2>&1 || die "Flatpak is unavailable after deployment. Reboot and retry."
+      command -v flatpak >/dev/null 2>&1 || die "Flatpak is unavailable after deployment. Reboot and retry."
   fi
   echo "This sets up Android Studio on the host and a Fedora development Distrobox."
   echo "The Distrobox includes Git, Java 21, Android platform tools and common build utilities."
@@ -531,6 +527,11 @@ setup_zed() {
   echo "Zed installation finished. If needed, add ~/.local/bin to PATH."
 }
 setup_nvidia() {
+  if rpm -q nvidia-driver >/dev/null 2>&1; then
+    echo "The NVIDIA edition already includes its prebuilt proprietary driver."
+    command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi || true
+    return 0
+  fi
   stage_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
   echo "NVIDIA driver packages are included in this image."
   echo "Check module compilation before relying on the driver:"
@@ -659,7 +660,6 @@ HELP
     *) die "Unknown argument: $1 (try --help)" ;;
   esac
   [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-  command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
   command -v sudo >/dev/null 2>&1 || die "sudo is required."
   local server_edition=0
   rpm -q cockpit-machines >/dev/null 2>&1 && server_edition=1
@@ -667,34 +667,51 @@ HELP
     echo
     echo "  Lyd Atomic setup"
     echo "  ----------------"
-    echo "  1) NVIDIA proprietary driver (standard edition)"
-    echo "  2) Virtualization (QEMU/KVM + libvirt)"
-    echo "  3) CoolerControl"
-    echo "  4) TuneD + tuned-ppd"
-    echo "  5) Tailscale VPN"
     if (( server_edition )); then
-      echo "  6) BlueBuild development environment (Distrobox)"
-      echo "  7) Solaar (Logitech device manager)"
-      echo "  8) Exit"
+      echo "  1) Virtualization (QEMU/KVM + libvirt)"
+      echo "  2) CoolerControl"
+      echo "  3) TuneD + tuned-ppd"
+      echo "  4) Tailscale VPN"
+      echo "  5) BlueBuild development environment (Distrobox)"
+      echo "  6) Solaar (Logitech device manager)"
+      echo "  7) Exit"
     else
+      echo "  1) NVIDIA proprietary driver"
+      echo "  2) Virtualization (QEMU/KVM + libvirt)"
+      echo "  3) CoolerControl"
+      echo "  4) TuneD + tuned-ppd"
+      echo "  5) Tailscale VPN"
       echo "  6) Zed editor"
       echo "  7) BlueBuild development environment (Distrobox)"
       echo "  8) Solaar (Logitech device manager)"
       echo "  9) Exit"
     fi
     read -r -p "Select a feature: " choice
-    case "$choice" in
-      1) setup_nvidia ;;
-      2) setup_virtualization ;;
-      3) setup_coolercontrol ;;
-      4) setup_tuned ;;
-      5) setup_tailscale ;;
-      6) if (( server_edition )); then setup_devbox; else setup_zed; fi ;;
-      7) if (( server_edition )); then setup_solaar; else setup_devbox; fi ;;
-      8) if (( server_edition )); then break; else setup_solaar; fi ;;
-      9) break ;;
-      *) echo "Choose a listed number." ;;
-    esac
+    if (( server_edition )); then
+      case "$choice" in
+        1) setup_virtualization ;;
+        2) setup_coolercontrol ;;
+        3) setup_tuned ;;
+        4) setup_tailscale ;;
+        5) setup_devbox ;;
+        6) setup_solaar ;;
+        7) break ;;
+        *) echo "Choose a listed number." ;;
+      esac
+    else
+      case "$choice" in
+        1) setup_nvidia ;;
+        2) setup_virtualization ;;
+        3) setup_coolercontrol ;;
+        4) setup_tuned ;;
+        5) setup_tailscale ;;
+        6) setup_zed ;;
+        7) setup_devbox ;;
+        8) setup_solaar ;;
+        9) break ;;
+        *) echo "Choose a listed number." ;;
+      esac
+    fi
   done
   echo "lydsetup finished. Log: $LOG"
 }
