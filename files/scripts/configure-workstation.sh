@@ -7,11 +7,16 @@ if rpm -q firefox >/dev/null 2>&1; then
   exit 1
 fi
 
-# Require the proprietary 580xx branch and build the matching kernel module.
-rpm -q akmod-nvidia-580xx xorg-x11-drv-nvidia-580xx xorg-x11-drv-nvidia-580xx-cuda
-command -v akmods >/dev/null 2>&1 || { echo "akmods is missing" >&2; exit 1; }
-rpm -q kernel-devel-matched >/dev/null
-akmods --force
+# BlueBuild's Fedora 45 Kinoite NVIDIA base image carries the proprietary
+# 580-series driver and a prebuilt, signed kernel module. Verify the branch
+# rather than silently shipping a different driver series.
+rpm -q nvidia-driver
+NVIDIA_VERSION="$(modinfo -F version nvidia)"
+if [[ "$NVIDIA_VERSION" != 580.* ]]; then
+  echo "Expected proprietary NVIDIA 580.x, found: $NVIDIA_VERSION" >&2
+  exit 1
+fi
+command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the NVIDIA base image" >&2; exit 1; }
 
 # Make Waterfox the system-wide default for web links and HTML documents.
 install -d /etc/xdg
@@ -28,7 +33,7 @@ cat > /usr/share/lyd/IMAGE-INFO <<'EOF'
 Lyd KDE Atomic
 Fedora Kinoite 45 base
 Minimal KDE Plasma workstation
-Proprietary NVIDIA 580xx driver branch
+Proprietary NVIDIA 580.x driver and prebuilt kernel module
 Waterfox is provided as a Flathub Flatpak and is the default web browser.
 Optional system features are managed with lydsetup.
 EOF
