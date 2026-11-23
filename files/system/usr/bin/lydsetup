@@ -560,6 +560,12 @@ main() {
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_solaar
       exit 0 ;;
+    theme)
+      [[ "${2:-}" == "reapply" ]] || die "Usage: lydsetup theme reapply"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_theme_reapply
+      exit 0 ;;
     devbox)
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
