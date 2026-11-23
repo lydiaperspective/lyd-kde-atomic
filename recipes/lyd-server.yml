@@ -5,6 +5,11 @@ base-image: quay.io/fedora/fedora-bootc
 image-version: "45"
 modules:
   - type: dnf
+    repos:
+      copr:
+        - codifryed/CoolerControl
+      files:
+        - https://pkgs.tailscale.com/stable/fedora/tailscale.repo
     install:
       packages:
         - podman
@@ -43,6 +48,14 @@ modules:
         - tmux
         - vim-enhanced
         - nano
+        - tuned
+        - tuned-ppd
+        - tailscale
+        - solaar
+        - distrobox
+        - coolercontrol
+        - coolercontrold
+        - liquidctl
     remove:
       packages: []
   - type: files
