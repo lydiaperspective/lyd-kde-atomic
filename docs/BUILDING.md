@@ -26,9 +26,24 @@ The Standard recipe uses the standard Fedora Kinoite base and does not install p
 
 The output is a local OCI image. Use `bluebuild switch` only on a test machine or VM; it builds and stages a new deployment for the next boot.
 
+## Server edition
+
+Build the headless server image with:
+
+```bash
+bluebuild generate recipes/lyd-server.yml -o Containerfile
+bluebuild build recipes/lyd-server.yml
+```
+
+Published image: `ghcr.io/lydiaperspective/lyd-atomic-server:latest`.
+
+The server recipe uses Fedora's Fedora 45 bootc base, installs Podman and Podman Compose, Cockpit with the Podman, Machines, Storage, NetworkManager, SELinux and SOS report modules, plus KVM/libvirt virtualization support. It enables `cockpit.socket`, `firewalld`, `sshd` and `libvirtd` at boot.
+
+The default public firewalld zone permits SSH (TCP 22), Cockpit (TCP 9090) and DHCPv6 client traffic. Container-published ports are intentionally not opened automatically because the required ports depend on each workload. Add explicit permanent rules only for services you intend to expose. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
+
 ## GitHub Actions
 
-Pushes to `main` and manual dispatch build both hardware editions in parallel. Pull requests validate both recipes without publishing. The build workflow publishes each image under its recipe name.
+Pushes to `main` and manual dispatch build the NVIDIA, Standard and Server editions in parallel. Pull requests validate both recipes without publishing. The build workflow publishes each image under its recipe name.
 
 ## GitHub Actions signing
 
@@ -75,5 +90,10 @@ The Fedora `aurorae` package installs the KWin Aurorae decoration engine. It ena
 The Mystical KDE theme and its supporting assets are maintained in [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes). The image build script `files/scripts/install-mystical-theme.sh` clones that repository and checks out a specific commit before installing the assets. Update the pinned commit in that script when intentionally moving the images to a newer theme revision. Do not change it to a floating branch name: commit pinning makes image builds reproducible.
 
 ## Optional feature manager
+
+`lydsetup` can install Tailscale from the official Fedora repository on all editions. It layers the package in a new deployment, enables `tailscaled` after reboot, and optionally runs `tailscale up` to authenticate the machine. No inbound Tailscale port is opened in firewalld by default.
+
+On workstation editions, `lydsetup` can also run Zed's official Linux installer. Zed is installed per-user under `~/.local`, so this does not create an rpm-ostree deployment. See [Zed's Linux installation documentation](https://zed.dev/docs/installation).
+
 
 `lydsetup` uses system package layering for optional RPMs. A package change creates a new deployment and normally requires a reboot before the package is available. Some setup tasks therefore require a second run after reboot to enable services or complete configuration. The utility does not reboot automatically.
