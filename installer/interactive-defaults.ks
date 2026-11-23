@@ -1,3 +1,3 @@
 # Default selection; the Lyd Atomic Edition spoke replaces this with the
-# edition selected in the graphical installer before installation starts.
+# edition selected in either the graphical or text-mode installer.
 bootc --source-imgref=registry:ghcr.io/lydiaperspective/lyd-atomic-standard:latest --target-imgref=ghcr.io/lydiaperspective/lyd-atomic-standard:latest
