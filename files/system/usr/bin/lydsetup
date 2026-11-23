@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.2.0
+VERSION=0.3.0
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -194,6 +194,7 @@ Features:
   TuneD + tuned-ppd (replaces power-profiles-daemon)
   Tailscale VPN client (official Fedora repository; all editions)
   Zed editor (official per-user Linux installer; workstation editions)
+  BlueBuild development environment (Distrobox; all editions)
 
 System package changes create a new deployment and require a reboot.
 Run lydsetup again after reboot if prompted to finish enabling this feature.
