@@ -1,0 +1,55 @@
+name: Build installable ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Published image tag to convert
+        required: true
+        default: latest
+      upload_release:
+        description: Attach ISO to the latest rolling release
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  iso:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install bootc-image-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman skopeo jq xorriso
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build ISO
+        env:
+          IMAGE: ghcr.io/lydiaperspective/lyd-kde-atomic:${{ inputs.image_tag }}
+        run: |
+          mkdir -p output
+          podman pull "$IMAGE"
+          podman run --rm --privileged --pull=newer \
+            -v ./output:/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type iso --rootfs btrfs --local \
+            --output /output "$IMAGE"
+      - name: Generate checksums
+        run: |
+          find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
+            sha256sum "$iso" > "$iso.sha256"
+          done
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyd-kde-atomic-iso
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
