@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+VERSION="1.0.0"
 topic="${1:-help}"
 show_index() {
   cat <<'EOF'
@@ -25,6 +26,7 @@ Tip: use 'command --help' or 'man command' for complete documentation.
 EOF
 }
 case "$topic" in
+--version|-V) echo "lydhelp $VERSION" ;;
 help|--help|-h) show_index ;;
 files) cat <<'EOF'
 FILES
