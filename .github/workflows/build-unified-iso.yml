@@ -8,15 +8,6 @@ on:
       - 'files/scripts/publish-iso-release.sh'
   workflow_dispatch:
     inputs:
-      rootfs_type:
-        description: Filesystem for the installed system
-        type: choice
-        required: true
-        default: btrfs
-        options:
-          - btrfs
-          - xfs
-          - ext4
 
 permissions:
   contents: write
@@ -43,14 +34,9 @@ jobs:
 
       - name: Build unified ISO with Image Builder
         env:
-          ROOTFS_TYPE: ${{ inputs.rootfs_type }}
         run: |
           set -Eeuo pipefail
           mkdir -p output
-          case "$ROOTFS_TYPE" in
-            btrfs|xfs|ext4) ;;
-            *) echo "Unsupported root filesystem: $ROOTFS_TYPE" >&2; exit 1 ;;
-          esac
 
           sudo podman run --rm --privileged \
             --security-opt label=disable \
@@ -59,7 +45,7 @@ jobs:
             ghcr.io/osbuild/image-builder-cli:latest \
             build \
             --bootc-ref localhost/lyd-atomic-installer:latest \
-            --bootc-default-fs "$ROOTFS_TYPE" \
+            --bootc-default-fs btrfs \
             --output-dir /output \
             bootc-generic-iso
 
