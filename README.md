@@ -26,7 +26,7 @@ BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses B
 
 ## Unified installer
 
-The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO.
+The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO. The unified installer uses Btrfs by default.
 
 See [docs/BUILDING.md](docs/BUILDING.md) for build instructions, ISO generation, CI signing setup and Secure Boot notes.
 
