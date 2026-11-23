@@ -77,7 +77,6 @@ modules:
         - coolercontrol
         - coolercontrold
         - liquidctl
-        - steam
         - steam-devices
         - gamemode
         - mangohud
@@ -91,8 +90,6 @@ modules:
         - firefox
         - firefox-langpacks
         - plasma-discover-rpm-ostree
-        # Avoid the x86_64 RPM Fusion codec package blocking Steam's i686 dependencies.
-        - libfdk-aac
   - type: default-flatpaks
     configurations:
       - scope: system
@@ -106,6 +103,7 @@ modules:
           - org.kde.haruna
           - org.kde.gwenview
           - com.vixalien.sticky
+          - com.valvesoftware.Steam
   - type: files
     files:
       - source: system
@@ -114,6 +112,5 @@ modules:
     scripts:
       - install-lyd-tools.sh
       - install-mystical-theme.sh
-      - install-millennium.sh
       - configure-workstation-intel.sh
       - enable-bib-repositories.sh
