@@ -25,7 +25,6 @@ iso_dir="$(dirname "$iso")"
 iso_name="$(basename "$iso")"
 checksum="$iso.sha256"
 
-# Keep the checksum portable: it references only the ISO filename.
 (
   cd "$iso_dir"
   sha256sum "$iso_name" > "$iso_name.sha256"
@@ -33,13 +32,11 @@ checksum="$iso.sha256"
 
 assets=()
 size_bytes="$(stat -c '%s' "$iso")"
-# GitHub Release assets have a 2 GiB per-file limit. Split conservatively below it.
 split_limit=$((1900 * 1000 * 1000))
 
 if (( size_bytes > split_limit )); then
   echo "ISO is larger than the safe release-asset limit; splitting into 1.9 GB parts."
-  split --bytes=1900M --numeric-suffixes=1 --suffix-length=3 \
-    "$iso" "$iso.part-"
+  split --bytes=1900M --numeric-suffixes=1 --suffix-length=3 "$iso" "$iso.part-"
 
   shopt -s nullglob
   parts=( "$iso".part-* )
@@ -55,7 +52,6 @@ if (( size_bytes > split_limit )); then
     assets+=( "$part" "$part.sha256" )
   done
 
-  # The full ISO is reconstructable from the parts and is not uploaded twice.
   rm -f "$iso"
 
   cat > "$iso_dir/recombine-iso.sh" <<'RECOMBINE'
