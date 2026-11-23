@@ -25,6 +25,8 @@ jobs:
             recipe: lyd-kde.yml
           - flavour: standard
             recipe: lyd-kde-intel.yml
+          - flavour: server
+            recipe: lyd-server.yml
     steps:
       - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
