@@ -24,13 +24,6 @@ stage_packages() {
   fi
   echo "All required system packages are already included in this image."
 }
-reboot_notice() {
-  if (( STAGED )); then
-    echo "Packages are staged. Reboot, then run lydsetup again to finish enabling this feature."
-    return 0
-  fi
-  return 1
-}
 
 ensure_flathub_system() {
   command -v flatpak >/dev/null 2>&1 || die "Flatpak is not installed."
