@@ -26,7 +26,7 @@ BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses B
 
 ## Unified installer
 
-The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO. The unified installer uses Btrfs by default.
+The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO. The unified installer image is built with Btrfs as its default filesystem selection; the actual target-disk layout must still be verified in Anaconda on each installer path.
 
 See [docs/BUILDING.md](docs/BUILDING.md) for build instructions, ISO generation, CI signing setup and Secure Boot notes.
 
@@ -59,7 +59,8 @@ bluebuild build recipes/lyd-kde-intel.yml
 
 - KDE Plasma (Fedora Kinoite 45)
 - Waterfox from Flathub (`net.waterfox.waterfox`), configured as the default browser
-- Mystical Global Theme, wallpaper, Plasma style, splash and generated icon theme
+- Mystical Global Theme, wallpaper, Plasma style, Plasma splash, Konsole profile and generated icon theme
+- Persistent swap file automatically sized to half of detected physical RAM on first boot (Btrfs-aware allocation)
 - Dolphin, Konsole, Kate, Ark, Okular, Spectacle and Discover
 - Flatpak support with Flathub, KDE Discover integration and KDE desktop portals
 - AppImage support with FUSE 2 compatibility and FUSE 3 runtime support
@@ -84,6 +85,12 @@ Podman-published ports are not automatically opened in firewalld. For example, a
 Virtualization packages are included and `libvirtd` is enabled. Add the administrative user to the `libvirt` and `kvm` groups with `lydsetup`'s virtualization option if needed; log out and back in for group membership to apply.
 
 Tailscale can be installed on any edition from `lydsetup`. The command adds Tailscale's official Fedora repository, layers its package, and enables `tailscaled` after reboot. Zed can be installed on workstation editions from `lydsetup`; it uses Zed's official per-user Linux installer and does not alter the immutable system deployment.
+
+## Updates, swap and rollback
+
+The Standard and NVIDIA workstation editions enable `lyd-swapfile.service` at boot. It creates a persistent swap file under `/var/lib/lyd/swap/` sized to half of detected physical RAM, rounded up to the next MiB. On Btrfs it uses `btrfs filesystem mkswapfile` so the file is allocated in a Btrfs-compatible way; other filesystems use a preallocated file. This is ordinary swap, not a hibernation guarantee.
+
+OS updates use bootc/rpm-ostree deployments. Each successful update creates a new bootable deployment while retaining the previous deployment for rollback; Fedora's boot menu exposes the available deployments. This is the supported atomic rollback mechanism and is more appropriate for the immutable OS than trying to boot arbitrary Btrfs snapshots with GRUB. It does not snapshot personal files in `/home` or mutable application data in `/var`; keep separate backups of those.
 
 ## Application formats and theming
 
@@ -136,7 +143,7 @@ Enter the environment with the short command `lydev` (or `distrobox enter lyd-at
 
 ## Mystical theme
 
-The Mystical theme is maintained in the separate [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes) repository. Image builds fetch a pinned commit of that repository, so the theme can evolve independently while image builds remain reproducible. It includes the KDE colour scheme, Global Theme, Plasma Style, wallpaper, splash screen, icon artwork and generated scalable icon theme. The visual identity uses midnight plum, amethyst, lavender and restrained antique-gold accents.
+The Mystical theme is maintained in the separate [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes) repository. Image builds fetch a pinned commit of that repository, so the theme can evolve independently while image builds remain reproducible. It includes the KDE colour scheme, Global Theme, Plasma Style, wallpaper, splash screen, icon artwork and generated scalable icon theme. The visual identity uses midnight plum, amethyst, lavender and restrained antique-gold accents. The currently committed theme repository includes the KDE palette, Plasma look-and-feel/splash, Plasma style, wallpaper and icon artwork/generator. Dedicated Mystical cursor artwork is not yet present, and the GRUB/Plymouth directories currently contain documentation but not installable theme assets; those components need to be authored and runtime-tested before they can be enabled safely.
 
 ## Important
 
