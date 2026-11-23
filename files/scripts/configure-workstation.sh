@@ -19,6 +19,8 @@ if [[ ! "$NVIDIA_PACKAGE" =~ ^nvidia-driver-580\. ]]; then
 fi
 command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the NVIDIA base image" >&2; exit 1; }
 
+systemctl enable lyd-swapfile.service
+
 install -d /etc/xdg
 cat > /etc/xdg/mimeapps.list <<'EOF'
 [Default Applications]
