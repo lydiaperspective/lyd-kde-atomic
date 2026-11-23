@@ -1,0 +1,30 @@
+name: Build Lyd KDE Atomic
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and publish image
+        uses: blue-build/github-action@v1
+        with:
+          recipe: recipes/lyd-kde.yml
+          registry: ghcr.io
+          organization: lydiaperspective
+          image_name: lyd-kde-atomic
+          tags: latest
+          pr ongel: false
