@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <object class="GtkWindow" id="editionSpokeWindow">
+    <property name="can-focus">False</property>
+    <property name="default-width">720</property>
+    <property name="default-height">420</property>
+    <child>
+      <object class="GtkBox" id="editionBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">18</property>
+        <property name="margin-start">32</property>
+        <property name="margin-end">32</property>
+        <property name="margin-top">32</property>
+        <property name="margin-bottom">32</property>
+        <child>
+          <object class="GtkLabel" id="editionHeading">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label">Choose your Lyd Atomic edition</property>
+            <property name="xalign">0</property>
+            <attributes>
+              <attribute name="weight" value="bold"/>
+              <attribute name="scale" value="1.35"/>
+            </attributes>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="editionDescription">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label">Select the system you want installed. The installer downloads only this edition from GitHub Container Registry, so an internet connection is required.</property>
+            <property name="wrap">True</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkComboBoxText" id="editionSelector">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="editionDetails">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label">Standard KDE: Intel/AMD graphics, with optional NVIDIA driver setup after installation.
+NVIDIA KDE: KDE workstation with the proprietary NVIDIA driver included.
+Server: Headless Fedora bootc server with Podman and Cockpit.</property>
+            <property name="wrap">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="editionNetworkWarning">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label">Important: keep the computer connected to the internet throughout installation. The selected image is not bundled on this ISO.</property>
+            <property name="wrap">True</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

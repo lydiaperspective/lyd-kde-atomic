@@ -18,11 +18,17 @@ The NVIDIA and Standard editions share the same KDE desktop, Waterfox Flatpak, M
 
 ## Project status
 
-Initial project foundation. Both image builds, ISO installers, update paths, NVIDIA driver operation, rollback and hardware support still require validation in a VM and on physical hardware.
+Initial project foundation. Image builds, installer, update paths, NVIDIA driver operation, rollback and hardware support still require validation in a VM and on physical hardware. The unified installer is a new implementation and must be tested before relying on it for a real installation.
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds all three editions and publishes them to GHCR. The ISO workflow can convert any published image into an installable ISO.
+BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds all three editions and publishes them to GHCR.
+
+## Unified installer
+
+The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO.
+
+See [docs/BUILDING.md](docs/BUILDING.md) for build instructions, ISO generation, CI signing setup and Secure Boot notes.
 
 ## Build locally
 
@@ -41,13 +47,12 @@ bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
 bluebuild build recipes/lyd-kde-intel.yml
 ```
 
-See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and ISO generation.
-
 ## GitHub Actions
 
 - Pushes to `main` and manual dispatch build all three editions in parallel.
 - Pull requests validate all three recipes without publishing.
-- The **Build installable ISO** workflow lets you choose NVIDIA, Standard or Server and a published image tag.
+- **Build unified installer ISO** creates a single ISO with all three edition choices.
+- **Build installable ISO** remains available for creating a single-edition ISO from a published image.
 - ISO artifacts include SHA256 checksums.
 
 ## Shared desktop
@@ -73,6 +78,8 @@ The Server edition is a separate headless Fedora bootc image:
 - `lydhelp` and `lydsetup`
 
 Cockpit is enabled through `cockpit.socket` and is available on TCP port 9090. SSH is enabled and allowed on TCP port 22. The default firewalld public zone allows only SSH, Cockpit and DHCPv6 client traffic. It deliberately does not open arbitrary container-published ports: open only the ports required by services you deploy, and prefer limiting them to the relevant network zone or source range.
+
+Podman-published ports are not automatically opened in firewalld. For example, after choosing an application port, add a permanent firewalld rule for that specific TCP or UDP port and reload firewalld. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
 
 Podman-published ports are not automatically opened in firewalld. For example, after choosing an application port, add a permanent firewalld rule for that specific TCP or UDP port and reload firewalld. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
 
@@ -110,7 +117,7 @@ Optional packages are not included in the base image. Atomic package changes cre
 
 ## BlueBuild development environment
 
-Run `lydsetup` and choose **BlueBuild development environment (Distrobox)**. If Distrobox is not installed, `lydsetup` layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
+Run `lydsetup` and choose **BlueBuild development environment (Distrobox)**. If Distrobox is not installed, it layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
 
 Enter the environment with the short command `lydev` (or `distrobox enter lyd-atomic-dev`). Clone this repository inside the shared home directory, then run `bluebuild build recipes/lyd-kde.yml`, `bluebuild build recipes/lyd-kde-intel.yml` or `bluebuild build recipes/lyd-server.yml`. The development container is rootless and intended for local builds; use the GitHub Actions workflow for publishing images.
 

@@ -1,0 +1,6 @@
+label: "Lyd-Atomic-Installer"
+grub2:
+  entries:
+    - name: "Install Lyd Atomic"
+      linux: "/images/pxeboot/vmlinuz inst.stage2=hd:LABEL=Lyd-Atomic-Installer console=tty0 inst.graphical rhgb quiet"
+      initrd: "/images/pxeboot/initrd.img"

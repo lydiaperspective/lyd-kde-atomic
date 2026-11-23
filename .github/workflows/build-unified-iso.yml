@@ -1,0 +1,80 @@
+name: Build unified installer ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      rootfs_type:
+        description: Filesystem for the installed system
+        type: choice
+        required: true
+        default: btrfs
+        options:
+          - btrfs
+          - xfs
+          - ext4
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  iso:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Build custom Anaconda installer container
+        run: |
+          set -Eeuo pipefail
+          sudo podman build --pull=always \
+            --file installer/Containerfile \
+            --tag localhost/lyd-atomic-installer:latest .
+
+      - name: Build unified ISO with Image Builder
+        env:
+          ROOTFS_TYPE: ${{ inputs.rootfs_type }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p output
+          case "$ROOTFS_TYPE" in
+            btrfs|xfs|ext4) ;;
+            *) echo "Unsupported root filesystem: $ROOTFS_TYPE" >&2; exit 1 ;;
+          esac
+
+          sudo podman run --rm --privileged \
+            --security-opt label=disable \
+            -v "$PWD/output:/output" \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            ghcr.io/osbuild/image-builder-cli:latest \
+            build \
+            --bootc-ref localhost/lyd-atomic-installer:latest \
+            --bootc-default-fs "$ROOTFS_TYPE" \
+            --output-dir /output \
+            bootc-generic-iso
+
+          test -n "$(find output -maxdepth 1 -type f -name '*.iso' -print -quit)"
+
+      - name: Publish ISO to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          sudo chown -R "$(id -u):$(id -g)" output
+          bash files/scripts/publish-iso-release.sh unified latest output
+
+      - name: Upload ISO build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyd-atomic-unified-installer-iso
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
