@@ -12,7 +12,6 @@ output_dir="$3"
 
 command -v gh >/dev/null || { echo "GitHub CLI (gh) is required" >&2; exit 1; }
 [[ -n "${GITHUB_REPOSITORY:-}" ]] || { echo "GITHUB_REPOSITORY is not set" >&2; exit 1; }
-[[ -n "${GITHUB_RUN_ID:-}" ]] || { echo "GITHUB_RUN_ID is not set" >&2; exit 1; }
 
 mapfile -d '' iso_files < <(find "$output_dir" -type f -name '*.iso' -print0)
 if [[ ${#iso_files[@]} -ne 1 ]]; then
@@ -101,13 +100,31 @@ else
 fi
 
 safe_image_tag="$(printf '%s' "$image_tag" | tr -c 'A-Za-z0-9._-' '-')"
-release_tag="iso-${edition}-${safe_image_tag}-${GITHUB_RUN_ID}"
+release_prefix="iso-${edition}-${safe_image_tag}"
+release_tag="$release_prefix"
 release_title="Lyd Atomic ${edition} ISO (${image_tag})"
 release_notes="Installable Lyd Atomic ISO for the **${edition}** edition, built from image tag **${image_tag}**.
 
 SHA-256 checksum is included. If the ISO was split into multiple assets, download all part files and recombine-iso.sh into the same directory, then run the script."
 
-echo "Publishing release $release_tag with ${#assets[@]} assets."
+# Keep one rolling release for each edition and image tag. Remove the prior
+# stable release and any older run-ID releases before publishing the replacement.
+echo "Looking for previous latest releases matching $release_prefix..."
+mapfile -t previous_releases < <(
+  gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' |
+    while IFS= read -r existing_tag; do
+      case "$existing_tag" in
+        "$release_prefix"*) printf '%s\\n' "$existing_tag" ;;
+      esac
+    done
+)
+
+for previous_tag in "${previous_releases[@]}"; do
+  echo "Deleting previous ISO release: $previous_tag"
+  gh release delete "$previous_tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+done
+
+echo "Publishing replacement release $release_tag with ${#assets[@]} assets."
 gh release create "$release_tag" "${assets[@]}" \
   --repo "$GITHUB_REPOSITORY" \
   --title "$release_title" \
