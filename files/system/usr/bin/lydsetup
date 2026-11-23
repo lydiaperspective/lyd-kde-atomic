@@ -407,7 +407,11 @@ main() {
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
-      case "$1" in\n        printscan) setup_printscan ;;\n        media) setup_media ;;\n        mediaedit) setup_mediaedit ;;\n      esac
+      case "$1" in
+        printscan) setup_printscan ;;
+        media) setup_media ;;
+        mediaedit) setup_mediaedit ;;
+      esac
       exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
@@ -442,15 +446,23 @@ Interactive optional-feature manager for Lyd Atomic.
 
 Usage: lydsetup [media enable|mediaedit enable|printscan enable|solaar enable|dev|development|devbox ...]
 
-Development commands:
-  lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
-  lydsetup dev devbox enable              Same as above
-  lydsetup dev androiddev enable          Set up Android Studio development
-  lydsetup dev container enable           Set up Podman container development
-  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
-  lydsetup printscan enable               Enable printing/scanning and install Skanpage
-  lydsetup media enable                   Install media playback Flatpaks\n  lydsetup mediaedit enable               Install media editing and conversion Flatpaks
-  Use 'development' instead of 'dev' as an alias.
+Available commands:
+  lydsetup                              Show this command list
+  lydsetup --help                       Show this command list
+  lydsetup --version                    Show version
+  lydsetup printscan enable             Enable printing/scanning and install Skanpage
+  lydsetup media enable                 Install media playback Flatpaks
+  lydsetup mediaedit enable             Install media editing/conversion Flatpaks
+  lydsetup solaar enable                Install Solaar system-wide
+  lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
+  lydsetup dev devbox enable            Same as above
+  lydsetup dev androiddev enable        Set up Android Studio development
+  lydsetup dev container enable        Set up Podman container development
+  lydsetup dev theme enable            Set up KDE theme/icon/cursor/Plymouth development
+  Use 'development' instead of 'dev' as an alias for development commands.
+
+Running lydsetup without arguments displays this list instead of opening the
+interactive feature menu. Run lydsetup with an explicit feature command to set it up.
 
 Features:
   NVIDIA proprietary driver (RPM Fusion; standard edition)
