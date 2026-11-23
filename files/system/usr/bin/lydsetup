@@ -13,7 +13,7 @@ confirm() {
   read -r -p "$1 [y/N] " answer
   [[ "$answer" =~ ^[Yy]$ ]]
 }
-stage_packages() {
+require_packages() {
   local -a missing=()
   local pkg
   for pkg in "$@"; do rpm -q "$pkg" >/dev/null 2>&1 || missing+=("$pkg"); done
@@ -40,7 +40,7 @@ install_flatpaks_system() {
 setup_printscan() {
   echo "This enables CUPS printing, USB/network scanner support and Skanpage."
   echo "All required system packages are already included in the image."
-  stage_packages cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi
+  require_packages cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi
   if ! rpm -q cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi >/dev/null 2>&1; then
     echo "Printing/scanning packages were not installed. If you cancelled, rerun: lydsetup printscan enable"
     return 0
@@ -81,7 +81,7 @@ setup_mediaedit() {
 
 setup_gaming() {
   echo "Checking the preinstalled gaming system packages."
-  stage_packages steam steam-devices gamemode mangohud gamescope protontricks
+  require_packages steam steam-devices gamemode mangohud gamescope protontricks
   echo "Installing Steam companion and game launchers from Flathub."
   install_flatpaks_system \
     com.vysp3r.ProtonPlus \
@@ -96,7 +96,7 @@ setup_gaming() {
 
 setup_gamingui() {
   echo "Checking the preinstalled Steam and Gamescope packages."
-  stage_packages steam steam-devices gamescope
+  require_packages steam steam-devices gamescope
   local bin_dir="$HOME/.local/bin"
   local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   mkdir -p "$bin_dir" "$app_dir"
@@ -150,7 +150,7 @@ setup_steamtheme() {
 
 setup_8bitdo() {
   echo "Checking the preinstalled Steam controller device support."
-  stage_packages steam-devices
+  require_packages steam-devices
   local rule_file="/etc/udev/rules.d/71-8bitdo-pro2.rules"
   local temp_file
   temp_file="$(mktemp)"
@@ -176,7 +176,7 @@ setup_virtualization() {
   if rpm -q cockpit-machines >/dev/null 2>&1; then
     echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
   else
-    stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
+    require_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
   fi
   echo "Enabling libvirt and preparing the current account for virtualization."
   sudo systemctl enable --now libvirtd.service
@@ -188,12 +188,12 @@ setup_virtualization() {
   echo "Group membership takes effect after logging out and back in."
 }
 setup_coolercontrol() {
-  stage_packages coolercontrol coolercontrold liquidctl
+  require_packages coolercontrol coolercontrold liquidctl
   echo "Enabling the preinstalled CoolerControl daemon."
   sudo systemctl enable --now coolercontrold.service
 }
 setup_tuned() {
-  stage_packages tuned tuned-ppd
+  require_packages tuned tuned-ppd
   echo "TuneD + tuned-ppd will replace power-profiles-daemon."
   confirm "Enable TuneD and tuned-ppd?" || return 0
   sudo systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
@@ -201,7 +201,7 @@ setup_tuned() {
   sudo systemctl enable --now tuned-ppd.service
 }
 setup_tailscale() {
-  stage_packages tailscale
+  require_packages tailscale
   sudo systemctl enable --now tailscaled.service
   echo "Tailscale daemon is enabled."
   if command -v kwriteconfig6 >/dev/null 2>&1 || [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
@@ -215,7 +215,7 @@ setup_tailscale() {
   fi
 }
 setup_solaar() {
-  stage_packages solaar
+  require_packages solaar
   echo "Solaar is included in the image."
   echo "Launch it from the application menu or run: solaar"
 }
@@ -224,8 +224,7 @@ setup_devbox() {
   local config_dir config_file box_name
   box_name="lyd-atomic-dev"
   if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
-    echo "Distrobox and Podman are required on the host. Missing packages will be layered into the next deployment."
-    stage_packages distrobox podman
+    require_packages distrobox podman
       command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
     command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot into the new deployment, then run lydsetup again."
   fi
@@ -260,7 +259,7 @@ DISTROBOX_CONFIG
 }
 
 ensure_distrobox_host() {
-  stage_packages distrobox podman
+  require_packages distrobox podman
   return 0
 }
 setup_androiddev() {
@@ -268,7 +267,7 @@ setup_androiddev() {
   ensure_distrobox_host || return 0
   if ! command -v flatpak >/dev/null 2>&1; then
     echo "Flatpak is required to install Android Studio."
-    stage_packages flatpak
+    die "Flatpak is required but is not present in this image."
       command -v flatpak >/dev/null 2>&1 || die "Flatpak is unavailable after deployment. Reboot and retry."
   fi
   echo "This sets up Android Studio on the host and a Fedora development Distrobox."
@@ -525,7 +524,7 @@ setup_nvidia() {
     command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi || true
     return 0
   fi
-  stage_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
+  require_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
   echo "NVIDIA driver packages are included in this image."
   echo "Check module compilation before relying on the driver:"
   echo "  systemctl status akmods"
@@ -625,7 +624,7 @@ Running lydsetup without arguments displays this list instead of opening the
 interactive feature menu. Run lydsetup with an explicit feature command to set it up.
 
 Features:
-  NVIDIA proprietary driver (RPM Fusion; standard edition)
+  NVIDIA proprietary driver (preinstalled; standard edition)
   Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
