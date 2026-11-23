@@ -512,7 +512,7 @@ feature_enabled() {
     gamingui)
       rpm -q steam steam-devices gamescope >/dev/null 2>&1 &&
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
-        [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]];
+        [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]] ;;
     gaming)
       rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
         flatpak_installed com.vysp3r.ProtonPlus &&
