@@ -7,13 +7,14 @@ if rpm -q firefox >/dev/null 2>&1; then
   exit 1
 fi
 
-# BlueBuild's Fedora 45 Kinoite NVIDIA base image carries the proprietary
-# 580-series driver and a prebuilt, signed kernel module. Verify the branch
-# rather than silently shipping a different driver series.
-rpm -q nvidia-driver
-NVIDIA_VERSION="$(modinfo -F version nvidia)"
-if [[ "$NVIDIA_VERSION" != 580.* ]]; then
-  echo "Expected proprietary NVIDIA 580.x, found: $NVIDIA_VERSION" >&2
+# Verify the NVIDIA userspace driver is present and on the expected branch.
+# Do not use modinfo here: image builds do not have the host's booted kernel
+# module tree, so a valid prebuilt NVIDIA module may not be visible at build
+# time. Kernel-module availability is a runtime/boot validation.
+NVIDIA_PACKAGE="$(rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}' nvidia-driver)"
+echo "Detected NVIDIA driver package: $NVIDIA_PACKAGE"
+if [[ ! "$NVIDIA_PACKAGE" =~ ^nvidia-driver-580\. ]]; then
+  echo "Expected proprietary NVIDIA 580.x, found: $NVIDIA_PACKAGE" >&2
   exit 1
 fi
 command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the NVIDIA base image" >&2; exit 1; }
