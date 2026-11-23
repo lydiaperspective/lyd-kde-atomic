@@ -27,6 +27,7 @@ modules:
         - htop
         - fastfetch
         - btrfs-progs
+        - util-linux
         - aurorae
         - fuse
         - fuse-libs
