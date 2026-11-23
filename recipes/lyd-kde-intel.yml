@@ -12,6 +12,7 @@ modules:
         - kate
         - ark
         - okular
+        - kup-backup
         - spectacle
         - kcalc
         - plasma-discover
