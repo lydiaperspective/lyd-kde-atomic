@@ -30,14 +30,14 @@ install -m 0644 "$SOURCE/README.md" /usr/share/lyd/mystical/README.md
 
 # Install the project's first-login wallpaper helper. It only applies the
 # bundled wallpaper once, preserving the user's later wallpaper choices.
-install -D -m 0755 "$WORK/theme/scripts/lyd-mystical-first-login" /usr/local/lib/lyd/lyd-mystical-first-login
+install -D -m 0755 "$WORK/theme/scripts/lyd-mystical-first-login" /usr/libexec/lyd/lyd-mystical-first-login
 install -d /etc/xdg/autostart
 cat > /etc/xdg/autostart/lyd-mystical-wallpaper.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=Lyd Mystical Wallpaper
 Comment=Set the Mystical moonlit garden wallpaper on first login
-Exec=/usr/local/lib/lyd/lyd-mystical-first-login
+Exec=/usr/libexec/lyd/lyd-mystical-first-login
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=2
 EOF
