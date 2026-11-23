@@ -7,6 +7,10 @@ on:
       - '.github/workflows/build-unified-iso.yml'
       - 'files/scripts/publish-iso-release.sh'
   workflow_dispatch:
+concurrency:
+  group: unified-iso-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: read
