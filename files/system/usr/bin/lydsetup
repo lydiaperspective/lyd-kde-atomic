@@ -221,10 +221,12 @@ HELP
     echo "  4) TuneD + tuned-ppd"
     echo "  5) Tailscale VPN"
     if (( server_edition )); then
-      echo "  6) BlueBuild development environment (Distrobox)"\n      echo "  7) Exit"
+      echo "  6) BlueBuild development environment (Distrobox)"
+      echo "  7) Exit"
     else
       echo "  6) Zed editor"
-      echo "  7) Exit"
+      echo "  7) BlueBuild development environment (Distrobox)"
+      echo "  8) Exit"
     fi
     read -r -p "Select a feature: " choice
     case "$choice" in
@@ -233,8 +235,9 @@ HELP
       3) setup_coolercontrol ;;
       4) setup_tuned ;;
       5) setup_tailscale ;;
-      6) if (( server_edition )); then break; else setup_zed; fi ;;
-      7) break ;;
+      6) if (( server_edition )); then setup_development; else setup_zed; fi ;;
+      7) if (( server_edition )); then break; else setup_development; fi ;;
+      8) break ;;
       *) echo "Choose a listed number." ;;
     esac
   done
