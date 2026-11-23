@@ -331,6 +331,7 @@ Usage:
   lydsetup dev devbox enable
   lydsetup dev androiddev enable
   lydsetup dev container enable
+  lydsetup dev theme enable
   lydsetup development <same subcommands>
 
 Development environments:
@@ -436,7 +437,7 @@ Development commands:
   lydsetup dev container enable           Set up Podman container development
   lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
   lydsetup printscan enable               Enable printing/scanning and install Skanpage
-  lydsetup media enable                   Install media Flatpaks\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
+  lydsetup media enable                   Install media Flatpaks
   Use 'development' instead of 'dev' as an alias.
 
 Features:
