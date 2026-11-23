@@ -200,6 +200,21 @@ EOF
   echo "The session requires a working Wayland-compatible GPU driver."
 }
 setup_8bitdo() {
+  local fedora free_repo nonfree_repo
+  fedora="$(rpm -E %fedora)"
+  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
+  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
+
+  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
+    echo "The steam-devices package is provided through RPM Fusion on this Fedora setup."
+    confirm "Add RPM Fusion Free and Nonfree repositories? A reboot will be required." || return 0
+    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
+    STAGED=1
+    reboot_notice
+    echo "After reboot, run: lydsetup 8bitdo"
+    return 0
+  fi
+
   echo "Installing Steam controller device support and 8BitDo HID permissions."
   stage_packages steam-devices
   reboot_notice && return 0
