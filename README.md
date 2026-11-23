@@ -22,7 +22,7 @@ Initial project foundation. Both image builds, ISO installers, update paths, NVI
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds both editions and publishes them to GHCR. The ISO workflow can convert either published image into an installable ISO.
+BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds all three editions and publishes them to GHCR. The ISO workflow can convert any published image into an installable ISO.
 
 ## Build locally
 
@@ -46,7 +46,7 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 ## GitHub Actions
 
 - Pushes to `main` and manual dispatch build all three editions in parallel.
-- Pull requests validate both recipes without publishing.
+- Pull requests validate all three recipes without publishing.
 - The **Build installable ISO** workflow lets you choose NVIDIA, Standard or Server and a published image tag.
 - ISO artifacts include SHA256 checksums.
 
