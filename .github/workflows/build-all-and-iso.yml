@@ -13,6 +13,10 @@ on:
           - standard
           - server
 
+concurrency:
+  group: build-all-and-iso-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write
