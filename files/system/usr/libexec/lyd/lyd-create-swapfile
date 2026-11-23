@@ -40,4 +40,4 @@ if ! swapon --show=NAME --noheadings | grep -Fxq "$SWAP_FILE"; then
   swapon "$SWAP_FILE"
 fi
 
-echo "Lyd Atomic swap is active: $SWAP_FILE ($((size_mib / 1024)) GiB rounded, target half of RAM)."
+echo "Lyd Atomic swap is active: $SWAP_FILE (${size_mib} MiB; target is half of detected RAM)."
