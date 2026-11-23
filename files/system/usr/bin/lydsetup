@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.8
+VERSION=0.4.9
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -181,6 +181,8 @@ setup_tailscale() {
   fi
   sudo systemctl enable --now tailscaled.service
   echo "Tailscale daemon is enabled."
+  echo "Installing KTailctl, the KDE desktop interface for Tailscale."
+  install_flatpaks_system org.fkoehler.KTailctl
   if confirm "Run 'tailscale up' now to connect this machine to your tailnet?"; then
     sudo tailscale up
   else
