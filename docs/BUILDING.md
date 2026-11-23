@@ -31,9 +31,17 @@ Pushes to `main` and manual dispatch publish the image to GHCR. Pull requests va
 
 The ISO is intended for fresh installations. Test it in a UEFI VM first, including networking, user creation, KDE login, Flatpak setup, update deployment, rollback, and shutdown/reboot. Review the installer's storage choices carefully before confirming any disk changes.
 
-## NVIDIA driver
+## NVIDIA driver and Secure Boot
 
-The initial image uses RPM Fusion's proprietary `akmod-nvidia-580xx` branch and matching 580xx userspace packages. This is the legacy branch for supported Maxwell, Pascal and Volta GPUs; it is not the current driver branch for newer GPUs. The image build explicitly checks for the 580xx packages and runs `akmods --force`, so a missing or unbuildable kernel module should fail the build rather than silently falling back. Verify the installed driver with `nvidia-smi` after boot. Secure Boot may require enrolling/signing the akmods key before the module can load.
+The image is based on BlueBuild's Fedora 45 Kinoite NVIDIA image, which provides the proprietary NVIDIA 580.x driver and a prebuilt, signed kernel module. The recipe verifies that the installed kernel module reports version 580.x. This branch is intended for supported older NVIDIA GPUs; newer GPUs should use a current driver branch instead.
+
+For Secure Boot, enroll the BlueBuild akmods certificate before relying on the NVIDIA module:
+
+```bash
+sudo mokutil --import /etc/pki/akmods/certs/akmods-blue-build.der
+```
+
+Reboot, enroll the key in the firmware's MOK manager, then verify the driver with `nvidia-smi`. If Secure Boot is disabled, the enrollment step is not required.
 
 ## Optional feature manager
 
