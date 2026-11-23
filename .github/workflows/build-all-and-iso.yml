@@ -1,0 +1,122 @@
+name: Build all images and latest ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_flavour:
+        description: Edition to package into the ISO after all images build
+        type: choice
+        required: true
+        default: standard
+        options:
+          - nvidia
+          - standard
+          - server
+      rootfs_type:
+        description: Filesystem for the installed system
+        type: choice
+        required: true
+        default: btrfs
+        options:
+          - btrfs
+          - xfs
+          - ext4
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build and publish ${{ matrix.flavour }} image
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavour: nvidia
+            recipe: lyd-kde.yml
+          - flavour: standard
+            recipe: lyd-kde-intel.yml
+          - flavour: server
+            recipe: lyd-server.yml
+    steps:
+      - name: Build and publish ${{ matrix.flavour }} image
+        uses: blue-build/github-action@v1
+        with:
+          recipe: ${{ matrix.recipe }}
+          registry: ghcr.io
+          registry_namespace: lydiaperspective
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          pr_event_number: 0
+          push: true
+          maximize_build_space: true
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+
+  iso:
+    name: Build latest ${{ inputs.image_flavour }} ISO
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Login to GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build ISO from newly published latest image
+        env:
+          IMAGE_FLAVOUR: ${{ inputs.image_flavour }}
+          ROOTFS_TYPE: ${{ inputs.rootfs_type }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p output
+
+          case "$IMAGE_FLAVOUR" in
+            nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
+            standard) IMAGE_NAME="lyd-atomic-standard" ;;
+            server) IMAGE_NAME="lyd-atomic-server" ;;
+            *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
+          esac
+
+          case "$ROOTFS_TYPE" in
+            btrfs|xfs|ext4) ;;
+            *) echo "Unsupported root filesystem: $ROOTFS_TYPE" >&2; exit 1 ;;
+          esac
+
+          IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:latest"
+          echo "Pulling newly published image: $IMAGE"
+          sudo podman pull "$IMAGE"
+
+          sudo podman run --rm --privileged --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/output:/output" \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type iso \
+            --rootfs "$ROOTFS_TYPE" \
+            "$IMAGE"
+
+      - name: Generate checksums
+        run: |
+          set -Eeuo pipefail
+          find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
+            sha256sum "$iso" > "$iso.sha256"
+          done
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyd-atomic-${{ inputs.image_flavour }}-latest-iso
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
