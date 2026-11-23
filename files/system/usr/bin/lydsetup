@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.5.3
+VERSION=0.6.0
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -17,15 +17,13 @@ confirm() {
 stage_packages() {
   local -a missing=()
   local pkg
-  STAGED=0
   for pkg in "$@"; do rpm -q "$pkg" >/dev/null 2>&1 || missing+=("$pkg"); done
-  if (("${#missing[@]}" == 0)); then echo "All requested packages are already installed."; return 0; fi
-  echo "The following system packages will be layered:"
-  printf '  - %s\n' "${missing[@]}"
-  echo "This creates a new deployment. Reboot to use the updated system."
-  confirm "Continue?" || return 0
-  sudo rpm-ostree install "${missing[@]}"
-  STAGED=1
+  if (("${#missing[@]}" != 0)); then
+    echo "This feature requires packages that are not present in this image:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    die "Update to an image build that includes these packages. Lyd Atomic does not layer system RPMs at runtime."
+  fi
+  echo "All required system packages are already included in this image."
 }
 reboot_notice() {
   if (( STAGED )); then
@@ -91,67 +89,23 @@ setup_mediaedit() {
 }
 
 setup_gaming() {
-  local fedora free_repo nonfree_repo
-  fedora="$(rpm -E %fedora)"
-  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
-  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
-
-  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
-    echo "Steam and some gaming packages require RPM Fusion Nonfree."
-    echo "This will add the RPM Fusion Free and Nonfree repository definitions."
-    confirm "Add RPM Fusion repositories? A reboot will be required before continuing." || return 0
-    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
-    STAGED=1
-    reboot_notice
-    echo "After reboot, run: lydsetup gaming enable"
-    return 0
-  fi
-
-  echo "Installing the gaming system packages."
+  echo "Checking the preinstalled gaming system packages."
   stage_packages steam steam-devices gamemode mangohud gamescope protontricks
-  reboot_notice && return 0
-  if ! rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1; then
-    echo "Gaming system packages are not all installed. If you cancelled, rerun: lydsetup gaming enable"
-    return 0
-  fi
-
   echo "Installing Steam companion and game launchers from Flathub."
   install_flatpaks_system \
     com.vysp3r.ProtonPlus \
     net.lutris.Lutris \
     com.heroicgameslauncher.hgl
-
   echo
   echo "Gaming setup is complete."
-  echo "Steam is installed as a system package; ProtonPlus, Lutris and Heroic Games Launcher are installed as system Flatpaks."
+  echo "Steam and gaming utilities are included in the image; ProtonPlus, Lutris and Heroic are system Flatpaks."
   echo "Example Steam launch option for GameMode and MangoHud:"
   echo "  gamemoderun mangohud %command%"
 }
 
 setup_gamingui() {
-  local fedora free_repo nonfree_repo
-  fedora="$(rpm -E %fedora)"
-  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
-  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
-
-  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
-    echo "Steam requires the RPM Fusion repositories on Fedora."
-    confirm "Add RPM Fusion Free and Nonfree repositories? A reboot will be required." || return 0
-    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
-    STAGED=1
-    reboot_notice
-    echo "After reboot, run: lydsetup gamingui"
-    return 0
-  fi
-
-  echo "Installing Steam and the Gamescope compositor."
+  echo "Checking the preinstalled Steam and Gamescope packages."
   stage_packages steam steam-devices gamescope
-  reboot_notice && return 0
-  if ! rpm -q steam steam-devices gamescope >/dev/null 2>&1; then
-    echo "Gaming UI packages are not all installed. If you cancelled, rerun: lydsetup gamingui"
-    return 0
-  fi
-
   local bin_dir="$HOME/.local/bin"
   local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   mkdir -p "$bin_dir" "$app_dir"
@@ -192,12 +146,10 @@ Icon=steam
 Terminal=false
 Categories=Game;System;
 EOF
-
   echo
-  echo "Steam Gamescope support is installed."
+  echo "Steam Gamescope support is configured."
   echo "Use 'Switch to Lyd Gamescope' from the application menu."
   echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
-  echo "The session requires a working Wayland-compatible GPU driver."
 }
 setup_steamtheme() {
   local helper="/usr/share/lyd/lyd-steamtheme-setup"
@@ -206,26 +158,8 @@ setup_steamtheme() {
 }
 
 setup_8bitdo() {
-  local fedora free_repo nonfree_repo
-  fedora="$(rpm -E %fedora)"
-  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
-  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
-
-  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
-    echo "The steam-devices package is provided through RPM Fusion on this Fedora setup."
-    confirm "Add RPM Fusion Free and Nonfree repositories? A reboot will be required." || return 0
-    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
-    STAGED=1
-    reboot_notice
-    echo "After reboot, run: lydsetup 8bitdo"
-    return 0
-  fi
-
-  echo "Installing Steam controller device support and 8BitDo HID permissions."
+  echo "Checking the preinstalled Steam controller device support."
   stage_packages steam-devices
-  reboot_notice && return 0
-  rpm -q steam-devices >/dev/null 2>&1 || die "steam-devices is not installed. Retry: lydsetup 8bitdo"
-
   local rule_file="/etc/udev/rules.d/71-8bitdo-pro2.rules"
   local temp_file
   temp_file="$(mktemp)"
@@ -238,14 +172,12 @@ ACTION!="remove", SUBSYSTEM=="hidraw", KERNELS=="*2DC8:*", MODE="0660", TAG+="ua
 UDEV_RULES
   sudo install -D -m 0644 "$temp_file" "$rule_file"
   rm -f "$temp_file"
-
   echo "Reloading udev rules and updating connected HID device permissions."
   sudo udevadm control --reload-rules
   sudo udevadm trigger --subsystem-match=hidraw
   echo
   echo "8BitDo controller support is configured."
   echo "Disconnect and reconnect your Pro 2, then fully restart Steam."
-  echo "In Steam Settings > Controller, check that the Pro 2 is detected."
   echo "For the rear paddles, use a controller mode and firmware that exposes them to Steam Input; udev permissions alone cannot create missing controller inputs."
 }
 
@@ -254,7 +186,6 @@ setup_virtualization() {
     echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
   else
     stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
-    reboot_notice && return 0
   fi
   echo "Enabling libvirt and preparing the current account for virtualization."
   sudo systemctl enable --now libvirtd.service
@@ -266,44 +197,26 @@ setup_virtualization() {
   echo "Group membership takes effect after logging out and back in."
 }
 setup_coolercontrol() {
-  local fedora repo
-  fedora="$(rpm -E %fedora)"
-  repo="/etc/yum.repos.d/codifryed-CoolerControl-fedora-$fedora.repo"
-  echo "CoolerControl is provided by its Fedora COPR repository."
-  confirm "Add the CoolerControl repository and stage its daemon and desktop package?" || return 0
-  sudo install -d -m 0755 /etc/yum.repos.d
-  sudo curl -fL "https://copr.fedorainfracloud.org/coprs/codifryed/CoolerControl/repo/fedora-$fedora/codifryed-CoolerControl-fedora-$fedora.repo" -o "$repo"
-  sudo rpm-ostree refresh-md
   stage_packages coolercontrol coolercontrold liquidctl
-  reboot_notice && return 0
+  echo "Enabling the preinstalled CoolerControl daemon."
   sudo systemctl enable --now coolercontrold.service
 }
 setup_tuned() {
-  echo "TuneD + tuned-ppd will replace power-profiles-daemon."
-  confirm "Stage tuned and tuned-ppd?" || return 0
   stage_packages tuned tuned-ppd
-  reboot_notice && return 0
+  echo "TuneD + tuned-ppd will replace power-profiles-daemon."
+  confirm "Enable TuneD and tuned-ppd?" || return 0
   sudo systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
   sudo systemctl enable --now tuned.service
   sudo systemctl enable --now tuned-ppd.service
 }
 setup_tailscale() {
-  local repo_file="/etc/yum.repos.d/tailscale.repo"
-  if ! rpm -q tailscale >/dev/null 2>&1; then
-    echo "Tailscale will be installed from its official Fedora RPM repository."
-    confirm "Add the Tailscale repository and stage the tailscale package?" || return 0
-    sudo install -d -m 0755 /etc/yum.repos.d
-    if [[ ! -s "$repo_file" ]]; then
-      sudo curl -fL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o "$repo_file"
-    fi
-    sudo rpm-ostree refresh-md
-    stage_packages tailscale
-    reboot_notice && return 0
-  fi
+  stage_packages tailscale
   sudo systemctl enable --now tailscaled.service
   echo "Tailscale daemon is enabled."
-  echo "Installing KTailctl, the KDE desktop interface for Tailscale."
-  install_flatpaks_system org.fkoehler.KTailctl
+  if command -v kwriteconfig6 >/dev/null 2>&1 || [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+    echo "Installing KTailctl, the KDE desktop interface for Tailscale."
+    install_flatpaks_system org.fkoehler.KTailctl
+  fi
   if confirm "Run 'tailscale up' now to connect this machine to your tailnet?"; then
     sudo tailscale up
   else
@@ -311,20 +224,9 @@ setup_tailscale() {
   fi
 }
 setup_solaar() {
-  if rpm -q solaar >/dev/null 2>&1; then
-    echo "Solaar is already installed system-wide."
-    echo "Launch it from the application menu or run: solaar"
-    return 0
-  fi
-  echo "Solaar will be installed system-wide with its Fedora udev rules."
-  echo "The package will be layered into a new deployment and requires a reboot."
   stage_packages solaar
-  reboot_notice && return 0
-  if rpm -q solaar >/dev/null 2>&1; then
-    echo "Solaar is installed system-wide. Launch it from the application menu or run: solaar"
-  else
-    echo "Solaar installation was not staged."
-  fi
+  echo "Solaar is included in the image."
+  echo "Launch it from the application menu or run: solaar"
 }
 
 setup_devbox() {
@@ -368,13 +270,7 @@ DISTROBOX_CONFIG
 }
 
 ensure_distrobox_host() {
-  if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
-    echo "Distrobox and Podman are required on the host. Missing packages will be layered into the next deployment."
-    stage_packages distrobox podman
-    reboot_notice && return 1
-    command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot, then run lydsetup again."
-    command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot, then run lydsetup again."
-  fi
+  stage_packages distrobox podman
   return 0
 }
 setup_androiddev() {
@@ -635,36 +531,8 @@ setup_zed() {
   echo "Zed installation finished. If needed, add ~/.local/bin to PATH."
 }
 setup_nvidia() {
-  local fedora free_repo nonfree_repo sb_state
-  if rpm -q akmod-nvidia xorg-x11-drv-nvidia >/dev/null 2>&1; then
-    echo "NVIDIA driver packages are already installed."
-    command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi || true
-    return 0
-  fi
-  fedora="$(rpm -E %fedora)"
-  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
-  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
-  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
-    echo "This will add RPM Fusion repository definitions for Fedora $fedora."
-    confirm "Add RPM Fusion repositories? A reboot will be required before continuing." || return 0
-    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
-    STAGED=1
-    reboot_notice
-    return 0
-  fi
-  echo "This installs the current proprietary NVIDIA driver from RPM Fusion using akmods."
-  echo "It may use a newer driver branch than the NVIDIA edition's prebuilt 580.x driver."
-  echo "The kernel module is compiled for this system and may take several minutes."
-  if command -v mokutil >/dev/null 2>&1; then
-    sb_state="$(mokutil --sb-state 2>/dev/null || true)"
-    if grep -qi 'enabled' <<<"$sb_state"; then
-      echo "WARNING: Secure Boot is enabled. The akmod may not load without module signing"
-      echo "and certificate enrollment. This setup does not enroll keys automatically."
-      confirm "Continue anyway?" || return 0
-    fi
-  fi
   stage_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
-  reboot_notice && return 0
+  echo "NVIDIA driver packages are included in this image."
   echo "Check module compilation before relying on the driver:"
   echo "  systemctl status akmods"
   echo "  journalctl -u akmods"
@@ -675,7 +543,6 @@ main() {
     printscan|media|mediaedit|gaming)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup $1 enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       case "$1" in
         printscan) setup_printscan ;;
@@ -692,21 +559,18 @@ main() {
     gamingui)
       [[ $# -eq 1 ]] || die "Usage: lydsetup gamingui"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_gamingui
       exit 0 ;;
     8bitdo)
       [[ $# -eq 1 ]] || die "Usage: lydsetup 8bitdo"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_8bitdo
       exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_solaar
       exit 0 ;;
@@ -718,13 +582,11 @@ main() {
       exit 0 ;;
     devbox)
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_devbox
       exit 0 ;;
     dev|development)
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
-      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       case "${2:-}" in
         devbox) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_devbox ;;
@@ -773,16 +635,15 @@ Features:
   Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
-  Tailscale VPN client (official Fedora repository; all editions)
+  Tailscale VPN client (preinstalled; all editions)
   Zed editor (official per-user Linux installer; workstation editions)
   BlueBuild development environment (Distrobox; all editions)
-  Solaar Logitech device manager (system package; workstation editions)
+  Solaar Logitech device manager (preinstalled system package)
   Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
   Gaming (Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
 
-System package changes create a new deployment and require a reboot.
-Run lydsetup again after reboot if prompted to finish enabling this feature.
+All system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
 separate module-signing setup before the driver can load.
 Logs: $LOG
