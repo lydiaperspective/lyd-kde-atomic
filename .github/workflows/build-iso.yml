@@ -11,6 +11,7 @@ on:
         options:
           - nvidia
           - standard
+          - server
       image_tag:
         description: Published image tag to convert
         required: true
@@ -41,6 +42,7 @@ jobs:
           case "$IMAGE_FLAVOUR" in
             nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
             standard) IMAGE_NAME="lyd-atomic-standard" ;;
+            server) IMAGE_NAME="lyd-atomic-server" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
           IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:$IMAGE_TAG"
