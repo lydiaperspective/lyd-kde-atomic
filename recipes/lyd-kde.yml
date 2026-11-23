@@ -13,6 +13,7 @@ modules:
         - ark
         - okular
         - kup-backup
+        - libdisplay-info
         - spectacle
         - kcalc
         - plasma-discover
