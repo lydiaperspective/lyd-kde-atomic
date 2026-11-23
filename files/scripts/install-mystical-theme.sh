@@ -19,6 +19,23 @@ test -f "$SOURCE/wallpaper/metadata.json"
 test -f "$WORK/theme/scripts/lyd-mystical-first-login"
 
 install -d /usr/share/color-schemes /usr/share/plasma/look-and-feel /usr/share/plasma/desktoptheme /usr/share/wallpapers /usr/share/icons /usr/share/lyd/mystical
+
+# Configure the SDDM login screen separately from the Plasma desktop theme.
+# The Breeze greeter remains responsible for login controls; Mystical supplies
+# its matching wallpaper as a system-owned, greeter-readable PNG.
+SDDM_BACKGROUND=/usr/share/backgrounds/lyd-mystical-sddm.png
+install -d /usr/share/backgrounds /etc/sddm.conf.d /usr/share/sddm/themes/breeze
+rsvg-convert -w 2560 -h 1440 "$SOURCE/wallpaper/contents/images/1920x1080.svg" -o "$SDDM_BACKGROUND"
+cat > /usr/share/sddm/themes/breeze/theme.conf.user <<'SDDM_THEME'
+[General]
+type=image
+background=/usr/share/backgrounds/lyd-mystical-sddm.png
+color=#171426
+SDDM_THEME
+cat > /etc/sddm.conf.d/10-lyd-mystical.conf <<'SDDM_CONFIG'
+[Theme]
+Current=breeze
+SDDM_CONFIG
 install -m 0644 "$SOURCE/colors/Mystical.colors" /usr/share/color-schemes/Mystical.colors
 cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" /usr/share/plasma/look-and-feel/
 cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/desktoptheme/
