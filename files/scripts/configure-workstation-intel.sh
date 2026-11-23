@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Standard edition uses Fedora Kinoite and does not include NVIDIA packages.
-# NVIDIA can be optionally layered later with lydsetup.
-if rpm -q akmod-nvidia akmod-nvidia-580xx nvidia-driver >/dev/null 2>&1; then
-  echo "Unexpected NVIDIA driver package found in standard image" >&2
-  exit 1
-fi
+# NVIDIA proprietary driver packages are present in the image but are not
+# activated by default. lydsetup can perform the user-facing configuration.
 
 systemctl enable lyd-swapfile.service
 
@@ -23,8 +19,8 @@ cat > /usr/share/lyd/IMAGE-INFO <<'EOF'
 Lyd Atomic Standard
 Fedora Kinoite 45 base
 Minimal KDE Plasma workstation
-No proprietary NVIDIA driver is included by default.
-The NVIDIA driver can be installed later using lydsetup.
+NVIDIA driver packages are preinstalled but not enabled by default.
+Use lydsetup to review the NVIDIA driver setup and module status.
 Waterfox is provided as a Flathub Flatpak and is the default web browser.
-Optional system features are managed with lydsetup.
+Optional system features are preinstalled and managed with lydsetup.
 EOF
