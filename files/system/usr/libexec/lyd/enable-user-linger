@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Give regular interactive accounts a persistent user systemd manager.
+# This is required for rootless Podman services to survive logout and start at boot.
+while IFS=: read -r username _ uid _ _ _ _; do
+  [[ "$uid" =~ ^[0-9]+$ ]] || continue
+  (( uid >= 1000 && uid < 60000 )) || continue
+  if loginctl enable-linger "$username"; then
+    echo "Enabled systemd lingering for $username (UID $uid)."
+  else
+    echo "Warning: could not enable lingering for $username (UID $uid)." >&2
+  fi
+done < <(getent passwd)
