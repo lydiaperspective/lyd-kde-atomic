@@ -17,14 +17,16 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Build and publish image
         uses: blue-build/github-action@v1
         with:
-          recipe: recipes/lyd-kde.yml
+          recipe: lyd-kde.yml
           registry: ghcr.io
-          organization: lydiaperspective
-          image_name: lyd-kde-atomic
-          tags: latest
-          pr ongel: false
+          registry_namespace: lydiaperspective
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          pr_event_number: ${{ github.event.number || 0 }}
+          push: ${{ github.event_name != 'pull_request' }}
+          maximize_build_space: true
