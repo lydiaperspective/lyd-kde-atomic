@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable lingering for regular Lyd Atomic server accounts
+Documentation=man:loginctl(1)
+Wants=systemd-logind.service
+After=systemd-logind.service
+ConditionPathExists=/usr/bin/loginctl
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/lyd/enable-user-linger
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
