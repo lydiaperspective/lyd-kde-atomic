@@ -18,7 +18,6 @@ if [[ "$NVIDIA_VERSION" != 580.* ]]; then
 fi
 command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the NVIDIA base image" >&2; exit 1; }
 
-# Make Waterfox the system-wide default for web links and HTML documents.
 install -d /etc/xdg
 cat > /etc/xdg/mimeapps.list <<'EOF'
 [Default Applications]
@@ -30,7 +29,7 @@ EOF
 
 install -d /usr/share/lyd
 cat > /usr/share/lyd/IMAGE-INFO <<'EOF'
-Lyd KDE Atomic
+Lyd Atomic NVIDIA
 Fedora Kinoite 45 base
 Minimal KDE Plasma workstation
 Proprietary NVIDIA 580.x driver and prebuilt kernel module
