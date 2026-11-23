@@ -5,6 +5,12 @@ base-image: ghcr.io/blue-build/base-images/fedora-kinoite-nvidia
 image-version: "45"
 modules:
   - type: dnf
+    repos:
+      nonfree: rpmfusion
+      copr:
+        - codifryed/CoolerControl
+      files:
+        - https://pkgs.tailscale.com/stable/fedora/tailscale.repo
     install:
       packages:
         - dolphin
@@ -48,6 +54,37 @@ modules:
         - fuse3-libs
         - xdg-desktop-portal
         - xdg-desktop-portal-kde
+        - cups
+        - sane-backends
+        - sane-backends-drivers-scanners
+        - sane-airscan
+        - ipp-usb
+        - avahi
+        - qemu-kvm
+        - libvirt
+        - libvirt-daemon-kvm
+        - virt-install
+        - virt-manager
+        - virt-viewer
+        - edk2-ovmf
+        - swtpm
+        - dnsmasq
+        - libvirt-daemon-config-network
+        - tuned
+        - tuned-ppd
+        - tailscale
+        - solaar
+        - distrobox
+        - podman
+        - coolercontrol
+        - coolercontrold
+        - liquidctl
+        - steam
+        - steam-devices
+        - gamemode
+        - mangohud
+        - gamescope
+        - protontricks
     remove:
       packages:
         - firefox
