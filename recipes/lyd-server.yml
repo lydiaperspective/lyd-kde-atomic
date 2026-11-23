@@ -1,7 +1,7 @@
 ---
 name: lyd-atomic-server
 description: Headless Fedora bootc server with Podman, Cockpit, KVM virtualization and firewalld.
-base-image: quay.io/fedora/fedora-bootc:45
+base-image: quay.io/fedora/fedora-bootc
 image-version: "45"
 modules:
   - type: dnf
