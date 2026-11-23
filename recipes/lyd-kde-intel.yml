@@ -1,6 +1,6 @@
 ---
-name: lyd-kde-atomic-intel
-description: Minimal KDE Atomic workstation for Intel and other non-NVIDIA graphics systems.
+name: lyd-atomic-standard
+description: Minimal KDE Atomic workstation for Intel, AMD and other non-NVIDIA graphics systems.
 base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: "45"
 modules:
