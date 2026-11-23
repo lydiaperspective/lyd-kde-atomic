@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Pin the shared theme repository so image builds remain reproducible.
 THEME_REPO=https://github.com/lydiaperspective/lyd-kde-themes.git
-THEME_COMMIT=e4b49f39f0bb1a28b65fb83662ff185860baeb63
+THEME_COMMIT=9fd97cf008e3fad169e8b61c612e736a7c16686d
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -25,6 +25,13 @@ cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/deskt
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
 python3 "$SOURCE/build-icon-theme.py" "$WORK/Mystical"
 cp -a "$WORK/Mystical" /usr/share/icons/Mystical
+
+# Refresh both the custom theme and inherited system icons. This also avoids
+# stale hicolor cache entries that can produce empty Plasma/Flatpak icons.
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -f /usr/share/icons/Mystical
+  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+fi
 
 # Add coordinated GRUB, animated Plymouth and Xcursor assets. Record the
 # exact source revision so the boot setup service can detect image updates.
