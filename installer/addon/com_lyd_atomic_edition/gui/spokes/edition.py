@@ -2,6 +2,7 @@
 
 from pyanaconda.ui.gui.spokes import NormalSpoke
 
+from com_lyd_atomic_edition.bootc import set_bootc_image
 from com_lyd_atomic_edition.categories.lyd_atomic import LydAtomicCategory
 
 EDITIONS = {
@@ -57,22 +58,13 @@ class LydAtomicEditionSpoke(NormalSpoke):
             return
 
         image = EDITIONS[self._edition][0]
-        if getattr(self.data, "bootc", None) is None:
-            raise RuntimeError("The installer bootc Kickstart command is missing")
-
-        # pykickstart's Fedora 45 bootc command uses sourceImgRef/targetImgRef.
-        self.data.bootc.sourceImgRef = "registry:" + image
-        self.data.bootc.targetImgRef = image
+        set_bootc_image(self.data, image)
 
     def execute(self):
         pass
 
     def on_info_bar_clicked(self, *args):
-        """Handle the standard Anaconda spoke info-bar signal.
-
-        This spoke does not currently display actionable info-bar messages,
-        but the AnacondaSpokeWindow Glade template connects this callback.
-        """
+        """Handle the standard Anaconda spoke info-bar signal."""
         return
 
     @property
