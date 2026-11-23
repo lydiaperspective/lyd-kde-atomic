@@ -17,6 +17,10 @@ on:
         required: true
         default: latest
 
+concurrency:
+  group: single-iso-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: read
