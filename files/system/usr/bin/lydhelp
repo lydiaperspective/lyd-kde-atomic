@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+topic="${1:-help}"
+show_index() {
+  cat <<'EOF'
+lydhelp - a practical Linux command reference
+
+Usage:
+  lydhelp                 Show this index
+  lydhelp files           Copy, move and inspect files
+  lydhelp folders         Create, remove and navigate directories
+  lydhelp search          Find files and search text
+  lydhelp permissions     Understand ownership and permissions
+  lydhelp storage         Inspect disks, filesystems and mounts
+  lydhelp processes       Inspect and manage processes
+  lydhelp network         Inspect network connections
+  lydhelp packages        Manage Fedora packages and deployments
+  lydhelp flatpak         Manage Flatpak applications
+  lydhelp appimage        Run and troubleshoot AppImage applications
+  lydhelp archives        Create and extract archives
+  lydhelp atomic          Understand Atomic updates and rollbacks
+
+Tip: use 'command --help' or 'man command' for complete documentation.
+EOF
+}
+case "$topic" in
+help|--help|-h) show_index ;;
+files) cat <<'EOF'
+FILES
+  ls -lah FILE       List files, including hidden files, in long format
+  file FILE          Identify a file's type
+  stat FILE          Show detailed file metadata
+  cp SOURCE DEST     Copy a file; add -r for directories
+  mv SOURCE DEST     Move or rename a file
+  rm FILE            Remove a file; use -r for directories (be careful)
+  touch FILE         Create an empty file or update its timestamp
+  head -n 20 FILE    Show the first 20 lines
+  tail -n 20 FILE    Show the last 20 lines
+  less FILE          Read a file interactively; press q to quit
+EOF
+;;
+folders) cat <<'EOF'
+FOLDERS
+  pwd                Print the current working directory
+  cd PATH            Change directory; cd .. moves to the parent
+  mkdir NAME         Create a directory; mkdir -p creates parent paths too
+  rmdir NAME         Remove an empty directory
+  find PATH -type d  Find directories below PATH
+  du -sh PATH        Show total space used by a directory
+  tree PATH          Display a directory tree (install tree if needed)
+EOF
+;;
+search) cat <<'EOF'
+SEARCH
+  find PATH -name '*.txt'     Find matching filenames
+  grep -n 'text' FILE         Search text and show line numbers
+  grep -Rni 'text' PATH       Search recursively, case-insensitively
+  command -v PROGRAM          Find a command in PATH
+  whereis PROGRAM             Find a program's binary and manual
+  rg 'text' PATH              Fast recursive text search (ripgrep)
+EOF
+;;
+permissions) cat <<'EOF'
+PERMISSIONS
+  ls -l FILE             Show owner, group and rwx permissions
+  id                     Show your user and group IDs
+  groups                 List your group memberships
+  chmod 644 FILE         Owner can write; everyone can read
+  chmod 755 FILE         Owner can write/execute; everyone can read/execute
+  chmod +x FILE          Add execute permission
+  chown USER:GROUP FILE  Change owner and group (normally requires sudo)
+  umask                  Show default permission mask for new files
+  NOTE: avoid chmod -R 777; it makes files writable by everyone.
+EOF
+;;
+storage) cat <<'EOF'
+STORAGE
+  lsblk -f                 List disks, partitions, filesystems and labels
+  blkid                    Show filesystem UUIDs and types
+  findmnt                  Show mounted filesystems
+  findmnt /PATH            Show which filesystem contains PATH
+  df -hT                   Show filesystem capacity and type
+  du -sh PATH              Show directory space usage
+  cat /etc/fstab           Show persistent mount configuration
+  btrfs filesystem usage / Show Btrfs space usage (Btrfs only)
+EOF
+;;
+processes) cat <<'EOF'
+PROCESSES
+  ps aux              List running processes
+  top                 Interactive process monitor; press q to quit
+  htop                Friendlier process monitor, if installed
+  pgrep NAME          Find process IDs by name
+  kill PID            Ask a process to exit
+  kill -TERM PID      Send a normal termination signal
+EOF
+;;
+network) cat <<'EOF'
+NETWORK
+  ip address          Show network interfaces and addresses
+  ip route            Show the routing table
+  ping HOST           Test basic reachability; Ctrl+C stops it
+  ss -tulpn           Show listening TCP/UDP sockets
+  curl -I URL         Fetch response headers
+  wget URL            Download a file
+  resolvectl status   Show DNS resolver configuration
+EOF
+;;
+packages) cat <<'EOF'
+FEDORA PACKAGES
+  rpm-ostree status              Show the current and pending deployments
+  rpm-ostree upgrade             Download an OS update for the next boot
+  rpm-ostree install PACKAGE     Layer a system RPM (reboot required)
+  rpm-ostree uninstall PACKAGE   Remove a layered RPM (reboot required)
+  rpm-ostree rollback            Select the previous deployment
+  rpm -q PACKAGE                 Check whether an RPM is installed
+  dnf search KEYWORD             Search packages (read-only)
+  dnf info PACKAGE               Show package details
+EOF
+;;
+flatpak) cat <<'EOF'
+FLATPAK
+  flatpak list                   List installed Flatpaks
+  flatpak search NAME            Search configured remotes
+  flatpak install flathub ID     Install an app from Flathub
+  flatpak update                 Update Flatpak apps
+  flatpak uninstall ID           Remove an app
+  flatpak info ID                Show application details
+  flatpak remote-ls flathub      List apps available on Flathub
+EOF
+;;
+appimage) cat <<'EOF'
+APPIMAGE
+  chmod +x ./AppName.AppImage    Mark an AppImage as executable
+  ./AppName.AppImage             Launch the AppImage from its folder
+  file ./AppName.AppImage        Check that the download is an AppImage
+  ./AppName.AppImage --appimage-extract
+                                 Extract files when FUSE mounting is unavailable
+  ./squashfs-root/AppRun         Run an extracted AppImage (from its extracted folder)
+
+Lyd Atomic includes FUSE 2 compatibility libraries and FUSE 3 support for
+many AppImages. AppImages bundle much of their own software, but some still
+need extra host libraries or newer runtimes. Only run AppImages from sources
+you trust. Keep the file in a user-writable location such as ~/Applications.
+EOF
+;;
+archives) cat <<'EOF'
+ARCHIVES
+  tar -tf FILE.tar               List archive contents
+  tar -xf FILE.tar               Extract an archive
+  tar -czf backup.tar.gz DIR     Create a gzip-compressed tar archive
+  tar -cJf backup.tar.xz DIR     Create an xz-compressed tar archive
+  unzip FILE.zip                 Extract a ZIP archive
+  zip -r FILE.zip DIR            Create a ZIP archive from a directory
+EOF
+;;
+atomic) cat <<'EOF'
+ATOMIC SYSTEM
+  rpm-ostree status       Inspect deployments and layered packages
+  rpm-ostree upgrade      Stage an operating-system update
+  systemctl reboot        Reboot into the staged deployment
+  rpm-ostree rollback     Prepare the previous deployment for next boot
+  bootc status            Show bootc image and update status (if available)
+  flatpak update          Update applications independently of the OS image
+
+Atomic package changes usually create a new deployment and require a reboot.
+Keep a known-good deployment until you have confirmed the new one works.
+EOF
+;;
+*) printf 'Unknown topic: %s\n\n' "$topic" >&2; show_index; exit 2 ;;
+esac
