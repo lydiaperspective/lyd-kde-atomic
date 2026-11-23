@@ -46,7 +46,13 @@ jobs:
             --output-dir /output \
             bootc-generic-iso
 
-          test -n "$(find output -maxdepth 1 -type f -name '*.iso' -print -quit)"
+          mapfile -t iso_files < <(find output -maxdepth 1 -type f -name '*.iso' -print)
+          if [[ ${#iso_files[@]} -ne 1 ]]; then
+            echo "Expected exactly one ISO, found ${#iso_files[@]}" >&2
+            exit 1
+          fi
+          mv "${iso_files[0]}" output/lyd-kde-atomic.iso
+          test -s output/lyd-kde-atomic.iso
 
       - name: Publish ISO to GitHub Releases
         env:
