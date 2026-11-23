@@ -36,6 +36,9 @@ modules:
         - librsvg2-tools
         - xcursorgen
         - aurorae
+        - breeze-icon-theme
+        - hicolor-icon-theme
+        - gtk-update-icon-cache
         - fuse
         - fuse-libs
         - fuse3
