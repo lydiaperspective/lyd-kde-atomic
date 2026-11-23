@@ -67,6 +67,14 @@ class LydAtomicEditionSpoke(NormalSpoke):
     def execute(self):
         pass
 
+    def on_info_bar_clicked(self, *args):
+        """Handle the standard Anaconda spoke info-bar signal.
+
+        This spoke does not currently display actionable info-bar messages,
+        but the AnacondaSpokeWindow Glade template connects this callback.
+        """
+        return
+
     @property
     def ready(self):
         return True
