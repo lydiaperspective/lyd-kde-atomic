@@ -91,6 +91,9 @@ The Mystical KDE theme and its supporting assets are maintained in [lyd-kde-them
 
 ## Optional feature manager
 
+On all editions, `lydsetup` can prepare a BlueBuild development environment using Distrobox. If Distrobox is missing, it layers the package into the next host deployment; reboot, run `lydsetup` again, and select the development option. The setup creates `lyd-atomic-dev` from BlueBuild's official `ghcr.io/blue-build/cli:latest-distrobox` image, exports the `bluebuild` binary, and routes Podman commands back to the host engine. Enter it with `distrobox enter lyd-atomic-dev`, clone this repository in the shared home directory, and build one of the recipes with `bluebuild build recipes/<recipe>.yml`. The container is rootless and intended for building/testing, not locally rebasing the host; use CI for publishing.
+
+
 `lydsetup` can install Tailscale from the official Fedora repository on all editions. It layers the package in a new deployment, enables `tailscaled` after reboot, and optionally runs `tailscale up` to authenticate the machine. No inbound Tailscale port is opened in firewalld by default.
 
 On workstation editions, `lydsetup` can also run Zed's official Linux installer. Zed is installed per-user under `~/.local`, so this does not create an rpm-ostree deployment. See [Zed's Linux installation documentation](https://zed.dev/docs/installation).
