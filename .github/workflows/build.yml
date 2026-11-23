@@ -30,3 +30,4 @@ jobs:
           pr_event_number: ${{ github.event.number || 0 }}
           push: ${{ github.event_name != 'pull_request' }}
           maximize_build_space: true
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
