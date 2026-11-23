@@ -91,6 +91,8 @@ modules:
         - firefox
         - firefox-langpacks
         - plasma-discover-rpm-ostree
+        # Avoid the x86_64 RPM Fusion codec package blocking Steam's i686 dependencies.
+        - libfdk-aac
   - type: default-flatpaks
     configurations:
       - scope: system
