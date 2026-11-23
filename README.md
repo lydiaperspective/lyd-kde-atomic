@@ -1,4 +1,4 @@
-# Lyd KDE Atomic
+# Lyd Atomic
 
 A minimal KDE Plasma workstation built as Fedora Atomic desktop images with BlueBuild.
 
@@ -6,10 +6,12 @@ A minimal KDE Plasma workstation built as Fedora Atomic desktop images with Blue
 
 | Edition | Image | Graphics |
 |---|---|---|
-| NVIDIA | `ghcr.io/lydiaperspective/lyd-kde-atomic:latest` | Proprietary NVIDIA 580.x driver |
-| Intel / generic | `ghcr.io/lydiaperspective/lyd-kde-atomic-intel:latest` | Fedora's in-kernel graphics stack; no proprietary NVIDIA driver |
+| NVIDIA | `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest` | Proprietary NVIDIA 580.x driver included |
+| Standard | `ghcr.io/lydiaperspective/lyd-atomic-standard:latest` | Fedora in-kernel graphics stack; no proprietary NVIDIA driver by default |
 
-The Intel edition is intended for Intel-only systems such as Intel iGPU laptops. It also serves as the generic non-NVIDIA edition. It does not layer NVIDIA drivers or NVIDIA kernel modules.
+The Standard edition is intended for Intel and AMD graphics systems, and can also be used on a system with an NVIDIA GPU. To add the proprietary NVIDIA driver after installation, run `lydsetup` and select **NVIDIA proprietary driver**. The installer adds RPM Fusion in one deployment, then layers the driver packages in a second deployment after reboot.
+
+The Standard edition's optional driver installation uses the current RPM Fusion `akmod-nvidia` package. It is not guaranteed to match the NVIDIA edition's prebuilt 580.x driver branch. Secure Boot may require additional module-signing configuration; `lydsetup` warns when it detects Secure Boot and does not enroll keys automatically.
 
 Both editions share the same KDE desktop, Waterfox Flatpak, Mystical theme, lydhelp and lydsetup commands, and optional workstation features.
 
@@ -19,7 +21,7 @@ Initial project foundation. Both image builds, ISO installers, update paths, NVI
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Intel edition uses the standard Fedora Kinoite base. GitHub Actions builds both editions and publishes them to GHCR. The ISO workflow can convert either published image into an installable ISO.
+BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds both editions and publishes them to GHCR. The ISO workflow can convert either published image into an installable ISO.
 
 ## Build locally
 
@@ -33,7 +35,7 @@ cd lyd-kde-atomic
 bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
 
-# Intel / generic edition
+# Standard edition
 bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
 bluebuild build recipes/lyd-kde-intel.yml
 ```
@@ -44,7 +46,7 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 
 - Pushes to `main` and manual dispatch build both editions in parallel.
 - Pull requests validate both recipes without publishing.
-- The **Build installable ISO** workflow lets you choose NVIDIA or Intel and a published image tag.
+- The **Build installable ISO** workflow lets you choose NVIDIA or Standard and a published image tag.
 - ISO artifacts include SHA256 checksums.
 
 ## Shared desktop
@@ -60,11 +62,12 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 
 Run `lydsetup` as your normal user:
 
+- NVIDIA proprietary driver on the Standard edition (RPM Fusion akmod; Secure Boot may need separate signing configuration)
 - Virtualization: QEMU/KVM, libvirt, virt-manager, UEFI firmware, TPM emulation, networking and group membership
 - CoolerControl system package and daemon
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
 
-Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot.
+Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
 
 ## Commands
 
