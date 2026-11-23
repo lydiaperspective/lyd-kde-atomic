@@ -27,27 +27,33 @@ on:
           - ext4
 
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 jobs:
   iso:
     runs-on: ubuntu-24.04
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Install Podman
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
+
       - name: Login to GHCR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GH_TOKEN" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Build ISO
         env:
           IMAGE_FLAVOUR: ${{ inputs.image_flavour }}
           IMAGE_TAG: ${{ inputs.image_tag }}
           ROOTFS_TYPE: ${{ inputs.rootfs_type }}
         run: |
+          set -Eeuo pipefail
           mkdir -p output
           case "$IMAGE_FLAVOUR" in
             nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
@@ -80,15 +86,19 @@ jobs:
             --type iso \
             --rootfs "$ROOTFS_TYPE" \
             "$IMAGE"
-      - name: Generate checksums
+
+      - name: Publish ISO to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          # bootc-image-builder writes artifacts as root inside the container.
-          # Return ownership to the Actions runner before creating sidecar files.
+          set -Eeuo pipefail
           sudo chown -R "$(id -u):$(id -g)" output
-          find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
-            sha256sum "$iso" > "$iso.sha256"
-          done
-      - name: Upload ISO artifact
+          bash files/scripts/publish-iso-release.sh "${{ inputs.image_flavour }}" "${{ inputs.image_tag }}" output
+
+      - name: Upload ISO build artifact
         uses: actions/upload-artifact@v4
         with:
           name: lyd-atomic-${{ inputs.image_flavour }}-iso
