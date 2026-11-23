@@ -18,8 +18,31 @@ python3 "$SOURCE/build-icon-theme.py" "$WORK/Mystical"
 cp -a "$WORK/Mystical" /usr/share/icons/Mystical
 cp -a "$SOURCE/icons" /usr/share/lyd/mystical/
 install -m 0644 "$SOURCE/README.md" /usr/share/lyd/mystical/README.md
-install -D -m 0644 "$SOURCE/colors/Mystical.colors" /usr/share/lyd/mystical/Mystical.colors
-# Seed system-wide defaults for new users; existing per-user settings remain theirs.
+
+# Install the project's first-login wallpaper helper. It only applies the
+# bundled wallpaper once, preserving the user's later wallpaper choices.
+install -D -m 0755 "$WORK/theme/scripts/lyd-mystical-first-login" /usr/local/lib/lyd/lyd-mystical-first-login
+install -d /etc/xdg/autostart
+cat > /etc/xdg/autostart/lyd-mystical-wallpaper.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Lyd Mystical Wallpaper
+Comment=Set the Mystical moonlit garden wallpaper on first login
+Exec=/usr/local/lib/lyd/lyd-mystical-first-login
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+EOF
+
+# Konsole's matching colour scheme and profile are included with the Debian
+# project's desktop profile; the artwork and KDE theme remain source-pinned.
+KONSOLE="$WORK/theme/profiles/desktop/config/includes.chroot/usr/share/konsole"
+if [[ -d "$KONSOLE" ]]; then
+  install -d /usr/share/konsole
+  install -m 0644 "$KONSOLE/Lyd-Mystical.colorscheme" /usr/share/konsole/
+  install -m 0644 "$KONSOLE/Lyd-Mystical.profile" /usr/share/konsole/
+fi
+
+# Seed system-wide defaults for new users; per-user settings take precedence.
 install -d /etc/xdg
 cat > /etc/xdg/kdeglobals <<'EOF'
 [General]
