@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# Optional feature manager for Lyd Atomic.
+set -Eeuo pipefail
+VERSION=0.2.0
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
+mkdir -p "$LOG_DIR"
+LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG") 2>&1
+STAGED=0
+
+die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+confirm() {
+  local answer
+  read -r -p "$1 [y/N] " answer
+  [[ "$answer" =~ ^[Yy]$ ]]
+}
+stage_packages() {
+  local -a missing=()
+  local pkg
+  STAGED=0
+  for pkg in "$@"; do rpm -q "$pkg" >/dev/null 2>&1 || missing+=("$pkg"); done
+  if (("${#missing[@]}" == 0)); then echo "All requested packages are already installed."; return 0; fi
+  echo "The following system packages will be layered:"
+  printf '  - %s\n' "${missing[@]}"
+  echo "This creates a new deployment. Reboot to use the updated system."
+  confirm "Continue?" || return 0
+  sudo rpm-ostree install "${missing[@]}"
+  STAGED=1
+}
+reboot_notice() {
+  if (( STAGED )); then
+    echo "Packages are staged. Reboot, then run lydsetup again to finish enabling this feature."
+    return 0
+  fi
+  return 1
+}
+setup_virtualization() {
+  stage_packages qemu-kvm libvirt libvirt-daemon-kvm virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq libvirt-daemon-config-network
+  reboot_notice && return 0
+  echo "Enabling libvirt and preparing the current account for virtualization."
+  sudo systemctl enable --now libvirtd.service
+  sudo usermod -aG libvirt,kvm "$USER"
+  if command -v virsh >/dev/null 2>&1; then
+    sudo virsh net-autostart default || true
+    sudo virsh net-start default || true
+  fi
+  echo "Group membership takes effect after logging out and back in."
+}
+setup_coolercontrol() {
+  local fedora repo
+  fedora="$(rpm -E %fedora)"
+  repo="/etc/yum.repos.d/codifryed-CoolerControl-fedora-$fedora.repo"
+  echo "CoolerControl is provided by its Fedora COPR repository."
+  confirm "Add the CoolerControl repository and stage its daemon and desktop package?" || return 0
+  sudo install -d -m 0755 /etc/yum.repos.d
+  sudo curl -fL "https://copr.fedorainfracloud.org/coprs/codifryed/CoolerControl/repo/fedora-$fedora/codifryed-CoolerControl-fedora-$fedora.repo" -o "$repo"
+  sudo rpm-ostree refresh-md
+  stage_packages coolercontrol coolercontrold liquidctl
+  reboot_notice && return 0
+  sudo systemctl enable --now coolercontrold.service
+}
+setup_tuned() {
+  echo "TuneD + tuned-ppd will replace power-profiles-daemon."
+  confirm "Stage tuned and tuned-ppd?" || return 0
+  stage_packages tuned tuned-ppd
+  reboot_notice && return 0
+  sudo systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
+  sudo systemctl enable --now tuned.service
+  sudo systemctl enable --now tuned-ppd.service
+}
+setup_nvidia() {
+  local fedora free_repo nonfree_repo sb_state
+  if rpm -q akmod-nvidia xorg-x11-drv-nvidia >/dev/null 2>&1; then
+    echo "NVIDIA driver packages are already installed."
+    command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi || true
+    return 0
+  fi
+  fedora="$(rpm -E %fedora)"
+  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
+  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
+  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
+    echo "This will add RPM Fusion repository definitions for Fedora $fedora."
+    confirm "Add RPM Fusion repositories? A reboot will be required before continuing." || return 0
+    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
+    STAGED=1
+    reboot_notice
+    return 0
+  fi
+  echo "This installs the current proprietary NVIDIA driver from RPM Fusion using akmods."
+  echo "It may use a newer driver branch than the NVIDIA edition's prebuilt 580.x driver."
+  echo "The kernel module is compiled for this system and may take several minutes."
+  if command -v mokutil >/dev/null 2>&1; then
+    sb_state="$(mokutil --sb-state 2>/dev/null || true)"
+    if grep -qi 'enabled' <<<"$sb_state"; then
+      echo "WARNING: Secure Boot is enabled. The akmod may not load without module signing"
+      echo "and certificate enrollment. This setup does not enroll keys automatically."
+      confirm "Continue anyway?" || return 0
+    fi
+  fi
+  stage_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
+  reboot_notice && return 0
+  echo "Check module compilation before relying on the driver:"
+  echo "  systemctl status akmods"
+  echo "  journalctl -u akmods"
+  echo "  modinfo -F version nvidia"
+}
+main() {
+  case "${1:-}" in
+    --help|-h)
+      cat <<HELP
+lydsetup $VERSION
+Interactive optional-feature manager for Lyd Atomic.
+
+Usage: lydsetup
+
+Features:
+  NVIDIA proprietary driver (RPM Fusion; standard edition)
+  Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
+  CoolerControl system package and daemon
+  TuneD + tuned-ppd (replaces power-profiles-daemon)
+
+System package changes create a new deployment and require a reboot.
+Run lydsetup again after reboot if prompted to finish enabling this feature.
+NVIDIA module compilation may take several minutes. Secure Boot may require
+separate module-signing setup before the driver can load.
+Logs: $LOG
+HELP
+      exit 0 ;;
+    --version) echo "$VERSION"; exit 0 ;;
+    "") ;;
+    *) die "Unknown argument: $1 (try --help)" ;;
+  esac
+  [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+  command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+  command -v sudo >/dev/null 2>&1 || die "sudo is required."
+  while true; do
+    echo
+    echo "  Lyd Atomic setup"
+    echo "  ----------------"
+    echo "  1) NVIDIA proprietary driver (standard edition)"
+    echo "  2) Virtualization (QEMU/KVM + libvirt)"
+    echo "  3) CoolerControl"
+    echo "  4) TuneD + tuned-ppd"
+    echo "  5) Exit"
+    read -r -p "Select a feature: " choice
+    case "$choice" in
+      1) setup_nvidia ;;
+      2) setup_virtualization ;;
+      3) setup_coolercontrol ;;
+      4) setup_tuned ;;
+      5) break ;;
+      *) echo "Choose 1-5." ;;
+    esac
+  done
+  echo "lydsetup finished. Log: $LOG"
+}
+main "$@"
