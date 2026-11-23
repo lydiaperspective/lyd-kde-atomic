@@ -76,7 +76,7 @@ Optional packages are not included in the base image. Atomic package changes cre
 
 ## Mystical theme
 
-The theme is sourced from [lyd-kde-deb-live](https://github.com/lydiaperspective/lyd-kde-deb-live) at a pinned commit and installs the KDE colour scheme, Global Theme, Plasma Style, wallpaper and generated scalable icon theme. The visual identity uses midnight plum, amethyst, lavender and restrained antique-gold accents.
+The Mystical theme is maintained in the separate [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes) repository. Image builds fetch a pinned commit of that repository, so the theme can evolve independently while image builds remain reproducible. It includes the KDE colour scheme, Global Theme, Plasma Style, wallpaper, splash screen, icon artwork and generated scalable icon theme. The visual identity uses midnight plum, amethyst, lavender and restrained antique-gold accents.
 
 ## Important
 
