@@ -1,4 +1,4 @@
-name: Build Lyd KDE Atomic
+name: Build Lyd Atomic
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         include:
           - flavour: nvidia
             recipe: lyd-kde.yml
-          - flavour: intel
+          - flavour: standard
             recipe: lyd-kde-intel.yml
     steps:
       - name: Build and publish ${{ matrix.flavour }} image
