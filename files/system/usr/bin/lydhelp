@@ -19,6 +19,7 @@ Usage:
   lydhelp appimage        Run and troubleshoot AppImage applications
   lydhelp archives        Create and extract archives
   lydhelp atomic          Understand Atomic updates and rollbacks
+  lydev                   Enter the BlueBuild development Distrobox (after setup)
 
 Tip: use 'command --help' or 'man command' for complete documentation.
 EOF
