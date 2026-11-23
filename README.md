@@ -109,15 +109,24 @@ Run `lydsetup` as your normal user:
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
 - Tailscale VPN client (all editions)
 - Zed editor (per-user install on workstation editions)
-- BlueBuild development environment in Distrobox (all editions); installs Distrobox on the host if needed, then creates the official BlueBuild development container
+- BlueBuild image/ISO build environment (`lydsetup devbox` or `lydsetup dev devbox enable`)
+- Android development environment (`lydsetup dev androiddev enable`): Android Studio from Flathub plus a Fedora Distrobox with Git, Java 21 and Android platform tools
+- Container development environment (`lydsetup dev container enable`): Fedora Distrobox with Podman Compose, Buildah and Skopeo, forwarding Podman commands to the host's rootless engine
 
 Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
 
 ## BlueBuild development environment
 
-Run `lydsetup` and choose **BlueBuild development environment (Distrobox)**. If Distrobox is not installed, it layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
+Run `lydsetup devbox` (or `lydsetup dev devbox enable`) to enable the BlueBuild development environment. If Distrobox is not installed, it layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
 
 Enter the environment with the short command `lydev` (or `distrobox enter lyd-atomic-dev`). Clone this repository inside the shared home directory, then run `bluebuild build recipes/lyd-kde.yml`, `bluebuild build recipes/lyd-kde-intel.yml` or `bluebuild build recipes/lyd-server.yml`. The development container is rootless and intended for local builds; use the GitHub Actions workflow for publishing images.
+
+## Development setup commands
+
+- `lydsetup devbox` or `lydsetup dev devbox enable`: create the BlueBuild Distrobox used to build Lyd Atomic images and ISOs.
+- `lydsetup dev androiddev enable`: install Android Studio from Flathub, create a Fedora Android toolchain Distrobox, and clone this repository into `~/Projects/lyd-kde-atomic` if that path is unused. Android Studio runs as a host Flatpak; the container supplies Git, Java 21 and Android platform tools. Configure the Android SDK path in Android Studio.
+- `lydsetup dev container enable`: create a Fedora container-development Distrobox with Podman Compose, Buildah, Skopeo and supporting tools. Podman commands are forwarded to the host's rootless Podman engine.
+- `development` is an alias for `dev`, so the longer command forms work too.
 
 ## Commands
 
