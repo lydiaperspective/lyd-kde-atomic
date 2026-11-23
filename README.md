@@ -55,8 +55,24 @@ See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and I
 - Waterfox from Flathub (`net.waterfox.waterfox`), configured as the default browser
 - Mystical Global Theme, wallpaper, Plasma style, splash and generated icon theme
 - Dolphin, Konsole, Kate, Ark, Okular, Spectacle and Discover
-- Flatpak support with Flathub enabled
+- Flatpak support with Flathub, KDE Discover integration and KDE desktop portals
+- AppImage support with FUSE 2 compatibility and FUSE 3 runtime support
+- Aurorae KWin decoration engine for SVG-based window decoration themes
 - `lydhelp` terminal reference and `lydsetup` optional-feature manager
+
+## Application formats and theming
+
+### Flatpak
+
+Flatpak is installed system-wide, Flathub is configured as a system remote, and KDE Discover's Flatpak backend is included. The KDE desktop portal backend is installed for file pickers, screen sharing and other portal-integrated features. Manage apps graphically through Discover or with `flatpak` commands. Apps installed from Flathub remain separate from the immutable base image.
+
+### AppImage
+
+Both images include FUSE 2 compatibility libraries and FUSE 3 tools/libraries. This supports a broad range of AppImages, including older runtimes that require `libfuse.so.2`. Downloaded AppImages can be made executable in Dolphin or with `chmod +x AppName.AppImage`, then launched directly. `lydhelp appimage` includes basic usage and extraction fallback guidance. Some AppImages still depend on host libraries or runtime assumptions and cannot be guaranteed to work universally.
+
+### Aurorae
+
+The Fedora `aurorae` package is included in both images. It provides KWin's Aurorae SVG-based window-decoration engine, allowing compatible Aurorae decoration themes to be selected in System Settings. It is separate from Plasma Global Themes and does not automatically install additional decoration themes.
 
 ## Optional features
 
