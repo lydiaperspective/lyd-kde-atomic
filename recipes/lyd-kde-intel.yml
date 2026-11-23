@@ -57,8 +57,12 @@ modules:
         repo:
           name: flathub
           title: Flathub
+          url: https://flathub.org/repo/flathub.flatpakrepo
         install:
           - net.waterfox.waterfox
+          - org.kde.haruna
+          - org.kde.gwenview
+          - com.vixalien.sticky
   - type: files
     files:
       - source: system
