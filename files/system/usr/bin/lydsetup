@@ -93,6 +93,45 @@ setup_tailscale() {
     echo "Connect later with: sudo tailscale up"
   fi
 }
+setup_development() {
+  local config_dir config_file box_name
+  box_name="lyd-atomic-dev"
+  if ! command -v distrobox >/dev/null 2>&1; then
+    echo "Distrobox is not installed on the host. It will be layered into the next deployment."
+    stage_packages distrobox
+    reboot_notice && return 0
+    command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
+  fi
+  command -v podman >/dev/null 2>&1 || die "Podman is required by Distrobox but is not available on the host."
+  config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox"
+  config_file="$config_dir/lyd-atomic-dev.ini"
+  mkdir -p "$config_dir"
+  cat > "$config_file" <<'DISTROBOX_CONFIG'
+[lyd-atomic-dev]
+image=ghcr.io/blue-build/cli:latest-distrobox
+exported_bins=/usr/bin/bluebuild
+init_hooks=ln -sf /usr/bin/distrobox-host-exec /usr/local/bin/podman
+pull=true
+start_now=true
+DISTROBOX_CONFIG
+  echo "Creating or updating the BlueBuild development Distrobox."
+  echo "The container uses the host's Podman engine and exports the BlueBuild CLI."
+  if ! distrobox assemble create --file "$config_file"; then
+    die "Distrobox setup failed. Review the output above and retry with: distrobox assemble create --file '$config_file'"
+  fi
+  echo
+  echo "Development environment is ready."
+  echo "Enter it with: distrobox enter $box_name"
+  echo "Clone the project with:"
+  echo "  mkdir -p ~/Projects && cd ~/Projects"
+  echo "  git clone https://github.com/lydiaperspective/lyd-kde-atomic.git"
+  echo "  cd lyd-kde-atomic"
+  echo "Build an edition with:"
+  echo "  bluebuild build recipes/lyd-kde.yml"
+  echo "  bluebuild build recipes/lyd-kde-intel.yml"
+  echo "  bluebuild build recipes/lyd-server.yml"
+  echo "The BlueBuild Distrobox is rootless; use GitHub Actions or an appropriately configured host workflow for publishing images."
+}
 setup_zed() {
   if command -v zed >/dev/null 2>&1; then
     echo "Zed is already installed. The official installer can update it."
@@ -182,7 +221,7 @@ HELP
     echo "  4) TuneD + tuned-ppd"
     echo "  5) Tailscale VPN"
     if (( server_edition )); then
-      echo "  6) Exit"
+      echo "  6) BlueBuild development environment (Distrobox)"\n      echo "  7) Exit"
     else
       echo "  6) Zed editor"
       echo "  7) Exit"
