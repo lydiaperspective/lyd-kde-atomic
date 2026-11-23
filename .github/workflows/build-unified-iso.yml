@@ -7,8 +7,6 @@ on:
       - '.github/workflows/build-unified-iso.yml'
       - 'files/scripts/publish-iso-release.sh'
   workflow_dispatch:
-    inputs:
-
 permissions:
   contents: write
   packages: read
@@ -33,7 +31,6 @@ jobs:
             --tag localhost/lyd-atomic-installer:latest .
 
       - name: Build unified ISO with Image Builder
-        env:
         run: |
           set -Eeuo pipefail
           mkdir -p output
