@@ -33,7 +33,7 @@ RUN git clone --quiet --filter=blob:none https://github.com/lydiaperspective/lyd
     git -C /tmp/lyd-kde-themes checkout --quiet e4b49f39f0bb1a28b65fb83662ff185860baeb63 && \
     bash /tmp/lyd-kde-themes/scripts/install-mystical-boot-assets.sh && \
     install -d /usr/share/lyd && \
-    printf '%s\\n' 'e4b49f39f0bb1a28b65fb83662ff185860baeb63' > /usr/share/lyd/mystical-theme-version && \
+    printf '%s\n' 'e4b49f39f0bb1a28b65fb83662ff185860baeb63' > /usr/share/lyd/mystical-theme-version && \
     plymouth-set-default-theme lyd-mystical && \
     install -d /etc/default && \
     { grep -v '^GRUB_THEME=' /etc/default/grub 2>/dev/null || true; } > /tmp/grub-defaults && \
