@@ -15,12 +15,21 @@ permissions:
 
 jobs:
   build:
+    name: Build ${{ matrix.flavour }} image
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavour: nvidia
+            recipe: lyd-kde.yml
+          - flavour: intel
+            recipe: lyd-kde-intel.yml
     steps:
-      - name: Build and publish image
+      - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
-          recipe: lyd-kde.yml
+          recipe: ${{ matrix.recipe }}
           registry: ghcr.io
           registry_namespace: lydiaperspective
           registry_token: ${{ secrets.GITHUB_TOKEN }}
