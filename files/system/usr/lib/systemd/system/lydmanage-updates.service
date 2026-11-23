@@ -1,0 +1,10 @@
+[Unit]
+Description=Lyd Atomic scheduled Flatpak, bootc and firmware updates
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/usr/bin/lydmanage
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/lydmanage updates run
+TimeoutStartSec=6h
