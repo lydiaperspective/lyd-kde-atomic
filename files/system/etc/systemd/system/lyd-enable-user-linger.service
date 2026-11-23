@@ -7,7 +7,7 @@ ConditionPathExists=/usr/bin/loginctl
 
 [Service]
 Type=oneshot
-ExecStart=/usr/libexec/lyd/enable-user-linger
+ExecStart=/usr/bin/bash /usr/libexec/lyd/enable-user-linger
 RemainAfterExit=yes
 
 [Install]
