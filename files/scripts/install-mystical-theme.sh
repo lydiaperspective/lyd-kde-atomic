@@ -103,3 +103,15 @@ cat > /etc/xdg/ksplashrc <<'EOF'
 [KSplash]
 Theme=org.lydark.mystical.desktop
 EOF
+
+# Keep a privileged reapply entry point on installed systems. The same pinned
+# installer is used for image builds and for later theme restoration.
+install -D -m 0755 "$BASH_SOURCE" /usr/libexec/lyd/lyd-mystical-theme-reapply
+
+if (( REAPPLY )); then
+  # Force the boot setup service to regenerate Plymouth's initramfs and GRUB
+  # configuration even when the pinned theme revision has not changed.
+  rm -f /var/lib/lyd/mystical-theme-version
+  systemctl daemon-reload
+  systemctl start lyd-mystical-boot-setup.service
+fi
