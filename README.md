@@ -1,24 +1,25 @@
 # Lyd KDE Atomic
 
-A minimal KDE Plasma workstation built as a Fedora Atomic desktop image with BlueBuild.
+A minimal KDE Plasma workstation built as Fedora Atomic desktop images with BlueBuild.
 
-## Goals
+## Hardware editions
 
-- One initial x86_64 workstation image based on Fedora Kinoite 45.
-- A slim KDE Plasma desktop with a small set of essential KDE applications.
-- Proprietary NVIDIA 580.x driver with a prebuilt kernel module.
-- Waterfox Flatpak as the default and only preinstalled web browser.
-- The Lyd Ark Mystical KDE appearance.
-- `lydhelp` terminal reference and `lydsetup` optional-feature manager.
-- Local builds and GitHub Actions image/ISO builds.
+| Edition | Image | Graphics |
+|---|---|---|
+| NVIDIA | `ghcr.io/lydiaperspective/lyd-kde-atomic:latest` | Proprietary NVIDIA 580.x driver |
+| Intel / generic | `ghcr.io/lydiaperspective/lyd-kde-atomic-intel:latest` | Fedora's in-kernel graphics stack; no proprietary NVIDIA driver |
+
+The Intel edition is intended for Intel-only systems such as Intel iGPU laptops. It also serves as the generic non-NVIDIA edition. It does not layer NVIDIA drivers or NVIDIA kernel modules.
+
+Both editions share the same KDE desktop, Waterfox Flatpak, Mystical theme, lydhelp and lydsetup commands, and optional workstation features.
 
 ## Project status
 
-Initial project foundation. The first image, NVIDIA module, ISO installer, update path and rollback flow still require validation in a VM and on physical hardware.
+Initial project foundation. Both image builds, ISO installers, update paths, NVIDIA driver operation, rollback and hardware support still require validation in a VM and on physical hardware.
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI image. The image uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. GitHub Actions publishes the custom image to GHCR. The separate ISO workflow uses bootc-image-builder to create an installable ISO from a published image.
+BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Intel edition uses the standard Fedora Kinoite base. GitHub Actions builds both editions and publishes them to GHCR. The ISO workflow can convert either published image into an installable ISO.
 
 ## Build locally
 
@@ -27,29 +28,33 @@ Install Podman and BlueBuild CLI:
 ```bash
 git clone https://github.com/lydiaperspective/lyd-kde-atomic.git
 cd lyd-kde-atomic
+
+# NVIDIA edition
 bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
+
+# Intel / generic edition
+bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
+bluebuild build recipes/lyd-kde-intel.yml
 ```
 
 See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and ISO generation.
 
 ## GitHub Actions
 
-- Pushes to `main` and manual dispatch build and publish the image to GHCR.
-- Pull requests build without publishing.
-- The **Build installable ISO** workflow can be run manually after an image is published.
+- Pushes to `main` and manual dispatch build both editions in parallel.
+- Pull requests validate both recipes without publishing.
+- The **Build installable ISO** workflow lets you choose NVIDIA or Intel and a published image tag.
 - ISO artifacts include SHA256 checksums.
 
-Image: `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
-
-## Default desktop
+## Shared desktop
 
 - KDE Plasma (Fedora Kinoite 45)
-- Waterfox from Flathub (`net.waterfox.waterfox`)
+- Waterfox from Flathub (`net.waterfox.waterfox`), configured as the default browser
 - Mystical Global Theme, wallpaper, Plasma style, splash and generated icon theme
 - Dolphin, Konsole, Kate, Ark, Okular, Spectacle and Discover
 - Flatpak support with Flathub enabled
-- Proprietary NVIDIA 580.x driver
+- `lydhelp` terminal reference and `lydsetup` optional-feature manager
 
 ## Optional features
 
@@ -72,4 +77,4 @@ The theme is sourced from [lyd-kde-deb-live](https://github.com/lydiaperspective
 
 ## Important
 
-This is an early project. Do not use it as the only operating system on a device until the ISO installer, NVIDIA driver, updates, rollback and hardware support have been tested. Keep independent backups of important data.
+This is an early project. Do not use it as the only operating system on a device until the installer, updates, rollback and hardware support have been tested. Keep independent backups of important data.
