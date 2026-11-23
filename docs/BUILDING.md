@@ -1,4 +1,4 @@
-# Building Lyd KDE Atomic
+# Building Lyd Atomic
 
 ## Local image builds
 
@@ -11,18 +11,18 @@ bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
 ```
 
-Published image: `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
+Published image: `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest`.
 
-### Intel / generic edition
+### Standard edition
 
 ```bash
 bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
 bluebuild build recipes/lyd-kde-intel.yml
 ```
 
-Published image: `ghcr.io/lydiaperspective/lyd-kde-atomic-intel:latest`.
+Published image: `ghcr.io/lydiaperspective/lyd-atomic-standard:latest`.
 
-The Intel recipe uses the standard Fedora Kinoite base and does not install proprietary NVIDIA drivers. It is intended for Intel iGPU systems and other non-NVIDIA hardware.
+The Standard recipe uses the standard Fedora Kinoite base and does not install proprietary NVIDIA drivers by default. It is intended for Intel/AMD systems, but an NVIDIA driver can be layered after installation using `lydsetup`.
 
 The output is a local OCI image. Use `bluebuild switch` only on a test machine or VM; it builds and stages a new deployment for the next boot.
 
@@ -42,7 +42,7 @@ Add the contents of `cosign.key` as the repository Actions secret `COSIGN_PRIVAT
 
 ## ISO generation
 
-Run the **Build installable ISO** workflow manually after the relevant image has been published. Choose the NVIDIA or Intel edition and the image tag. The workflow downloads that image, creates an ISO and attaches a SHA256 checksum. Artifacts are retained for 14 days.
+Run the **Build installable ISO** workflow manually after the relevant image has been published. Choose the NVIDIA or Standard edition and the image tag. The workflow downloads that image, creates an ISO and attaches a SHA256 checksum. Artifacts are retained for 14 days.
 
 ## Image installation
 
@@ -52,13 +52,15 @@ Test each edition in a UEFI VM before physical installation, including networkin
 
 The NVIDIA edition is based on BlueBuild's Fedora 45 Kinoite NVIDIA image, which provides the proprietary NVIDIA 580.x driver and a prebuilt, signed kernel module. The NVIDIA recipe verifies that the installed kernel module reports version 580.x. This branch is intended for supported older NVIDIA GPUs; newer GPUs should use a current driver branch instead.
 
-For Secure Boot, enroll the BlueBuild akmods certificate before relying on the NVIDIA module:
+The Standard edition can add the current RPM Fusion NVIDIA driver using `lydsetup`. The setup is deliberately staged:
 
-```bash
-sudo mokutil --import /etc/pki/akmods/certs/akmods-blue-build.der
-```
+1. Add the RPM Fusion repository release packages to a new deployment.
+2. Reboot and run `lydsetup` again.
+3. Layer `akmod-nvidia`, `xorg-x11-drv-nvidia` and `xorg-x11-drv-nvidia-cuda`.
+4. Reboot into the new deployment and allow the akmods service time to compile the kernel module.
+5. Verify with `nvidia-smi` and `modinfo -F version nvidia`.
 
-Reboot, enroll the key in the firmware's MOK manager, then verify the driver with `nvidia-smi`. If Secure Boot is disabled, enrollment is not required.
+This uses the current RPM Fusion driver branch, which may differ from the NVIDIA edition's pinned 580.x driver. If Secure Boot is enabled, the generated module may be blocked unless module signing is configured and its certificate is enrolled. `lydsetup` detects Secure Boot and warns, but does not generate or enroll signing keys. Keep a working deployment available before enabling the driver.
 
 ## Optional feature manager
 
