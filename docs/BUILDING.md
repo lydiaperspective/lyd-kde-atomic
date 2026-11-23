@@ -13,15 +13,15 @@ bluebuild build recipes/lyd-kde.yml
 
 The build uses the recipe in `recipes/lyd-kde.yml`. The output is a local OCI image. Use `bluebuild switch recipes/lyd-kde.yml` only on a test machine or VM; it builds and stages a new deployment for the next boot.
 
-## GitHub Actions secrets
+## GitHub Actions signing
 
-Create a Cosign key pair once on a trusted workstation:
+The build workflow can publish unsigned bootstrap images so the first build works without extra setup. For signed images, create a Cosign key pair once on a trusted workstation:
 
 ```bash
 cosign generate-key-pair
 ```
 
-Add the contents of `cosign.key` as the repository Actions secret `COSIGN_PRIVATE_KEY` and the contents of `cosign.pub` as `COSIGN_PUBLIC_KEY`. Keep the private key out of the repository and do not upload it as an artifact. GitHub Actions uses its token to publish the image to GHCR.
+Add the contents of `cosign.key` as the repository Actions secret `COSIGN_PRIVATE_KEY` and the contents of `cosign.pub` as `COSIGN_PUBLIC_KEY`. Keep the private key out of the repository and do not upload it as an artifact. When both secrets are present, the workflow signs the image; otherwise it uses BlueBuild's `--no-sign` option. GitHub Actions uses its token to publish the image to GHCR.
 
 ## Publish and ISO build
 
