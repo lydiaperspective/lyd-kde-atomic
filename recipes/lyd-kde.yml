@@ -31,16 +31,14 @@ modules:
         - fastfetch
         - btrfs-progs
         - akmods
+        - kernel-devel-matched
         - akmod-nvidia-580xx
         - xorg-x11-drv-nvidia-580xx
         - xorg-x11-drv-nvidia-580xx-cuda
-        - tuned
-        - tuned-ppd
     remove:
       packages:
         - firefox
         - firefox-langpacks
-        - power-profiles-daemon
         - plasma-discover-rpm-ostree
   - type: default-flatpaks
     configurations:
@@ -60,10 +58,3 @@ modules:
       - install-lyd-tools.sh
       - install-mystical-theme.sh
       - configure-workstation.sh
-  - type: systemd
-    system:
-      enabled:
-        - tuned.service
-        - tuned-ppd.service
-      disabled:
-        - power-profiles-daemon.service
