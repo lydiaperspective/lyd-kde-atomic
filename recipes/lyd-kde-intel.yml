@@ -1,0 +1,52 @@
+---
+name: lyd-kde-atomic-intel
+description: Minimal KDE Atomic workstation for Intel and other non-NVIDIA graphics systems.
+base-image: quay.io/fedora-ostree-desktops/kinoite
+image-version: "45"
+modules:
+  - type: dnf
+    install:
+      packages:
+        - dolphin
+        - konsole
+        - kate
+        - ark
+        - okular
+        - spectacle
+        - kcalc
+        - plasma-discover
+        - plasma-discover-flatpak
+        - flatpak
+        - git
+        - curl
+        - wget
+        - jq
+        - python3
+        - python3-pip
+        - bash-completion
+        - htop
+        - fastfetch
+        - btrfs-progs
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+        - plasma-discover-rpm-ostree
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+        install:
+          - net.waterfox.waterfox
+  - type: files
+    files:
+      - source: system
+        destination: /
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+      - install-mystical-theme.sh
+      - configure-workstation-intel.sh
