@@ -62,6 +62,14 @@ The Standard edition can add the current RPM Fusion NVIDIA driver using `lydsetu
 
 This uses the current RPM Fusion driver branch, which may differ from the NVIDIA edition's pinned 580.x driver. If Secure Boot is enabled, the generated module may be blocked unless module signing is configured and its certificate is enrolled. `lydsetup` detects Secure Boot and warns, but does not generate or enroll signing keys. Keep a working deployment available before enabling the driver.
 
+## AppImage, Flatpak and Aurorae support
+
+Both image recipes install `fuse` and `fuse-libs` for FUSE 2 compatibility, plus `fuse3` and `fuse3-libs` for FUSE 3. This provides the host FUSE components required by many current and legacy AppImages. Some AppImages still require additional libraries or a compatible runtime; FUSE support cannot guarantee every third-party AppImage will run.
+
+Flatpak is installed as a system package. BlueBuild's `default-flatpaks` module configures Flathub as a system remote and installs Waterfox. `plasma-discover-flatpak` supplies Discover's Flatpak integration, while `xdg-desktop-portal` and `xdg-desktop-portal-kde` provide desktop portal services used by sandboxed applications.
+
+The Fedora `aurorae` package installs the KWin Aurorae decoration engine. It enables compatible SVG-based Aurorae window decorations to be installed and selected in KDE System Settings; it is not itself a theme pack.
+
 ## Mystical theme dependency
 
 The Mystical KDE theme and its supporting assets are maintained in [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes). The image build script `files/scripts/install-mystical-theme.sh` clones that repository and checks out a specific commit before installing the assets. Update the pinned commit in that script when intentionally moving the images to a newer theme revision. Do not change it to a floating branch name: commit pinning makes image builds reproducible.
