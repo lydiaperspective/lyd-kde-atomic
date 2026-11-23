@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+REAPPLY=0
+if [[ "${1:-}" == "--reapply" && $# -eq 1 ]]; then
+  REAPPLY=1
+elif (($# > 0)); then
+  echo "Usage: $0 [--reapply]" >&2
+  exit 2
+fi
+
 # Pin the shared theme repository so image builds remain reproducible.
 THEME_REPO=https://github.com/lydiaperspective/lyd-kde-themes.git
 THEME_COMMIT=9fd97cf008e3fad169e8b61c612e736a7c16686d
