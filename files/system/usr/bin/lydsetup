@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.6
+VERSION=0.4.7
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -374,6 +374,39 @@ THEME_DISTROBOX_CONFIG
   echo "optipng, pngquant, xcursorgen and Plymouth."
 }
 
+setup_theme_reapply() {
+  local installer="/usr/libexec/lyd/lyd-mystical-theme-reapply"
+  echo "This reapplies the complete Lyd Mystical theme, including:"
+  echo "  Plasma look-and-feel, colors, icons, cursor and wallpaper"
+  echo "  SDDM login screen and background"
+  echo "  GRUB boot menu and Plymouth startup theme (initramfs rebuild)"
+  echo
+  confirm "Reapply the Mystical theme now? This will replace the current desktop theme and wallpaper." || return 0
+
+  [[ -x "$installer" ]] || die "The Mystical theme reapply tool is missing. Update to the latest Lyd Atomic image first."
+  sudo "$installer" --reapply
+
+  if command -v plasma-apply-lookandfeel >/dev/null 2>&1; then
+    plasma-apply-lookandfeel --apply org.lydark.mystical.desktop
+  else
+    echo "Warning: plasma-apply-lookandfeel is unavailable; system-wide defaults were refreshed."
+  fi
+  if command -v kwriteconfig6 >/dev/null 2>&1; then
+    kwriteconfig6 --file kdeglobals --group General --key ColorScheme Mystical
+    kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage org.lydark.mystical.desktop
+    kwriteconfig6 --file kdeglobals --group Icons --key Theme Mystical
+    kwriteconfig6 --file kcminputrc --group Mouse --key cursorTheme Mystical
+    kwriteconfig6 --file plasmarc --group Theme --key name org.lydark.mystical.desktop
+  fi
+  local wallpaper="/usr/share/wallpapers/org.lydark.mystical.wallpaper/contents/images/1920x1080.svg"
+  if [[ -r "$wallpaper" ]] && command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then
+    plasma-apply-wallpaperimage "$wallpaper" || echo "Warning: wallpaper could not be applied to the current Plasma session."
+  fi
+  echo
+  echo "Mystical theme reapplication is complete. The GRUB/Plymouth setup has been refreshed."
+  echo "If the login or boot appearance does not update immediately, reboot to verify it."
+}
+
 flatpak_installed() {
   local app_id="$1"
   flatpak list --system --app --columns=application 2>/dev/null | grep -Fxq "$app_id"
@@ -555,7 +588,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|solaar enable|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|solaar enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup                              Show this command list
