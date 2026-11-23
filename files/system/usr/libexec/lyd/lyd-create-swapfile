@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Create a persistent swap file equal to half of physical RAM.
+# Btrfs requires its dedicated swapfile helper (no holes, NOCOW).
+SWAP_DIR=/var/lib/lyd/swap
+SWAP_FILE="$SWAP_DIR/swapfile"
+
+mem_kib="$(awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo)"
+[[ "$mem_kib" =~ ^[0-9]+$ ]] || { echo "Unable to determine physical memory." >&2; exit 1; }
+size_mib=$(( (mem_kib / 2 + 1023) / 1024 ))
+(( size_mib > 0 )) || size_mib=1
+expected_bytes=$(( size_mib * 1024 * 1024 ))
+
+install -d -m 0700 "$SWAP_DIR"
+
+if [[ -e "$SWAP_FILE" ]]; then
+  current_bytes="$(stat -c '%s' "$SWAP_FILE")"
+  if (( current_bytes != expected_bytes )); then
+    if swapon --show=NAME --noheadings | grep -Fxq "$SWAP_FILE"; then
+      swapoff "$SWAP_FILE"
+    fi
+    rm -f "$SWAP_FILE"
+  fi
+fi
+
+if [[ ! -e "$SWAP_FILE" ]]; then
+  fs_type="$(findmnt -n -o FSTYPE -T "$SWAP_DIR" || true)"
+  if [[ "$fs_type" == btrfs ]]; then
+    btrfs filesystem mkswapfile --size "${size_mib}M" --uuid clear "$SWAP_FILE"
+  else
+    fallocate -l "$expected_bytes" "$SWAP_FILE"
+    chmod 0600 "$SWAP_FILE"
+    mkswap "$SWAP_FILE"
+  fi
+fi
+
+chmod 0600 "$SWAP_FILE"
+if ! swapon --show=NAME --noheadings | grep -Fxq "$SWAP_FILE"; then
+  swapon "$SWAP_FILE"
+fi
+
+echo "Lyd Atomic swap is active: $SWAP_FILE ($((size_mib / 1024)) GiB rounded, target half of RAM)."
