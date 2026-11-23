@@ -61,6 +61,17 @@ jobs:
           esac
           IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:$IMAGE_TAG"
           sudo podman pull "$IMAGE"
+
+          echo "Checking repository configuration inside $IMAGE before ISO conversion"
+          sudo podman run --rm --entrypoint /bin/bash "$IMAGE" -lc '
+            set -Eeuo pipefail
+            echo "Repository directories:"
+            ls -la /etc/yum.repos.d /usr/share/dnf5/repos.d 2>/dev/null || true
+            echo
+            echo "DNF5 enabled repositories:"
+            dnf5 repo list --enabled
+          '
+
           sudo podman run --rm --privileged --pull=newer \
             --security-opt label=type:unconfined_t \
             -v "$PWD/output:/output" \
