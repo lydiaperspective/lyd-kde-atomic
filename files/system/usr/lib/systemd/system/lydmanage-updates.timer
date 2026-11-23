@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Lyd Atomic automatic updates
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00
+Persistent=true
+AccuracySec=1min
+Unit=lydmanage-updates.service
+
+[Install]
+WantedBy=timers.target
