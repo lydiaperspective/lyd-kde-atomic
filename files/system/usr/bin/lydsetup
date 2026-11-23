@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.0
+VERSION=0.6.1
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -77,7 +77,8 @@ setup_mediaedit() {
 
 setup_gaming() {
   echo "Checking the preinstalled gaming system packages."
-  require_packages steam steam-devices gamemode mangohud gamescope protontricks
+  require_packages steam-devices gamemode mangohud gamescope protontricks
+  flatpak_installed com.valvesoftware.Steam || die "Steam Flatpak is missing from this image."
   echo "Installing Steam companion and game launchers from Flathub."
   install_flatpaks_system \
     com.vysp3r.ProtonPlus \
@@ -85,14 +86,16 @@ setup_gaming() {
     com.heroicgameslauncher.hgl
   echo
   echo "Gaming setup is complete."
-  echo "Steam and gaming utilities are included in the image; ProtonPlus, Lutris and Heroic are system Flatpaks."
+  echo "Steam is preinstalled as a system Flatpak. GameMode, MangoHud, Gamescope and Protontricks are included in the image."
+  echo "ProtonPlus, Lutris and Heroic are installed as system Flatpaks."
   echo "Example Steam launch option for GameMode and MangoHud:"
   echo "  gamemoderun mangohud %command%"
 }
 
 setup_gamingui() {
   echo "Checking the preinstalled Steam and Gamescope packages."
-  require_packages steam steam-devices gamescope
+  require_packages steam-devices gamescope
+  flatpak_installed com.valvesoftware.Steam || die "Steam Flatpak is missing from this image."
   local bin_dir="$HOME/.local/bin"
   local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   mkdir -p "$bin_dir" "$app_dir"
@@ -139,9 +142,7 @@ EOF
   echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
 }
 setup_steamtheme() {
-  local helper="/usr/share/lyd/lyd-steamtheme-setup"
-  [[ -f "$helper" ]] || die "The Lyd Mystical Steam setup helper is missing from this image. Update Lyd Atomic first."
-  bash "$helper"
+  die "The Steam Flatpak is now the supported client. Millennium does not support Flatpak Steam, so the Lyd Mystical Steam client theme is temporarily unavailable."
 }
 
 setup_8bitdo() {
@@ -442,17 +443,17 @@ feature_enabled() {
         flatpak_installed ca.littlesvr.asunder &&
         flatpak_installed org.soundconverter.SoundConverter ;;
     gamingui)
-      rpm -q steam steam-devices gamescope >/dev/null 2>&1 &&
+      rpm -q steam-devices gamescope >/dev/null 2>&1 &&
+        flatpak_installed com.valvesoftware.Steam &&
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
         [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]] ;;
     gaming)
-      rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
+      rpm -q steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
+        flatpak_installed com.valvesoftware.Steam &&
         flatpak_installed com.vysp3r.ProtonPlus &&
         flatpak_installed net.lutris.Lutris &&
         flatpak_installed com.heroicgameslauncher.hgl ;;
-    steamtheme)
-      [[ -f "$HOME/.config/lyd/steamtheme-installed" ]] &&
-        [[ -f /usr/lib/millennium/libmillennium_bootstrap_x86.so ]] ;;
+    steamtheme) return 1 ;;
     8bitdo)
       rpm -q steam-devices >/dev/null 2>&1 &&
         [[ -f /etc/udev/rules.d/71-8bitdo-pro2.rules ]] ;;
@@ -606,7 +607,7 @@ Available commands:
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
-  lydsetup steamtheme                   Install and activate the Lyd Mystical Steam client theme
+  lydsetup steamtheme                   Explain Steam Flatpak theme compatibility (Millennium unsupported)
   lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Use preinstalled Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
@@ -630,7 +631,7 @@ Features:
   Solaar Logitech device manager (preinstalled system package)
   Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
-  Gaming (Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
+  Gaming (Steam Flatpak, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
 
 All system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
