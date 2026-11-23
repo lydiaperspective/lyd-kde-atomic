@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Pin the shared theme repository so image builds remain reproducible.
 THEME_REPO=https://github.com/lydiaperspective/lyd-kde-themes.git
-THEME_COMMIT=240a38cba36e78d2437b3f8a7f63a638741d5a53
+THEME_COMMIT=462de0cb6bf0a1cddabbe95f5d547f4ec44e7024
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
