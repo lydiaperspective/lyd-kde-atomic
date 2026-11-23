@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.3.0
+VERSION=0.4.0
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -93,7 +93,7 @@ setup_tailscale() {
     echo "Connect later with: sudo tailscale up"
   fi
 }
-setup_development() {
+setup_devbox() {
   local config_dir config_file box_name
   box_name="lyd-atomic-dev"
   if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
@@ -132,6 +132,89 @@ DISTROBOX_CONFIG
   echo "  bluebuild build recipes/lyd-server.yml"
   echo "The BlueBuild Distrobox is rootless; use GitHub Actions or an appropriately configured host workflow for publishing images."
 }
+
+ensure_distrobox_host() {
+  if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
+    echo "Distrobox and Podman are required on the host. Missing packages will be layered into the next deployment."
+    stage_packages distrobox podman
+    reboot_notice && return 1
+    command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot, then run lydsetup again."
+    command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot, then run lydsetup again."
+  fi
+  return 0
+}
+setup_androiddev() {
+  local box_name="lyd-android-dev" repo_dir
+  ensure_distrobox_host || return 0
+  if ! command -v flatpak >/dev/null 2>&1; then
+    echo "Flatpak is required to install Android Studio."
+    stage_packages flatpak
+    reboot_notice && return 0
+    command -v flatpak >/dev/null 2>&1 || die "Flatpak is unavailable after deployment. Reboot and retry."
+  fi
+  echo "This sets up Android Studio on the host and a Fedora development Distrobox."
+  echo "The Distrobox includes Git, Java 21, Android platform tools and common build utilities."
+  if confirm "Install Android Studio from Flathub and create the Android development environment?"; then
+    flatpak install --user --noninteractive flathub com.google.AndroidStudio
+  else
+    return 0
+  fi
+  if ! distrobox list --no-color 2>/dev/null | grep -q "$box_name"; then
+    distrobox create --name "$box_name" --image registry.fedoraproject.org/fedora:45 --additional-packages "git git-lfs java-21-openjdk-devel android-tools wget curl unzip zip tar findutils which" --yes
+  else
+    echo "Distrobox $box_name already exists; leaving its contents intact."
+  fi
+  repo_dir="$HOME/Projects/lyd-kde-atomic"
+  mkdir -p "$HOME/Projects"
+  if [[ ! -d "$repo_dir/.git" ]]; then
+    if [[ -e "$repo_dir" ]]; then
+      echo "Skipping clone because $repo_dir already exists and is not a Git repository."
+    else
+      git clone https://github.com/lydiaperspective/lyd-kde-atomic.git "$repo_dir"
+    fi
+  else
+    echo "Lyd Atomic repository already exists at $repo_dir."
+  fi
+  echo
+  echo "Android development environment is ready."
+  echo "Launch Android Studio from the application menu."
+  echo "Enter the toolchain container with: distrobox enter $box_name"
+  echo "Project checkout: $repo_dir (shared with the container)"
+  echo "In Android Studio, set the Android SDK location to a writable host path such as $HOME/Android/Sdk."
+  echo "For GitHub access, use the GitHub sign-in flow in Android Studio or configure gh/git credentials separately."
+}
+setup_containerdev() {
+  local box_name="lyd-container-dev"
+  ensure_distrobox_host || return 0
+  echo "This creates a Fedora container-development environment using the host's rootless Podman engine."
+  if ! distrobox list --no-color 2>/dev/null | grep -q "$box_name"; then
+    distrobox create --name "$box_name" --image registry.fedoraproject.org/fedora:45 --additional-packages "git git-lfs podman-compose buildah skopeo jq yq curl wget vim-enhanced" --yes
+  else
+    echo "Distrobox $box_name already exists; leaving its contents intact."
+  fi
+  distrobox enter "$box_name" -- bash -lc 'mkdir -p "$HOME/.local/bin"; ln -sf /usr/bin/distrobox-host-exec "$HOME/.local/bin/podman"; grep -q "\\.local/bin" "$HOME/.bashrc" 2>/dev/null || echo "export PATH=\\"$HOME/.local/bin:\\$PATH" >> "$HOME/.bashrc"'
+  echo
+  echo "Container development environment is ready."
+  echo "Enter it with: distrobox enter $box_name"
+  echo "Podman commands are forwarded to the host's rootless Podman engine."
+  echo "Your home directory is shared, so compose projects and source checkouts remain accessible."
+}
+dev_help() {
+  cat <<HELP
+Usage:
+  lydsetup devbox
+  lydsetup dev devbox enable
+  lydsetup dev androiddev enable
+  lydsetup dev container enable
+  lydsetup development <same subcommands>
+
+Development environments:
+  devbox       BlueBuild environment for building Lyd Atomic images and ISOs
+  androiddev   Android Studio plus a Fedora Android toolchain container
+  container    Fedora container-development tools using host rootless Podman
+HELP
+}
+
 setup_zed() {
   if command -v zed >/dev/null 2>&1; then
     echo "Zed is already installed. The official installer can update it."
@@ -180,12 +263,37 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
+    devbox)
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_devbox
+      exit 0 ;;
+    dev|development)
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      case "${2:-}" in
+        devbox) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_devbox ;;
+        androiddev) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_androiddev ;;
+        container) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_containerdev ;;
+        --help|-h|"") dev_help ;;
+        *) dev_help; die "Unknown development environment: $2" ;;
+      esac
+      exit 0 ;;
     --help|-h)
       cat <<HELP
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup
+Usage: lydsetup [dev|development|devbox ...]
+
+Development commands:
+  lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
+  lydsetup dev devbox enable              Same as above
+  lydsetup dev androiddev enable          Set up Android Studio development
+  lydsetup dev container enable           Set up Podman container development
+  Use 'development' instead of 'dev' as an alias.
 
 Features:
   NVIDIA proprietary driver (RPM Fusion; standard edition)
@@ -236,7 +344,7 @@ HELP
       3) setup_coolercontrol ;;
       4) setup_tuned ;;
       5) setup_tailscale ;;
-      6) if (( server_edition )); then setup_development; else setup_zed; fi ;;
+      6) if (( server_edition )); then setup_devbox; else setup_zed; fi ;;
       7) if (( server_edition )); then break; else setup_development; fi ;;
       8) break ;;
       *) echo "Choose a listed number." ;;
