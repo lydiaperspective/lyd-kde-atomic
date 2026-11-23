@@ -1,13 +1,10 @@
 ---
 name: lyd-kde-atomic
-description: Minimal Lyd KDE Atomic workstation with proprietary NVIDIA 580xx support.
-base-image: quay.io/fedora-ostree-desktops/kinoite
+description: Minimal KDE Atomic workstation with the proprietary NVIDIA 580 driver.
+base-image: ghcr.io/blue-build/base-images/fedora-kinoite-nvidia
 image-version: "45"
 modules:
   - type: dnf
-    repos:
-      nonfree: rpmfusion
-      cleanup: false
     install:
       packages:
         - dolphin
@@ -30,11 +27,6 @@ modules:
         - htop
         - fastfetch
         - btrfs-progs
-        - akmods
-        - kernel-devel-matched
-        - akmod-nvidia-580xx
-        - xorg-x11-drv-nvidia-580xx
-        - xorg-x11-drv-nvidia-580xx-cuda
     remove:
       packages:
         - firefox
