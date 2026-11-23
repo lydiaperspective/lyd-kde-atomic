@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Keep the base browser set intentionally empty; Waterfox is provisioned as a
-# system Flatpak by BlueBuild's default-flatpaks module.
+# Waterfox is provisioned as a system Flatpak by BlueBuild's default-flatpaks
+# module. The base system must not retain Firefox as an RPM browser.
 if rpm -q firefox firefox-wayland firefox-langpacks >/dev/null 2>&1; then
   echo "Unexpected Firefox RPM detected in base image" >&2
   exit 1
 fi
-
-# Require the 580xx legacy branch rather than silently accepting the current
-# NVIDIA branch, which no longer supports Maxwell/Pascal/Volta GPUs.
+# Require the proprietary 580xx branch and build the matching kernel module.
 rpm -q akmod-nvidia-580xx xorg-x11-drv-nvidia-580xx xorg-x11-drv-nvidia-580xx-cuda
 command -v akmods >/dev/null 2>&1 || { echo "akmods is missing" >&2; exit 1; }
+rpm -q kernel-devel-matched >/dev/null
 akmods --force
-
 install -d /usr/share/lyd
 cat > /usr/share/lyd/IMAGE-INFO <<'EOF'
 Lyd KDE Atomic
