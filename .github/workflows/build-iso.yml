@@ -7,10 +7,10 @@ on:
         description: Hardware image to install
         type: choice
         required: true
-        default: nvidia
+        default: standard
         options:
           - nvidia
-          - intel
+          - standard
       image_tag:
         description: Published image tag to convert
         required: true
@@ -39,8 +39,8 @@ jobs:
         run: |
           mkdir -p output
           case "$IMAGE_FLAVOUR" in
-            nvidia) IMAGE_NAME="lyd-kde-atomic" ;;
-            intel) IMAGE_NAME="lyd-kde-atomic-intel" ;;
+            nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
+            standard) IMAGE_NAME="lyd-atomic-standard" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
           IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:$IMAGE_TAG"
@@ -59,7 +59,7 @@ jobs:
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lyd-kde-atomic-${{ inputs.image_flavour }}-iso
+          name: lyd-atomic-${{ inputs.image_flavour }}-iso
           path: output/
           if-no-files-found: error
           retention-days: 14
