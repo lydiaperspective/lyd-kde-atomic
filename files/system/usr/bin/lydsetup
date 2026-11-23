@@ -169,10 +169,12 @@ fi
 if ! kdialog --warningyesno "You are about to log out of Plasma. At the SDDM login screen, select 'Lyd Gamescope' from the session menu, then sign in to launch Steam in Gamepad UI. To return, log out of Gamescope and select 'Plasma (Wayland)'." --title "Switch to Lyd Gamescope"; then
   exit 0
 fi
-if command -v qdbus6 >/dev/null 2>&1; then
-  qdbus6 org.kde.Shutdown /Shutdown logout
-elif command -v qdbus >/dev/null 2>&1; then
-  qdbus org.kde.Shutdown /Shutdown logout
+qdbus_cmd=""
+for candidate in qdbus6 qdbus-qt6 qdbus; do
+  if command -v "$candidate" >/dev/null 2>&1; then qdbus_cmd="$candidate"; break; fi
+done
+if [[ -n "$qdbus_cmd" ]]; then
+  "$qdbus_cmd" org.kde.Shutdown /Shutdown logout
 else
   kdialog --error "Could not find qdbus to safely log out of Plasma. Log out from the application menu, then choose Lyd Gamescope at SDDM." 2>/dev/null || true
   exit 1
