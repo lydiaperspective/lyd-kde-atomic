@@ -374,6 +374,74 @@ THEME_DISTROBOX_CONFIG
   echo "optipng, pngquant, xcursorgen and Plymouth."
 }
 
+flatpak_installed() {
+  local app_id="$1"
+  flatpak list --system --app --columns=application 2>/dev/null | grep -Fxq "$app_id"
+}
+user_flatpak_installed() {
+  local app_id="$1"
+  flatpak list --user --app --columns=application 2>/dev/null | grep -Fxq "$app_id"
+}
+distrobox_exists() {
+  command -v distrobox >/dev/null 2>&1 && distrobox list --no-color 2>/dev/null | grep -Fq "$1"
+}
+feature_enabled() {
+  local feature="$1"
+  case "$feature" in
+    printscan)
+      rpm -q cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi >/dev/null 2>&1 &&
+        flatpak_installed org.kde.skanpage &&
+        systemctl is-enabled --quiet cups.service &&
+        systemctl is-enabled --quiet avahi-daemon.service ;;
+    media)
+      flatpak_installed com.spotify.Client &&
+        flatpak_installed com.stremio.Stremio &&
+        flatpak_installed org.jellyfin.JellyfinDesktop &&
+        flatpak_installed com.unicornsonlsd.finamp &&
+        flatpak_installed org.fcast.Receiver ;;
+    mediaedit)
+      flatpak_installed org.inkscape.Inkscape &&
+        flatpak_installed org.kde.kdenlive &&
+        flatpak_installed org.kde.krita &&
+        flatpak_installed ca.littlesvr.asunder &&
+        flatpak_installed org.soundconverter.SoundConverter ;;
+    gaming)
+      rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
+        flatpak_installed com.vysp3r.ProtonPlus &&
+        flatpak_installed net.lutris.Lutris &&
+        flatpak_installed com.heroicgameslauncher.hgl ;;
+    solaar) rpm -q solaar >/dev/null 2>&1 ;;
+    devbox) distrobox_exists lyd-atomic-dev ;;
+    androiddev)
+      { flatpak_installed com.google.AndroidStudio || user_flatpak_installed com.google.AndroidStudio; } &&
+        distrobox_exists lyd-android-dev ;;
+    container) distrobox_exists lyd-container-dev ;;
+    theme)
+      { user_flatpak_installed org.inkscape.Inkscape || flatpak_installed org.inkscape.Inkscape; } &&
+        { user_flatpak_installed org.kde.krita || flatpak_installed org.kde.krita; } &&
+        { user_flatpak_installed org.gimp.GIMP || flatpak_installed org.gimp.GIMP; } &&
+        distrobox_exists lyd-theme-dev ;;
+    *) return 1 ;;
+  esac
+}
+status_label() {
+  local feature="$1" state
+  if feature_enabled "$feature"; then state="Enabled"; else state="Disabled"; fi
+  printf '\\033[35m[%s]\\033[0m' "$state"
+}
+show_feature_status() {
+  printf '  %-12s %b\\n' "printscan" "$(status_label printscan)"
+  printf '  %-12s %b\\n' "media" "$(status_label media)"
+  printf '  %-12s %b\\n' "mediaedit" "$(status_label mediaedit)"
+  printf '  %-12s %b\\n' "gaming" "$(status_label gaming)"
+  printf '  %-12s %b\\n' "solaar" "$(status_label solaar)"
+  echo
+  echo "Development:"
+  printf '  %-12s %b\\n' "devbox" "$(status_label devbox)"
+  printf '  %-12s %b\\n' "androiddev" "$(status_label androiddev)"
+  printf '  %-12s %b\\n' "container" "$(status_label container)"
+  printf '  %-12s %b\\n' "theme" "$(status_label theme)"
+}
 dev_help() {
   cat <<HELP
 Usage:
@@ -525,7 +593,7 @@ Logs: $LOG
 HELP
       exit 0 ;;
     --version) echo "$VERSION"; exit 0 ;;
-    "") ;;
+    "")\n      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."\n      show_feature_status\n      echo\n      echo "Run lydsetup --help to see available commands."\n      exit 0 ;;
     *) die "Unknown argument: $1 (try --help)" ;;
   esac
   [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
