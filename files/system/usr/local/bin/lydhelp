@@ -16,6 +16,7 @@ Usage:
   lydhelp network         Inspect network connections
   lydhelp packages        Manage Fedora packages and deployments
   lydhelp flatpak         Manage Flatpak applications
+  lydhelp appimage        Run and troubleshoot AppImage applications
   lydhelp archives        Create and extract archives
   lydhelp atomic          Understand Atomic updates and rollbacks
 
@@ -126,6 +127,21 @@ FLATPAK
   flatpak uninstall ID           Remove an app
   flatpak info ID                Show application details
   flatpak remote-ls flathub      List apps available on Flathub
+EOF
+;;
+appimage) cat <<'EOF'
+APPIMAGE
+  chmod +x ./AppName.AppImage    Mark an AppImage as executable
+  ./AppName.AppImage             Launch the AppImage from its folder
+  file ./AppName.AppImage        Check that the download is an AppImage
+  ./AppName.AppImage --appimage-extract
+                                 Extract files when FUSE mounting is unavailable
+  ./squashfs-root/AppRun         Run an extracted AppImage (from its extracted folder)
+
+Lyd Atomic includes FUSE 2 compatibility libraries and FUSE 3 support for
+many AppImages. AppImages bundle much of their own software, but some still
+need extra host libraries or newer runtimes. Only run AppImages from sources
+you trust. Keep the file in a user-writable location such as ~/Applications.
 EOF
 ;;
 archives) cat <<'EOF'
