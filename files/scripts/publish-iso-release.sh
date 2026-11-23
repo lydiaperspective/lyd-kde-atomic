@@ -107,7 +107,7 @@ release_tag="iso-${edition}-${safe_image_tag}-${GITHUB_RUN_ID}"
 release_title="Lyd Atomic ${edition} ISO (${image_tag})"
 release_notes="Installable Lyd Atomic ISO for the **${edition}** edition, built from image tag **${image_tag}**.
 
-SHA-256 checksum is included. If the ISO was split into multiple assets, download all part files and `recombine-iso.sh` into the same directory, then run the script."
+SHA-256 checksum is included. If the ISO was split into multiple assets, download all part files and recombine-iso.sh into the same directory, then run the script."
 
 echo "Publishing release $release_tag with ${#assets[@]} assets."
 gh release create "$release_tag" "${assets[@]}" \
