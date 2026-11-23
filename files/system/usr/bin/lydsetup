@@ -292,7 +292,8 @@ Usage:
 Development environments:
   devbox       BlueBuild environment for building Lyd Atomic images and ISOs
   androiddev   Android Studio plus a Fedora Android toolchain container
-  container    Fedora container-development tools using host rootless Podman\n  theme        KDE theme, icon, cursor and Plymouth artwork toolchain
+  container    Fedora container-development tools using host rootless Podman
+  theme        KDE theme, icon, cursor and Plymouth artwork toolchain
 HELP
 }
 
@@ -364,7 +365,8 @@ main() {
       case "${2:-}" in
         devbox) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_devbox ;;
         androiddev) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_androiddev ;;
-        container) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_containerdev ;;\n        theme) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_themedev ;;
+        container) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_containerdev ;;
+        theme) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_themedev ;;
         --help|-h|"") dev_help ;;
         *) dev_help; die "Unknown development environment: $2" ;;
       esac
