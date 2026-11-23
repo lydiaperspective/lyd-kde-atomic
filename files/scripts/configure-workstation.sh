@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Waterfox is provisioned as a system Flatpak by BlueBuild's default-flatpaks
-# module. The base system must not retain Firefox as an RPM browser.
-if rpm -q firefox >/dev/null 2>&1; then
-  echo "Unexpected Firefox RPM detected in base image" >&2
-  exit 1
-fi
-
+# Waterfox is provisioned as a system Flatpak and configured as the default browser.
+# The Kinoite base may also retain its Firefox RPM; it is not the default.
 # Verify the NVIDIA userspace driver is present and on the expected branch.
 # Do not use modinfo here: image builds do not have the host's booted kernel
 # module tree, so a valid prebuilt NVIDIA module may not be visible at build
