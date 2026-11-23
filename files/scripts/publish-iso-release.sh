@@ -114,7 +114,7 @@ mapfile -t previous_releases < <(
   gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' |
     while IFS= read -r existing_tag; do
       case "$existing_tag" in
-        "$release_prefix"*) printf '%s\\n' "$existing_tag" ;;
+        "$release_prefix"*) printf '%s\n' "$existing_tag" ;;
       esac
     done
 )
