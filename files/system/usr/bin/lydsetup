@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.5.1
+VERSION=0.5.2
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -199,6 +199,12 @@ EOF
   echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
   echo "The session requires a working Wayland-compatible GPU driver."
 }
+setup_steamtheme() {
+  local helper="/usr/share/lyd/lyd-steamtheme-setup"
+  [[ -f "$helper" ]] || die "The Lyd Mystical Steam setup helper is missing from this image. Update Lyd Atomic first."
+  bash "$helper"
+}
+
 setup_8bitdo() {
   local fedora free_repo nonfree_repo
   fedora="$(rpm -E %fedora)"
@@ -555,6 +561,11 @@ feature_enabled() {
         flatpak_installed org.kde.krita &&
         flatpak_installed ca.littlesvr.asunder &&
         flatpak_installed org.soundconverter.SoundConverter ;;
+    steamtheme)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup steamtheme"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      setup_steamtheme
+      exit 0 ;;
     gamingui)
       rpm -q steam steam-devices gamescope >/dev/null 2>&1 &&
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
@@ -564,6 +575,9 @@ feature_enabled() {
         flatpak_installed com.vysp3r.ProtonPlus &&
         flatpak_installed net.lutris.Lutris &&
         flatpak_installed com.heroicgameslauncher.hgl ;;
+    steamtheme)
+      [[ -f "$HOME/.config/lyd/steamtheme-installed" ]] &&
+        [[ -f /usr/lib/millennium/libmillennium_bootstrap_x86.so ]] ;;
     8bitdo)
       rpm -q steam-devices >/dev/null 2>&1 &&
         [[ -f /etc/udev/rules.d/71-8bitdo-pro2.rules ]] ;;
@@ -592,6 +606,7 @@ show_feature_status() {
   printf '  %-12s %b\\n' "mediaedit" "$(status_label mediaedit)"
   printf '  %-12s %b\\n' "gaming" "$(status_label gaming)"
   printf '  %-12s %b\\n' "gamingui" "$(status_label gamingui)"
+  printf '  %-12s %b\\n' "steamtheme" "$(status_label steamtheme)"
   printf '  %-12s %b\\n' "8bitdo" "$(status_label 8bitdo)"
   printf '  %-12s %b\\n' "solaar" "$(status_label solaar)"
   echo
@@ -734,7 +749,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup                              Show this command list
@@ -745,6 +760,7 @@ Available commands:
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
+  lydsetup steamtheme                   Install and activate the Lyd Mystical Steam client theme
   lydsetup 8bitdo                       Install Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Install Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
