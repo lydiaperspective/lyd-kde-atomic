@@ -7,6 +7,8 @@ if rpm -q akmod-nvidia akmod-nvidia-580xx nvidia-driver >/dev/null 2>&1; then
   exit 1
 fi
 
+systemctl enable lyd-swapfile.service
+
 install -d /etc/xdg
 cat > /etc/xdg/mimeapps.list <<'EOF'
 [Default Applications]
