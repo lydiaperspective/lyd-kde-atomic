@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.9
+VERSION=0.5.0
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -128,6 +128,75 @@ setup_gaming() {
   echo "  gamemoderun mangohud %command%"
 }
 
+setup_gamingui() {
+  local fedora free_repo nonfree_repo
+  fedora="$(rpm -E %fedora)"
+  free_repo="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm"
+  nonfree_repo="https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
+
+  if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
+    echo "Steam requires the RPM Fusion repositories on Fedora."
+    confirm "Add RPM Fusion Free and Nonfree repositories? A reboot will be required." || return 0
+    sudo rpm-ostree install "$free_repo" "$nonfree_repo"
+    STAGED=1
+    reboot_notice
+    echo "After reboot, run: lydsetup gamingui"
+    return 0
+  fi
+
+  echo "Installing Steam and the Gamescope compositor."
+  stage_packages steam steam-devices gamescope
+  reboot_notice && return 0
+  if ! rpm -q steam steam-devices gamescope >/dev/null 2>&1; then
+    echo "Gaming UI packages are not all installed. If you cancelled, rerun: lydsetup gamingui"
+    return 0
+  fi
+
+  local bin_dir="$HOME/.local/bin"
+  local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+  mkdir -p "$bin_dir" "$app_dir"
+  cat > "$bin_dir/lyd-gamescope-switch" <<'SWITCH_SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+if [[ "${XDG_SESSION_TYPE:-}" != "wayland" ]]; then
+  kdialog --error "The Lyd Gamescope session requires a Wayland desktop. Log into Plasma (Wayland) and try again." 2>/dev/null || true
+  exit 1
+fi
+if ! command -v kdialog >/dev/null 2>&1; then
+  echo "KDialog is required to confirm the session switch." >&2
+  exit 1
+fi
+if ! kdialog --warningyesno "You are about to log out of Plasma. At the SDDM login screen, select 'Lyd Gamescope' from the session menu, then sign in to launch Steam in Gamepad UI. To return, log out of Gamescope and select 'Plasma (Wayland)'." --title "Switch to Lyd Gamescope"; then
+  exit 0
+fi
+if command -v qdbus6 >/dev/null 2>&1; then
+  qdbus6 org.kde.Shutdown /Shutdown logout
+elif command -v qdbus >/dev/null 2>&1; then
+  qdbus org.kde.Shutdown /Shutdown logout
+else
+  kdialog --error "Could not find qdbus to safely log out of Plasma. Log out from the application menu, then choose Lyd Gamescope at SDDM." 2>/dev/null || true
+  exit 1
+fi
+SWITCH_SCRIPT
+  chmod 0755 "$bin_dir/lyd-gamescope-switch"
+  cat > "$app_dir/lyd-gamescope-switch.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Switch to Lyd Gamescope
+GenericName=Steam Gaming Session
+Comment=Log out and switch to the Steam Gamescope session
+Exec=$bin_dir/lyd-gamescope-switch
+Icon=steam
+Terminal=false
+Categories=Game;System;
+EOF
+
+  echo
+  echo "Steam Gamescope support is installed."
+  echo "Use 'Switch to Lyd Gamescope' from the application menu."
+  echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
+  echo "The session requires a working Wayland-compatible GPU driver."
+}
 setup_virtualization() {
   if rpm -q cockpit-machines >/dev/null 2>&1; then
     echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
@@ -440,6 +509,10 @@ feature_enabled() {
         flatpak_installed org.kde.krita &&
         flatpak_installed ca.littlesvr.asunder &&
         flatpak_installed org.soundconverter.SoundConverter ;;
+    gamingui)
+      rpm -q steam steam-devices gamescope >/dev/null 2>&1 &&
+        [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
+        [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]];;
     gaming)
       rpm -q steam steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
         flatpak_installed com.vysp3r.ProtonPlus &&
@@ -469,6 +542,7 @@ show_feature_status() {
   printf '  %-12s %b\\n' "media" "$(status_label media)"
   printf '  %-12s %b\\n' "mediaedit" "$(status_label mediaedit)"
   printf '  %-12s %b\\n' "gaming" "$(status_label gaming)"
+  printf '  %-12s %b\\n' "gamingui" "$(status_label gamingui)"
   printf '  %-12s %b\\n' "solaar" "$(status_label solaar)"
   echo
   echo "Development:"
@@ -555,6 +629,13 @@ main() {
         gaming) setup_gaming ;;
       esac
       exit 0 ;;
+    gamingui)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup gamingui"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_gamingui
+      exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
@@ -596,7 +677,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|solaar enable|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|solaar enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup                              Show this command list
@@ -606,6 +687,7 @@ Available commands:
   lydsetup media enable                 Install media playback Flatpaks
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
+  lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
   lydsetup solaar enable                Install Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
   lydsetup dev devbox enable            Same as above
