@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+BOX_NAME="lyd-atomic-dev"
+
+if ! command -v distrobox >/dev/null 2>&1; then
+  echo "Distrobox is not installed on this system."
+  echo "Run 'lydsetup' and choose the BlueBuild development environment option first."
+  exit 1
+fi
+
+if ! distrobox list 2>/dev/null | grep -Fq "$BOX_NAME"; then
+  echo "The '$BOX_NAME' development container has not been created yet."
+  echo "Run 'lydsetup' and choose the BlueBuild development environment option first."
+  exit 1
+fi
+
+exec distrobox enter "$BOX_NAME" "$@"
