@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.0
+VERSION=0.4.1
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -93,6 +93,23 @@ setup_tailscale() {
     echo "Connect later with: sudo tailscale up"
   fi
 }
+setup_solaar() {
+  if rpm -q solaar >/dev/null 2>&1; then
+    echo "Solaar is already installed system-wide."
+    echo "Launch it from the application menu or run: solaar"
+    return 0
+  fi
+  echo "Solaar will be installed system-wide with its Fedora udev rules."
+  echo "The package will be layered into a new deployment and requires a reboot."
+  stage_packages solaar
+  reboot_notice && return 0
+  if rpm -q solaar >/dev/null 2>&1; then
+    echo "Solaar is installed system-wide. Launch it from the application menu or run: solaar"
+  else
+    echo "Solaar installation was not staged."
+  fi
+}
+
 setup_devbox() {
   local config_dir config_file box_name
   box_name="lyd-atomic-dev"
@@ -263,6 +280,13 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
+    solaar)
+      [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_solaar
+      exit 0 ;;
     devbox)
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
@@ -286,7 +310,7 @@ main() {
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [dev|development|devbox ...]
+Usage: lydsetup [solaar enable|dev|development|devbox ...]
 
 Development commands:
   lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
@@ -303,6 +327,7 @@ Features:
   Tailscale VPN client (official Fedora repository; all editions)
   Zed editor (official per-user Linux installer; workstation editions)
   BlueBuild development environment (Distrobox; all editions)
+  Solaar Logitech device manager (system package; workstation editions)
 
 System package changes create a new deployment and require a reboot.
 Run lydsetup again after reboot if prompted to finish enabling this feature.
@@ -331,11 +356,13 @@ HELP
     echo "  5) Tailscale VPN"
     if (( server_edition )); then
       echo "  6) BlueBuild development environment (Distrobox)"
-      echo "  7) Exit"
+      echo "  7) Solaar (Logitech device manager)"
+      echo "  8) Exit"
     else
       echo "  6) Zed editor"
       echo "  7) BlueBuild development environment (Distrobox)"
-      echo "  8) Exit"
+      echo "  8) Solaar (Logitech device manager)"
+      echo "  9) Exit"
     fi
     read -r -p "Select a feature: " choice
     case "$choice" in
@@ -345,8 +372,9 @@ HELP
       4) setup_tuned ;;
       5) setup_tailscale ;;
       6) if (( server_edition )); then setup_devbox; else setup_zed; fi ;;
-      7) if (( server_edition )); then break; else setup_devbox; fi ;;
-      8) break ;;
+      7) if (( server_edition )); then setup_solaar; else setup_devbox; fi ;;
+      8) if (( server_edition )); then break; else setup_solaar; fi ;;
+      9) break ;;
       *) echo "Choose a listed number." ;;
     esac
   done
