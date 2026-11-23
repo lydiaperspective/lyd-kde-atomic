@@ -345,7 +345,7 @@ HELP
       4) setup_tuned ;;
       5) setup_tailscale ;;
       6) if (( server_edition )); then setup_devbox; else setup_zed; fi ;;
-      7) if (( server_edition )); then break; else setup_development; fi ;;
+      7) if (( server_edition )); then break; else setup_devbox; fi ;;
       8) break ;;
       *) echo "Choose a listed number." ;;
     esac
