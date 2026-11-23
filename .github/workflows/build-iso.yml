@@ -82,6 +82,9 @@ jobs:
             "$IMAGE"
       - name: Generate checksums
         run: |
+          # bootc-image-builder writes artifacts as root inside the container.
+          # Return ownership to the Actions runner before creating sidecar files.
+          sudo chown -R "$(id -u):$(id -g)" output
           find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
             sha256sum "$iso" > "$iso.sha256"
           done
