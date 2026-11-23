@@ -16,6 +16,15 @@ on:
         description: Published image tag to convert
         required: true
         default: latest
+      rootfs_type:
+        description: Filesystem for the installed system
+        type: choice
+        required: true
+        default: btrfs
+        options:
+          - btrfs
+          - xfs
+          - ext4
 
 permissions:
   contents: read
@@ -37,6 +46,7 @@ jobs:
         env:
           IMAGE_FLAVOUR: ${{ inputs.image_flavour }}
           IMAGE_TAG: ${{ inputs.image_tag }}
+          ROOTFS_TYPE: ${{ inputs.rootfs_type }}
         run: |
           mkdir -p output
           case "$IMAGE_FLAVOUR" in
@@ -45,6 +55,10 @@ jobs:
             server) IMAGE_NAME="lyd-atomic-server" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
+          case "$ROOTFS_TYPE" in
+            btrfs|xfs|ext4) ;;
+            *) echo "Unsupported root filesystem: $ROOTFS_TYPE" >&2; exit 1 ;;
+          esac
           IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:$IMAGE_TAG"
           sudo podman pull "$IMAGE"
           sudo podman run --rm --privileged --pull=newer \
@@ -52,7 +66,9 @@ jobs:
             -v "$PWD/output:/output" \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
-            --type iso "$IMAGE"
+            --type iso \
+            --rootfs "$ROOTFS_TYPE" \
+            "$IMAGE"
       - name: Generate checksums
         run: |
           find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
