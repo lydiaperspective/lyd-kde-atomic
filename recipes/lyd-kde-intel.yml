@@ -57,3 +57,4 @@ modules:
       - install-lyd-tools.sh
       - install-mystical-theme.sh
       - configure-workstation-intel.sh
+      - enable-bib-repositories.sh
