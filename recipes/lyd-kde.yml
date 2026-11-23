@@ -74,5 +74,6 @@ modules:
     scripts:
       - install-lyd-tools.sh
       - install-mystical-theme.sh
+      - install-millennium.sh
       - configure-workstation.sh
       - enable-bib-repositories.sh
