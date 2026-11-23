@@ -380,7 +380,7 @@ THEME_DISTROBOX_CONFIG
 setup_theme_reapply() {
   local installer="/usr/libexec/lyd/lyd-mystical-theme-reapply"
   echo "This reapplies the complete Lyd Mystical theme, including:"
-  echo "  Plasma look-and-feel, colors, icons, cursor and wallpaper"
+  echo "  Plasma look-and-feel, colors, Breeze icons, cursor and wallpaper"
   echo "  SDDM login screen and background"
   echo "  GRUB boot menu and Plymouth startup theme (initramfs rebuild)"
   echo
@@ -397,7 +397,7 @@ setup_theme_reapply() {
   if command -v kwriteconfig6 >/dev/null 2>&1; then
     kwriteconfig6 --file kdeglobals --group General --key ColorScheme Mystical
     kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage org.lydark.mystical.desktop
-    kwriteconfig6 --file kdeglobals --group Icons --key Theme Mystical
+    kwriteconfig6 --file kdeglobals --group Icons --key Theme breeze
     kwriteconfig6 --file kcminputrc --group Mouse --key cursorTheme Mystical
     kwriteconfig6 --file plasmarc --group Theme --key name org.lydark.mystical.desktop
   fi
