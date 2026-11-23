@@ -29,4 +29,13 @@ else
   exit 1
 fi
 
-echo "Server image configured: headless multi-user target, Cockpit socket enabled, TCP 9090 allowed."
+# Enable Podman's rootless restart helper for every user systemd manager.
+# Containers must have --restart=always or --restart=unless-stopped.
+user_restart_unit="/usr/lib/systemd/user/podman-restart.service"
+if [[ ! -f "$user_restart_unit" ]]; then
+  echo "Podman's rootless podman-restart.service is missing." >&2
+  exit 1
+fi
+systemctl --global enable podman-restart.service
+
+echo "Server image configured: headless target, Cockpit socket, TCP 9090, global rootless Podman restart."
