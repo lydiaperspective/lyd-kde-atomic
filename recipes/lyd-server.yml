@@ -61,3 +61,4 @@ modules:
         - firewalld.service
         - sshd.service
         - libvirtd.service
+        - lyd-enable-user-linger.service
