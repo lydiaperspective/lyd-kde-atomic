@@ -104,8 +104,15 @@ Run `lydsetup` as your normal user:
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
 - Tailscale VPN client (all editions)
 - Zed editor (per-user install on workstation editions)
+- BlueBuild development environment in Distrobox (all editions); installs Distrobox on the host if needed, then creates the official BlueBuild development container
 
 Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
+
+## BlueBuild development environment
+
+Run `lydsetup` and choose **BlueBuild development environment (Distrobox)**. If Distrobox is not installed, `lydsetup` layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
+
+Enter the environment with `distrobox enter lyd-atomic-dev`. Clone this repository inside the shared home directory, then run `bluebuild build recipes/lyd-kde.yml`, `bluebuild build recipes/lyd-kde-intel.yml` or `bluebuild build recipes/lyd-server.yml`. The development container is rootless and intended for local builds; use the GitHub Actions workflow for publishing images.
 
 ## Commands
 
