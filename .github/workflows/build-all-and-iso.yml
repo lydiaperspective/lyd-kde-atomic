@@ -23,7 +23,7 @@ on:
           - ext4
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
@@ -58,10 +58,13 @@ jobs:
           build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
 
   iso:
-    name: Build latest ${{ inputs.image_flavour }} ISO
+    name: Build and release latest ${{ inputs.image_flavour }} ISO
     needs: build
     runs-on: ubuntu-24.04
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Install Podman
         run: |
           sudo apt-get update
@@ -106,17 +109,18 @@ jobs:
             --rootfs "$ROOTFS_TYPE" \
             "$IMAGE"
 
-      - name: Generate checksums
+      - name: Publish ISO to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           set -Eeuo pipefail
-          # bootc-image-builder writes artifacts as root inside the container.
-          # Return ownership to the Actions runner before creating sidecar files.
           sudo chown -R "$(id -u):$(id -g)" output
-          find output -type f -name '*.iso' -print0 | while IFS= read -r -d '' iso; do
-            sha256sum "$iso" > "$iso.sha256"
-          done
+          bash files/scripts/publish-iso-release.sh "${{ inputs.image_flavour }}" latest output
 
-      - name: Upload ISO artifact
+      - name: Upload ISO build artifact
         uses: actions/upload-artifact@v4
         with:
           name: lyd-atomic-${{ inputs.image_flavour }}-latest-iso
