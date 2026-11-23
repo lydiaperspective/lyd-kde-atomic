@@ -1,0 +1,14 @@
+[Unit]
+Description=Create and enable the Lyd Atomic half-RAM swap file
+Documentation=man:swapon(8) man:btrfs(8)
+DefaultDependencies=no
+After=local-fs.target
+Before=swap.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/lyd/lyd-create-swapfile
+RemainAfterExit=yes
+
+[Install]
+WantedBy=swap.target
