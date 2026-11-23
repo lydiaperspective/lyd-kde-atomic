@@ -1,6 +1,11 @@
 name: Build unified installer ISO
 
 on:
+  push:
+    paths:
+      - 'installer/**'
+      - '.github/workflows/build-unified-iso.yml'
+      - 'files/scripts/publish-iso-release.sh'
   workflow_dispatch:
     inputs:
       rootfs_type:
