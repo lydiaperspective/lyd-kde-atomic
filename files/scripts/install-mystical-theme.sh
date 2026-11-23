@@ -26,7 +26,7 @@ test -f "$SOURCE/plasma-style/org.lydark.mystical.desktop/metadata.json"
 test -f "$SOURCE/wallpaper/metadata.json"
 test -f "$WORK/theme/scripts/lyd-mystical-first-login"
 
-install -d /usr/share/color-schemes /usr/share/plasma/look-and-feel /usr/share/plasma/desktoptheme /usr/share/wallpapers /usr/share/icons /usr/share/lyd/mystical
+install -d /usr/share/color-schemes /usr/share/plasma/look-and-feel /usr/share/plasma/desktoptheme /usr/share/wallpapers /usr/share/lyd/mystical
 
 # Configure the SDDM login screen separately from the Plasma desktop theme.
 # The Breeze greeter remains responsible for login controls; Mystical supplies
@@ -48,24 +48,14 @@ install -m 0644 "$SOURCE/colors/Mystical.colors" /usr/share/color-schemes/Mystic
 cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" /usr/share/plasma/look-and-feel/
 cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/desktoptheme/
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
-python3 -m py_compile "$SOURCE/build-icon-theme.py"
-python3 "$SOURCE/build-icon-theme.py" "$WORK/Mystical"
-cp -a "$WORK/Mystical" /usr/share/icons/Mystical
-
-# Refresh both the custom theme and inherited system icons. This also avoids
-# stale hicolor cache entries that can produce empty Plasma/Flatpak icons.
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f /usr/share/icons/Mystical
-  gtk-update-icon-cache -f /usr/share/icons/hicolor || true
-fi
-
+# The custom Mystical icon theme is intentionally disabled for now.
+# Keep Breeze as the icon theme until the artwork is ready.
 # Add coordinated GRUB, animated Plymouth and Xcursor assets. Record the
 # exact source revision so the boot setup service can detect image updates.
 bash "$WORK/theme/scripts/install-mystical-boot-assets.sh"
 printf '%s\n' "$THEME_COMMIT" > /usr/share/lyd/mystical-theme-version
 systemctl enable lyd-mystical-boot-setup.service
 
-cp -a "$SOURCE/icons" /usr/share/lyd/mystical/
 install -m 0644 "$SOURCE/README.md" /usr/share/lyd/mystical/README.md
 
 # Install the project's first-login wallpaper helper. It only applies the
@@ -102,7 +92,7 @@ LookAndFeelPackage=org.lydark.mystical.desktop
 widgetStyle=Breeze
 
 [Icons]
-Theme=Mystical
+Theme=breeze
 EOF
 cat > /etc/xdg/plasmarc <<'EOF'
 [Theme]
