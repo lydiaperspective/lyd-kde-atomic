@@ -40,10 +40,6 @@ test -d "$WORK/files/usr/lib/millennium" || {
   echo "Millennium archive did not contain usr/lib/millennium." >&2
   exit 1
 }
-test -d "$WORK/files/usr/share/millennium" || {
-  echo "Millennium archive did not contain usr/share/millennium." >&2
-  exit 1
-}
 cp -a "$WORK/files/." /
 
 for library in \
