@@ -4,25 +4,25 @@ A minimal KDE Plasma workstation built as a Fedora Atomic desktop image with Blu
 
 ## Goals
 
-- One initial x86_64 workstation image.
-- KDE Plasma with a restrained base package set.
-- Proprietary NVIDIA 580-series driver target.
-- Waterfox Flatpak as the default and only preinstalled browser.
+- One initial x86_64 workstation image based on Fedora Kinoite 45.
+- A slim KDE Plasma desktop with a small set of essential KDE applications.
+- Proprietary NVIDIA 580xx driver branch for supported older NVIDIA GPUs.
+- Waterfox Flatpak as the default and only preinstalled web browser.
 - The Lyd Ark Mystical KDE appearance.
 - `lydhelp` terminal reference and `lydsetup` optional-feature manager.
 - Local builds and GitHub Actions image/ISO builds.
 
 ## Project status
 
-The repository is being initialized. The initial image and installer must be validated in a VM and on supported hardware before being treated as a production operating system. NVIDIA 580 compatibility is a hard requirement and must be verified against the Fedora release and kernel selected by the build.
+Initial project foundation. The first image, NVIDIA module build, ISO installer, update path and rollback flow still require validation in a VM and on physical hardware.
 
 ## Technology
 
-The project uses BlueBuild recipes to create a bootable Fedora Atomic image. The image is published to GitHub Container Registry and can be rebased onto using bootc-compatible tooling. An ISO is generated from the published image using bootc-image-builder in GitHub Actions.
+BlueBuild creates the Fedora Kinoite-based OCI image. GitHub Actions publishes it to GHCR. The separate ISO workflow uses bootc-image-builder to create an installable ISO from a published image.
 
 ## Build locally
 
-Requirements: Fedora or another supported Linux build host, Podman (or Docker), and BlueBuild CLI.
+Install Podman and BlueBuild CLI:
 
 ```bash
 git clone https://github.com/lydiaperspective/lyd-kde-atomic.git
@@ -31,45 +31,46 @@ bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
 ```
 
-See [docs/BUILDING.md](docs/BUILDING.md) for local image builds and ISO generation.
+See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup and ISO generation.
 
 ## GitHub Actions
 
-- Pushes and manual dispatch build and publish the workstation OCI image to GHCR.
-- A separate manual workflow builds an installable ISO from the published image.
-- Pull requests validate the recipe without publishing.
-- Release and update artifacts include SHA256 checksums.
+- Pushes to `main` and manual dispatch build and publish the image to GHCR.
+- Pull requests build without publishing.
+- The **Build installable ISO** workflow can be run manually after an image is published.
+- ISO artifacts include SHA256 checksums.
 
-The image name is `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
+Image: `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
 
 ## Default desktop
 
-- KDE Plasma (Kinoite base)
-- Waterfox from Flathub (`net.waterfox.waterfox`) as the only preinstalled browser
+- KDE Plasma (Fedora Kinoite)
+- Waterfox from Flathub (`net.waterfox.waterfox`)
 - Mystical Global Theme, wallpaper, Plasma style, splash and generated icon theme
-- Konsole, Dolphin, Kate, Ark, Okular, Spectacle and Discover
+- Dolphin, Konsole, Kate, Ark, Okular, Spectacle and Discover
 - Flatpak support with Flathub enabled
+- Proprietary NVIDIA 580xx driver branch
 
 ## Optional features
 
-Run `lydsetup` as your normal user to select optional system features:
+Run `lydsetup` as your normal user:
 
-- Virtualization: QEMU/KVM, libvirt, virt-manager, firmware, TPM emulation and required services/groups
+- Virtualization: QEMU/KVM, libvirt, virt-manager, UEFI firmware, TPM emulation, networking and group membership
 - Steam system package (RPM Fusion)
 - CoolerControl system package and daemon
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
 
-These features are opt-in and are not part of the default image. Atomic package changes are staged as a new deployment and require a reboot. Some features may require an additional repository; the setup manager explains this before making changes.
+Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot.
 
 ## Commands
 
-- `lydhelp`: topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives.
-- `lydsetup`: interactive optional-feature installer for the workstation.
+- `lydhelp`: topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages, Flatpak and Atomic deployments.
+- `lydsetup`: interactive optional-feature installer.
 
-## Theme source
+## Mystical theme
 
-The Mystical theme is adapted from [lyd-kde-deb-live](https://github.com/lydiaperspective/lyd-kde-deb-live), under its repository license. The theme keeps Breeze-compatible layout and uses midnight plum, amethyst, lavender and restrained antique-gold accents.
+The theme is sourced from [lyd-kde-deb-live](https://github.com/lydiaperspective/lyd-kde-deb-live) at a pinned commit and installs the KDE colour scheme, Global Theme, Plasma Style, wallpaper and generated scalable icon theme. The visual identity uses midnight plum, amethyst, lavender and restrained antique-gold accents.
 
 ## Important
 
-This is an early project. Do not use it as the only operating system on a device until the ISO installer, image updates, NVIDIA driver, rollback path and hardware support have been tested. Keep independent backups of important data.
+This is an early project. Do not use it as the only operating system on a device until the ISO installer, NVIDIA driver, updates, rollback and hardware support have been tested. Keep independent backups of important data.
