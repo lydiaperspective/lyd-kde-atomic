@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Optional feature manager for Lyd KDE Atomic.
+set -Eeuo pipefail
+VERSION=0.1.0
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
+mkdir -p "$LOG_DIR"
+LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG") 2>&1
+
+die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+need_root_tool() { command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable. This tool is intended for Lyd KDE Atomic."; }
+confirm() {
+  local answer
+  read -r -p "$1 [y/N] " answer
+  [[ "$answer" =~ ^[Yy]$ ]]
+}
+stage_packages() {
+  local -a missing=()
+  local pkg
+  for pkg in "$@"; do
+    rpm -q "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+  done
+  if (("${#missing[@]}" == 0)); then
+    echo "All requested packages are already installed."
+    return 0
+  fi
+  echo "The following system packages will be layered:"
+  printf '  - %s\n' "${missing[@]}"
+  echo "This creates a new deployment. Reboot to use the updated system."
+  confirm "Continue?" || return 0
+  sudo rpm-ostree install "${missing[@]}"
+}
+ensure_rpmfusion() {
+  local fedora
+  fedora="$(rpm -E %fedora)"
+  sudo rpm-ostree install \
+    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$fedora.noarch.rpm" \
+    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$fedora.noarch.rpm"
+}
+setup_virtualization() {
+  stage_packages @virtualization qemu-kvm libvirt virt-install virt-manager virt-viewer edk2-ovmf swtpm dnsmasq
+  echo "Enabling libvirt and preparing the current account for virtualization."
+  sudo systemctl enable --now libvirtd.service
+  sudo usermod -aG libvirt,kvm "$USER"
+  if command -v virsh >/dev/null 2>&1; then
+    sudo virsh net-autostart default || true
+    sudo virsh net-start default || true
+  fi
+  echo "Group membership takes effect after logging out and back in."
+}
+setup_steam() {
+  echo "Steam is installed as a system RPM from RPM Fusion (not as a Flatpak)."
+  confirm "Enable RPM Fusion and stage Steam?" || return 0
+  ensure_rpmfusion
+  stage_packages steam
+}
+setup_coolercontrol() {
+  local fedora repo
+  fedora="$(rpm -E %fedora)"
+  repo="/etc/yum.repos.d/codifryed-CoolerControl-fedora-$fedora.repo"
+  echo "CoolerControl needs its upstream COPR repository on Fedora Atomic."
+  confirm "Add the CoolerControl COPR repository and stage its system packages?" || return 0
+  sudo install -d -m 0755 /etc/yum.repos.d
+  sudo curl -fL "https://copr.fedorainfracloud.org/coprs/codifryed/CoolerControl/repo/fedora-$fedora/codifryed-CoolerControl-fedora-$fedora.repo" -o "$repo"
+  stage_packages coolercontrol liquidctl
+  sudo systemctl enable --now coolercontrold.service
+}
+setup_tuned() {
+  echo "TuneD will replace power-profiles-daemon as the system power-profile provider."
+  confirm "Stage tuned and tuned-ppd, and disable power-profiles-daemon?" || return 0
+  stage_packages tuned tuned-ppd
+  sudo systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
+  sudo systemctl enable --now tuned.service
+  sudo systemctl enable --now tuned-ppd.service
+}
+main() {
+  case "${1:-}" in
+    --help|-h)
+      cat <<HELP
+lydsetup $VERSION
+Interactive optional-feature manager for Lyd KDE Atomic.
+
+Usage: lydsetup
+
+Features:
+  Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
+  Steam system package (RPM Fusion)
+  CoolerControl system package and daemon
+  TuneD + tuned-ppd (replaces power-profiles-daemon)
+
+System package changes create a new deployment and normally require reboot.
+Logs: $LOG
+HELP
+      exit 0 ;;
+    --version) echo "$VERSION"; exit 0 ;;
+    "") ;;
+    *) die "Unknown argument: $1 (try --help)" ;;
+  esac
+  [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+  need_root_tool
+  command -v sudo >/dev/null 2>&1 || die "sudo is required."
+  command -v whiptail >/dev/null 2>&1 && {
+    echo "This build uses a portable terminal menu; whiptail is optional."
+  }
+  while true; do
+    echo
+    echo "  Lyd KDE Atomic setup"
+    echo "  --------------------"
+    echo "  1) Virtualization (QEMU/KVM + libvirt)"
+    echo "  2) Steam (system package)"
+    echo "  3) CoolerControl"
+    echo "  4) TuneD + tuned-ppd"
+    echo "  5) Exit"
+    read -r -p "Select a feature: " choice
+    case "$choice" in
+      1) setup_virtualization ;;
+      2) setup_steam ;;
+      3) setup_coolercontrol ;;
+      4) setup_tuned ;;
+      5) break ;;
+      *) echo "Choose 1-5." ;;
+    esac
+  done
+  echo "lydsetup finished. Log: $LOG"
+}
+main "$@"
