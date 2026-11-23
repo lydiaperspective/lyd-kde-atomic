@@ -56,7 +56,6 @@ Image: `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
 Run `lydsetup` as your normal user:
 
 - Virtualization: QEMU/KVM, libvirt, virt-manager, UEFI firmware, TPM emulation, networking and group membership
-- Steam system package (RPM Fusion)
 - CoolerControl system package and daemon
 - TuneD and tuned-ppd (replaces power-profiles-daemon)
 
