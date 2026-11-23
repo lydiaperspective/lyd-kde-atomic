@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.1
+VERSION=0.4.2
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -216,6 +216,72 @@ setup_containerdev() {
   echo "Podman commands are forwarded to the host's rootless Podman engine."
   echo "Your home directory is shared, so compose projects and source checkouts remain accessible."
 }
+
+setup_themedev() {
+  local box_name="lyd-theme-dev"
+  local repo_dir="$HOME/Development/lyd-kde-themes"
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox"
+  local config_file="$config_dir/$box_name.ini"
+
+  ensure_distrobox_host || return 0
+  command -v flatpak >/dev/null 2>&1 || die "Flatpak is required for the graphical theme editors. Enable Flatpak/Flathub on this system, then retry."
+
+  echo "This sets up the Mystical KDE theme development environment."
+  echo "Graphical editors will be installed as user Flatpaks:"
+  echo "  Inkscape (SVG icons, scalable artwork and cursor assets)"
+  echo "  Krita (raster artwork, textures and animation frames)"
+  echo "  GIMP (raster editing and image cleanup)"
+  echo "A Fedora Distrobox will provide Git, Python image/SVG tooling, image optimizers,"
+  echo "cursor utilities and Plymouth tools without layering them into the host OS."
+  echo "The theme repository will be checked out at: $repo_dir"
+  confirm "Install the tools and prepare the theme repository?" || return 0
+
+  if ! flatpak remotes --user --columns=name | grep -qx flathub; then
+    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+  fi
+  flatpak install --user --assumeyes flathub org.inkscape.Inkscape org.kde.krita org.gimp.GIMP
+
+  mkdir -p "$config_dir"
+  cat > "$config_file" <<'THEME_DISTROBOX_CONFIG'
+[lyd-theme-dev]
+image=registry.fedoraproject.org/fedora:45
+additional_packages="git git-lfs python3 python3-pip python3-pillow python3-cairosvg python3-lxml python3-numpy ImageMagick optipng pngquant xorg-x11-apps plymouth"
+pull=true
+start_now=true
+THEME_DISTROBOX_CONFIG
+
+  echo "Creating or updating the theme toolchain container."
+  if ! distrobox assemble create --file "$config_file"; then
+    die "Theme toolchain creation failed. Retry with: distrobox assemble create --file '$config_file'"
+  fi
+
+  mkdir -p "$HOME/Development"
+  if [[ -d "$repo_dir/.git" ]]; then
+    local origin
+    origin="$(git -C "$repo_dir" remote get-url origin 2>/dev/null || true)"
+    [[ "$origin" == "https://github.com/lydiaperspective/lyd-kde-themes.git" || "$origin" == "git@github.com:lydiaperspective/lyd-kde-themes.git" ]] || die "$repo_dir is a Git repository, but its origin is not lyd-kde-themes. Refusing to change it."
+    if [[ -n "$(git -C "$repo_dir" status --porcelain)" ]]; then
+      echo "The existing theme checkout has local changes; leaving it untouched."
+      echo "Review or commit those changes, then run: lydsetup dev theme enable"
+    else
+      git -C "$repo_dir" pull --ff-only origin main
+    fi
+  elif [[ -e "$repo_dir" ]]; then
+    die "$repo_dir already exists but is not a Git repository. Move it aside and retry."
+  else
+    git clone https://github.com/lydiaperspective/lyd-kde-themes.git "$repo_dir"
+  fi
+
+  echo
+  echo "Theme development environment is ready."
+  echo "Repository: $repo_dir"
+  echo "Launch Inkscape, Krita or GIMP from the application menu."
+  echo "Enter the toolchain with: distrobox enter $box_name"
+  echo "The container and host share your home directory, including the theme checkout."
+  echo "Useful tools in the container: git, git-lfs, Python/Pillow, CairoSVG, ImageMagick,"
+  echo "optipng, pngquant, xcursorgen (from xorg-x11-apps) and Plymouth."
+}
+
 dev_help() {
   cat <<HELP
 Usage:
@@ -228,7 +294,7 @@ Usage:
 Development environments:
   devbox       BlueBuild environment for building Lyd Atomic images and ISOs
   androiddev   Android Studio plus a Fedora Android toolchain container
-  container    Fedora container-development tools using host rootless Podman
+  container    Fedora container-development tools using host rootless Podman\n  theme        KDE theme, icon, cursor and Plymouth artwork toolchain
 HELP
 }
 
@@ -300,7 +366,7 @@ main() {
       case "${2:-}" in
         devbox) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_devbox ;;
         androiddev) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_androiddev ;;
-        container) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_containerdev ;;
+        container) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_containerdev ;;\n        theme) [[ "${3:-}" == "enable" ]] || { dev_help; exit 2; }; setup_themedev ;;
         --help|-h|"") dev_help ;;
         *) dev_help; die "Unknown development environment: $2" ;;
       esac
@@ -316,7 +382,7 @@ Development commands:
   lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
   lydsetup dev devbox enable              Same as above
   lydsetup dev androiddev enable          Set up Android Studio development
-  lydsetup dev container enable           Set up Podman container development
+  lydsetup dev container enable           Set up Podman container development\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
   Use 'development' instead of 'dev' as an alias.
 
 Features:
