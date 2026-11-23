@@ -82,11 +82,6 @@ modules:
         - mangohud
         - gamescope
         - protontricks
-    remove:
-      packages:
-        - firefox
-        - firefox-langpacks
-        - plasma-discover-rpm-ostree
   - type: default-flatpaks
     configurations:
       - scope: system
