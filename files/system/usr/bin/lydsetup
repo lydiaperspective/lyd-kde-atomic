@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.4.2
+VERSION=0.4.3
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -34,6 +34,50 @@ reboot_notice() {
   fi
   return 1
 }
+
+ensure_flathub_system() {
+  command -v flatpak >/dev/null 2>&1 || die "Flatpak is not installed."
+  if ! flatpak remotes --system --columns=name | grep -qx flathub; then
+    echo "Adding the system-wide Flathub repository."
+    sudo flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+  fi
+  sudo flatpak remote-modify --system --prio=100 flathub
+}
+install_flatpaks_system() {
+  ensure_flathub_system
+  flatpak install --system --assumeyes --or-update flathub "$@"
+}
+setup_printscan() {
+  echo "This enables CUPS printing, USB/network scanner support and Skanpage."
+  echo "System packages will be layered into a new deployment if they are missing."
+  stage_packages cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi
+  reboot_notice && return 0
+  if ! rpm -q cups sane-backends sane-backends-drivers-scanners sane-airscan ipp-usb avahi >/dev/null 2>&1; then
+    echo "Printing/scanning packages were not installed. If you cancelled, rerun: lydsetup printscan enable"
+    return 0
+  fi
+  echo "Enabling CUPS printing and Avahi device discovery."
+  sudo systemctl enable --now cups.service
+  sudo systemctl enable --now avahi-daemon.service
+  echo "Installing Skanpage from Flathub."
+  install_flatpaks_system org.kde.skanpage
+  echo
+  echo "Printing and scanning support is enabled."
+  echo "Open System Settings > Printers to add a printer."
+  echo "Open Skanpage to scan. Device support depends on the printer/scanner's supported protocols."
+}
+setup_media() {
+  echo "Installing media applications from the system Flathub repository."
+  install_flatpaks_system \
+    com.spotify.Client \
+    com.stremio.Stremio \
+    org.jellyfin.JellyfinDesktop \
+    com.unicornsonlsd.finamp \
+    org.fcast.Receiver
+  echo
+  echo "Media applications are installed."
+}
+
 setup_virtualization() {
   if rpm -q cockpit-machines >/dev/null 2>&1; then
     echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
@@ -345,6 +389,13 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
+    printscan|media)
+      [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup $1 enable"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      if [[ "$1" == "printscan" ]]; then setup_printscan; else setup_media; fi
+      exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
@@ -376,14 +427,16 @@ main() {
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [solaar enable|dev|development|devbox ...]
+Usage: lydsetup [printscan enable|media enable|solaar enable|dev|development|devbox ...]
 
 Development commands:
   lydsetup devbox                         Enable BlueBuild image/ISO build Distrobox
   lydsetup dev devbox enable              Same as above
   lydsetup dev androiddev enable          Set up Android Studio development
   lydsetup dev container enable           Set up Podman container development
-  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
+  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
+  lydsetup printscan enable               Enable printing/scanning and install Skanpage
+  lydsetup media enable                   Install media Flatpaks\n  lydsetup dev theme enable               Set up KDE theme/icon/cursor/Plymouth development
   Use 'development' instead of 'dev' as an alias.
 
 Features:
@@ -395,6 +448,8 @@ Features:
   Zed editor (official per-user Linux installer; workstation editions)
   BlueBuild development environment (Distrobox; all editions)
   Solaar Logitech device manager (system package; workstation editions)
+  Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
+  Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
 
 System package changes create a new deployment and require a reboot.
 Run lydsetup again after reboot if prompted to finish enabling this feature.
