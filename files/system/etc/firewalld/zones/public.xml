@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>Lyd Server</short>
+  <description>Default Lyd Atomic Server zone. SSH and Cockpit are enabled; application ports must be opened deliberately.</description>
+  <service name="ssh"/>
+  <service name="cockpit"/>
+  <service name="dhcpv6-client"/>
+</zone>
