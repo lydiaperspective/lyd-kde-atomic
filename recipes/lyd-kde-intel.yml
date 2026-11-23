@@ -16,6 +16,7 @@ modules:
         - kcalc
         - plasma-discover
         - plasma-discover-flatpak
+        - sddm-breeze
         - flatpak
         - git
         - curl
