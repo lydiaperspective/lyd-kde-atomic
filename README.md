@@ -81,8 +81,6 @@ Cockpit is enabled through `cockpit.socket` and is available on TCP port 9090. S
 
 Podman-published ports are not automatically opened in firewalld. For example, after choosing an application port, add a permanent firewalld rule for that specific TCP or UDP port and reload firewalld. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
 
-Podman-published ports are not automatically opened in firewalld. For example, after choosing an application port, add a permanent firewalld rule for that specific TCP or UDP port and reload firewalld. Do not expose libvirt management, VNC or SPICE ports directly to untrusted networks.
-
 Virtualization packages are included and `libvirtd` is enabled. Add the administrative user to the `libvirt` and `kvm` groups with `lydsetup`'s virtualization option if needed; log out and back in for group membership to apply.
 
 Tailscale can be installed on any edition from `lydsetup`. The command adds Tailscale's official Fedora repository, layers its package, and enables `tailscaled` after reboot. Zed can be installed on workstation editions from `lydsetup`; it uses Zed's official per-user Linux installer and does not alter the immutable system deployment.
