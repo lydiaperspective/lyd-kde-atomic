@@ -112,12 +112,13 @@ Optional packages are not included in the base image. Atomic package changes cre
 
 Run `lydsetup` and choose **BlueBuild development environment (Distrobox)**. If Distrobox is not installed, `lydsetup` layers it into the next system deployment and asks you to reboot. After reboot, run `lydsetup` again and choose the same option; it creates the `lyd-atomic-dev` container from BlueBuild's official development image and exports the `bluebuild` command to the host. The container uses the host's rootless Podman engine rather than running a nested container engine.
 
-Enter the environment with `distrobox enter lyd-atomic-dev`. Clone this repository inside the shared home directory, then run `bluebuild build recipes/lyd-kde.yml`, `bluebuild build recipes/lyd-kde-intel.yml` or `bluebuild build recipes/lyd-server.yml`. The development container is rootless and intended for local builds; use the GitHub Actions workflow for publishing images.
+Enter the environment with the short command `lydev` (or `distrobox enter lyd-atomic-dev`). Clone this repository inside the shared home directory, then run `bluebuild build recipes/lyd-kde.yml`, `bluebuild build recipes/lyd-kde-intel.yml` or `bluebuild build recipes/lyd-server.yml`. The development container is rootless and intended for local builds; use the GitHub Actions workflow for publishing images.
 
 ## Commands
 
 - `lydhelp`: topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages, Flatpak and Atomic deployments.
 - `lydsetup`: interactive optional-feature installer.
+- `lydev`: enter the `lyd-atomic-dev` BlueBuild development Distrobox.
 
 ## Mystical theme
 
