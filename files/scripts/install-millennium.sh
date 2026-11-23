@@ -2,13 +2,13 @@
 set -Eeuo pipefail
 
 # Millennium 3.6.3 stable Linux x86_64 release.
-# Download through GitHub's release-asset API and verify the immutable
-# SHA-256 digest published in the release metadata.
+# Use the public browser-download URL (the GitHub API asset endpoint returns
+# HTTP 403 in some unauthenticated build environments) and verify the
+# immutable SHA-256 digest published in the release metadata.
 VERSION="3.6.3"
 ASSET="millennium-v${VERSION}-linux-x86_64.tar.gz"
-ASSET_ID="744378744"
 EXPECTED_SHA256="9d9a5f8448cf92f4634d6ea49b5263409157cccf5b68a8ff10e962c8d7e52c28"
-ASSET_URL="https://api.github.com/repos/SteamClientHomebrew/Millennium/releases/assets/${ASSET_ID}"
+ASSET_URL="https://github.com/SteamClientHomebrew/Millennium/releases/download/v${VERSION}/${ASSET}"
 
 for cmd in curl tar sha256sum; do
   command -v "$cmd" >/dev/null 2>&1 || {
@@ -22,9 +22,9 @@ trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/files"
 
 echo "Downloading Millennium v${VERSION} Linux x86_64 release asset..."
-curl --fail --location --silent --show-error \
-  -H "Accept: application/octet-stream" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
+curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+  --connect-timeout 20 --max-time 300 \
+  -H "User-Agent: Lyd-Atomic-build" \
   "$ASSET_URL" -o "$WORK/$ASSET"
 
 echo "Verifying Millennium release checksum..."
