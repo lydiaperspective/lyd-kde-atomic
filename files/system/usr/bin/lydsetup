@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.5.0
+VERSION=0.5.1
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -199,6 +199,35 @@ EOF
   echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
   echo "The session requires a working Wayland-compatible GPU driver."
 }
+setup_8bitdo() {
+  echo "Installing Steam controller device support and 8BitDo HID permissions."
+  stage_packages steam-devices
+  reboot_notice && return 0
+  rpm -q steam-devices >/dev/null 2>&1 || die "steam-devices is not installed. Retry: lydsetup 8bitdo"
+
+  local rule_file="/etc/udev/rules.d/71-8bitdo-pro2.rules"
+  local temp_file
+  temp_file="$(mktemp)"
+  cat > "$temp_file" <<'UDEV_RULES'
+# 8BitDo USB, wired and 2.4 GHz HID devices
+ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="2dc8", MODE="0660", TAG+="uaccess"
+
+# 8BitDo Bluetooth HID devices
+ACTION!="remove", SUBSYSTEM=="hidraw", KERNELS=="*2DC8:*", MODE="0660", TAG+="uaccess"
+UDEV_RULES
+  sudo install -D -m 0644 "$temp_file" "$rule_file"
+  rm -f "$temp_file"
+
+  echo "Reloading udev rules and updating connected HID device permissions."
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=hidraw
+  echo
+  echo "8BitDo controller support is configured."
+  echo "Disconnect and reconnect your Pro 2, then fully restart Steam."
+  echo "In Steam Settings > Controller, check that the Pro 2 is detected."
+  echo "For the rear paddles, use a controller mode and firmware that exposes them to Steam Input; udev permissions alone cannot create missing controller inputs."
+}
+
 setup_virtualization() {
   if rpm -q cockpit-machines >/dev/null 2>&1; then
     echo "The Server edition already includes Cockpit Machines and the KVM/libvirt stack."
@@ -520,6 +549,9 @@ feature_enabled() {
         flatpak_installed com.vysp3r.ProtonPlus &&
         flatpak_installed net.lutris.Lutris &&
         flatpak_installed com.heroicgameslauncher.hgl ;;
+    8bitdo)
+      rpm -q steam-devices >/dev/null 2>&1 &&
+        [[ -f /etc/udev/rules.d/71-8bitdo-pro2.rules ]] ;;
     solaar) rpm -q solaar >/dev/null 2>&1 ;;
     devbox) distrobox_exists lyd-atomic-dev ;;
     androiddev)
@@ -545,6 +577,7 @@ show_feature_status() {
   printf '  %-12s %b\\n' "mediaedit" "$(status_label mediaedit)"
   printf '  %-12s %b\\n' "gaming" "$(status_label gaming)"
   printf '  %-12s %b\\n' "gamingui" "$(status_label gamingui)"
+  printf '  %-12s %b\\n' "8bitdo" "$(status_label 8bitdo)"
   printf '  %-12s %b\\n' "solaar" "$(status_label solaar)"
   echo
   echo "Development:"
@@ -638,6 +671,13 @@ main() {
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_gamingui
       exit 0 ;;
+    8bitdo)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup 8bitdo"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v rpm-ostree >/dev/null 2>&1 || die "rpm-ostree is unavailable; this command targets Lyd Atomic."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_8bitdo
+      exit 0 ;;
     solaar)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup solaar enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
@@ -679,7 +719,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|solaar enable|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup                              Show this command list
@@ -690,6 +730,7 @@ Available commands:
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
+  lydsetup 8bitdo                       Install Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Install Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
   lydsetup dev devbox enable            Same as above
