@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# Update manager for Lyd Atomic.
+set -Eeuo pipefail
+
+VERSION="1.0.0"
+
+die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
+need_root() { [[ $EUID -eq 0 ]] || die "This internal operation must run as root."; }
+need_sudo() { command -v sudo >/dev/null 2>&1 || die "sudo is required."; }
+
+flatpak_update() {
+  command -v flatpak >/dev/null 2>&1 || { echo "Flatpak is not installed; skipping."; return 0; }
+  echo "Updating Flatpak applications..."
+  flatpak update --assumeyes
+}
+
+system_update() {
+  command -v bootc >/dev/null 2>&1 || die "bootc is unavailable. This command requires a Lyd Atomic bootc installation."
+  need_sudo
+  echo "Checking for and staging the latest Lyd Atomic system image..."
+  echo "The update will become active after you reboot; this command will not reboot automatically."
+  sudo bootc upgrade
+}
+
+firmware_update() {
+  command -v fwupdmgr >/dev/null 2>&1 || die "fwupdmgr is not installed."
+  need_sudo
+  echo "Refreshing firmware metadata from configured remotes..."
+  sudo fwupdmgr refresh --force
+  echo "Checking for and installing available firmware updates..."
+  sudo fwupdmgr update
+}
+
+auto_enable() {
+  need_sudo
+  echo "Enabling weekly automatic updates (Sunday at 03:00 local system time)."
+  echo "The built-in bootc timer will be disabled so system updates follow this schedule."
+  sudo systemctl daemon-reload
+  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
+  sudo systemctl enable --now lydmanage-updates.timer
+  echo "Automatic updates are enabled."
+  echo "Flatpak system apps, the bootc image and available firmware will be updated weekly."
+  echo "System and firmware updates may require a reboot; the machine will not reboot automatically."
+}
+
+auto_disable() {
+  need_sudo
+  sudo systemctl disable --now lydmanage-updates.timer
+  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
+  echo "Automatic updates are disabled."
+  echo "Manual updates remain available through lydmanage."
+}
+
+auto_status() {
+  if systemctl is-enabled --quiet lydmanage-updates.timer 2>/dev/null; then
+    echo "Automatic updates: enabled"
+  else
+    echo "Automatic updates: disabled"
+  fi
+  systemctl status lydmanage-updates.timer --no-pager 2>/dev/null || true
+  systemctl list-timers lydmanage-updates.timer --no-pager 2>/dev/null || true
+}
+
+run_automatic_updates() {
+  need_root
+  local failures=0
+  echo "===== Lyd Atomic scheduled updates: $(date --iso-8601=seconds) ====="
+
+  if command -v flatpak >/dev/null 2>&1; then
+    echo "===== Flatpak system updates ====="
+    flatpak update --system --assumeyes || { echo "Flatpak system update failed."; failures=$((failures + 1)); }
+  else
+    echo "Flatpak is not installed; skipping."
+  fi
+
+  if command -v bootc >/dev/null 2>&1; then
+    echo "===== bootc system image update ====="
+    bootc upgrade || { echo "bootc upgrade failed."; failures=$((failures + 1)); }
+  else
+    echo "bootc is unavailable; skipping system image update."
+  fi
+
+  if command -v fwupdmgr >/dev/null 2>&1; then
+    echo "===== Firmware updates ====="
+    fwupdmgr refresh --force || { echo "Firmware metadata refresh failed."; failures=$((failures + 1)); }
+    fwupdmgr update --assume-yes || { echo "Firmware update failed."; failures=$((failures + 1)); }
+  else
+    echo "fwupdmgr is not installed; skipping firmware updates."
+  fi
+
+  echo "===== Scheduled update run complete ====="
+  if (( failures > 0 )); then
+    echo "$failures update task(s) failed. Review: journalctl -u lydmanage-updates.service"
+    return 1
+  fi
+  echo "All available update tasks completed."
+}
+
+usage() {
+  cat <<HELP
+lydmanage $VERSION
+
+Usage:
+  lydmanage flatpak update       Update Flatpak applications
+  lydmanage system update        Stage the latest Lyd Atomic bootc image
+  lydmanage firmware update      Refresh LVFS metadata and install firmware updates
+  lydmanage updates auto enable  Enable weekly automatic updates (Sunday at 03:00)
+  lydmanage updates auto disable Disable automatic updates
+  lydmanage updates auto status  Show automatic update timer status
+
+Automatic updates run Flatpak system updates, bootc image updates and available
+firmware updates. System and firmware changes may require a reboot; the timer
+does not reboot the computer automatically.
+
+Logs for scheduled updates:
+  journalctl -u lydmanage-updates.service
+HELP
+}
+
+main() {
+  case "${1:-}" in
+    flatpak)
+      need_user
+      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage flatpak update"
+      flatpak_update
+      ;;
+    system)
+      need_user
+      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage system update"
+      system_update
+      ;;
+    firmware)
+      need_user
+      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage firmware update"
+      firmware_update
+      ;;
+    updates)
+      case "${2:-}" in
+        auto)
+          case "${3:-}" in
+            enable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto enable"; auto_enable ;;
+            disable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto disable"; auto_disable ;;
+            status) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto status"; auto_status ;;
+            *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
+          esac
+          ;;
+        run)
+          [[ $# -eq 2 ]] || die "Invalid internal update invocation."
+          run_automatic_updates
+          ;;
+        *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
+      esac
+      ;;
+    --help|-h|"") usage ;;
+    --version) echo "$VERSION" ;;
+    *) usage >&2; die "Unknown command: $1" ;;
+  esac
+}
+
+main "$@"
