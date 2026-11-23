@@ -1,5 +1,5 @@
 ---
-name: lyd-kde-atomic
+name: lyd-atomic-nvidia
 description: Minimal KDE Atomic workstation with the proprietary NVIDIA 580 driver.
 base-image: ghcr.io/blue-build/base-images/fedora-kinoite-nvidia
 image-version: "45"
