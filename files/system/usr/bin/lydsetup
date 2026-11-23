@@ -96,13 +96,13 @@ setup_tailscale() {
 setup_development() {
   local config_dir config_file box_name
   box_name="lyd-atomic-dev"
-  if ! command -v distrobox >/dev/null 2>&1; then
-    echo "Distrobox is not installed on the host. It will be layered into the next deployment."
-    stage_packages distrobox
+  if ! command -v distrobox >/dev/null 2>&1 || ! command -v podman >/dev/null 2>&1; then
+    echo "Distrobox and Podman are required on the host. Missing packages will be layered into the next deployment."
+    stage_packages distrobox podman
     reboot_notice && return 0
     command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
+    command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot into the new deployment, then run lydsetup again."
   fi
-  command -v podman >/dev/null 2>&1 || die "Podman is required by Distrobox but is not available on the host."
   config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox"
   config_file="$config_dir/lyd-atomic-dev.ini"
   mkdir -p "$config_dir"
