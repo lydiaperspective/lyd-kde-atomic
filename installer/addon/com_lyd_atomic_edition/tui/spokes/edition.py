@@ -9,6 +9,8 @@ from pyanaconda.ui.tui.spokes import NormalTUISpoke
 
 from com_lyd_atomic_edition.categories.lyd_atomic import LydAtomicCategory
 
+__all__ = ["LydAtomicEditionTUISpoke"]
+
 EDITIONS = {
     "1": (
         "standard",
