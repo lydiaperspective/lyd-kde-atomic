@@ -6,7 +6,7 @@ A minimal KDE Plasma workstation built as a Fedora Atomic desktop image with Blu
 
 - One initial x86_64 workstation image based on Fedora Kinoite 45.
 - A slim KDE Plasma desktop with a small set of essential KDE applications.
-- Proprietary NVIDIA 580xx driver branch for supported older NVIDIA GPUs.
+- Proprietary NVIDIA 580.x driver with a prebuilt kernel module.
 - Waterfox Flatpak as the default and only preinstalled web browser.
 - The Lyd Ark Mystical KDE appearance.
 - `lydhelp` terminal reference and `lydsetup` optional-feature manager.
@@ -14,11 +14,11 @@ A minimal KDE Plasma workstation built as a Fedora Atomic desktop image with Blu
 
 ## Project status
 
-Initial project foundation. The first image, NVIDIA module build, ISO installer, update path and rollback flow still require validation in a VM and on physical hardware.
+Initial project foundation. The first image, NVIDIA module, ISO installer, update path and rollback flow still require validation in a VM and on physical hardware.
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI image. GitHub Actions publishes it to GHCR. The separate ISO workflow uses bootc-image-builder to create an installable ISO from a published image.
+BlueBuild creates the Fedora Kinoite-based OCI image. The image uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. GitHub Actions publishes the custom image to GHCR. The separate ISO workflow uses bootc-image-builder to create an installable ISO from a published image.
 
 ## Build locally
 
@@ -31,7 +31,7 @@ bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
 ```
 
-See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup and ISO generation.
+See [docs/BUILDING.md](docs/BUILDING.md) for CI signing setup, Secure Boot and ISO generation.
 
 ## GitHub Actions
 
@@ -44,12 +44,12 @@ Image: `ghcr.io/lydiaperspective/lyd-kde-atomic:latest`.
 
 ## Default desktop
 
-- KDE Plasma (Fedora Kinoite)
+- KDE Plasma (Fedora Kinoite 45)
 - Waterfox from Flathub (`net.waterfox.waterfox`)
 - Mystical Global Theme, wallpaper, Plasma style, splash and generated icon theme
 - Dolphin, Konsole, Kate, Ark, Okular, Spectacle and Discover
 - Flatpak support with Flathub enabled
-- Proprietary NVIDIA 580xx driver branch
+- Proprietary NVIDIA 580.x driver
 
 ## Optional features
 
