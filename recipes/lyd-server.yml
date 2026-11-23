@@ -52,6 +52,7 @@ modules:
     scripts:
       - install-lyd-tools.sh
   - type: systemd
+      - enable-bib-repositories.sh
     system:
       enabled:
         - cockpit.socket
