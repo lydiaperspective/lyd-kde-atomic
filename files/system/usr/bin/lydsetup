@@ -245,7 +245,7 @@ setup_themedev() {
   cat > "$config_file" <<'THEME_DISTROBOX_CONFIG'
 [lyd-theme-dev]
 image=registry.fedoraproject.org/fedora:45
-additional_packages="git git-lfs python3 python3-pip python3-pillow python3-cairosvg python3-lxml python3-numpy ImageMagick optipng pngquant xorg-x11-apps plymouth"
+additional_packages="git git-lfs python3 python3-pip python3-pillow python3-cairosvg python3-lxml python3-numpy ImageMagick optipng pngquant xcursorgen plymouth"
 pull=true
 start_now=true
 THEME_DISTROBOX_CONFIG
@@ -277,7 +277,7 @@ THEME_DISTROBOX_CONFIG
   echo "Enter the toolchain with: distrobox enter $box_name"
   echo "The container and host share your home directory, including the theme checkout."
   echo "Useful tools in the container: git, git-lfs, Python/Pillow, CairoSVG, ImageMagick,"
-  echo "optipng, pngquant, xcursorgen (from xorg-x11-apps) and Plymouth."
+  echo "optipng, pngquant, xcursorgen and Plymouth."
 }
 
 dev_help() {
