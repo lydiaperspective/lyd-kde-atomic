@@ -547,6 +547,10 @@ main() {
       esac
       exit 0 ;;
     --help|-h)
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      echo "Current feature status (purple):"
+      show_feature_status
+      echo
       cat <<HELP
 lydsetup $VERSION
 Interactive optional-feature manager for Lyd Atomic.
@@ -593,7 +597,12 @@ Logs: $LOG
 HELP
       exit 0 ;;
     --version) echo "$VERSION"; exit 0 ;;
-    "")\n      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."\n      show_feature_status\n      echo\n      echo "Run lydsetup --help to see available commands."\n      exit 0 ;;
+    "")
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      show_feature_status
+      echo
+      echo "Run lydsetup --help to see available commands."
+      exit 0 ;;
     *) die "Unknown argument: $1 (try --help)" ;;
   esac
   [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
