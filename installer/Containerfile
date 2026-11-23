@@ -30,12 +30,12 @@ RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
 
 # Pull the same pinned Mystical theme revision used by the installed images.
 RUN git clone --quiet --filter=blob:none https://github.com/lydiaperspective/lyd-kde-themes.git /tmp/lyd-kde-themes && \
-    git -C /tmp/lyd-kde-themes checkout --quiet 240a38cba36e78d2437b3f8a7f63a638741d5a53 && \
+    git -C /tmp/lyd-kde-themes checkout --quiet 462de0cb6bf0a1cddabbe95f5d547f4ec44e7024 && \
     bash /tmp/lyd-kde-themes/scripts/install-mystical-boot-assets.sh && \
     plymouth-set-default-theme lyd-mystical && \
     install -d /etc/default && \
     { grep -v '^GRUB_THEME=' /etc/default/grub 2>/dev/null || true; } > /tmp/grub-defaults && \
-    printf 'GRUB_THEME="/usr/share/grub/themes/lyd-mystical/theme.txt"\\nGRUB_TIMEOUT=5\\nGRUB_TIMEOUT_STYLE=menu\\n' >> /tmp/grub-defaults && \
+    printf 'GRUB_THEME="/usr/share/grub/themes/lyd-mystical/theme.txt"\nGRUB_TIMEOUT=5\nGRUB_TIMEOUT_STYLE=menu\n' >> /tmp/grub-defaults && \
     cat /tmp/grub-defaults > /etc/default/grub && \
     rm -rf /tmp/lyd-kde-themes /tmp/grub-defaults
 
