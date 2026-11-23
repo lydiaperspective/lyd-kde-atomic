@@ -48,6 +48,7 @@ install -m 0644 "$SOURCE/colors/Mystical.colors" /usr/share/color-schemes/Mystic
 cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" /usr/share/plasma/look-and-feel/
 cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/desktoptheme/
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
+python3 -m py_compile "$SOURCE/build-icon-theme.py"
 python3 "$SOURCE/build-icon-theme.py" "$WORK/Mystical"
 cp -a "$WORK/Mystical" /usr/share/icons/Mystical
 
