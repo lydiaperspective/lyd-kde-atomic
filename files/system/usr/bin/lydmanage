@@ -178,8 +178,9 @@ plasma_load() {
   local input target tmp
   input="$(plasma_profile_file "$1")"
   [[ -r "$input" ]] || die "Cannot read Plasma profile: $input"
-  IFS= read -r _ < "$input"
-  [[ "$_" == "# Lyd Atomic Plasma layout profile v1" ]] ||
+  local header
+  IFS= read -r header < "$input"
+  [[ "$header" == "# Lyd Atomic Plasma layout profile v1" ]] ||
     die "Unsupported or invalid Plasma profile: $input"
 
   target="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
