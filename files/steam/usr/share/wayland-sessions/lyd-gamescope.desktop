@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Lyd Gamescope
+Comment=Steam gaming session powered by Gamescope
+Exec=/usr/bin/gamescope -e -f -- /usr/bin/steam -gamepadui
+TryExec=/usr/bin/gamescope
+Type=Application
+DesktopNames=gamescope
