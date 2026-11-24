@@ -22,7 +22,29 @@ bluebuild build recipes/lyd-kde-intel.yml
 
 Published image: `ghcr.io/lydiaperspective/lyd-atomic-standard:latest`.
 
-The Standard recipe uses the standard Fedora Kinoite base and does not install proprietary NVIDIA drivers by default. It is intended for Intel/AMD systems, but an NVIDIA driver can be layered after installation using `lydsetup`.
+The Standard recipe uses the standard Fedora Kinoite base and does not install proprietary NVIDIA drivers or the gaming package set. It is intended for Intel/AMD systems, but an NVIDIA driver can be layered after installation using `lydsetup`.
+
+### Steam editions
+
+The Steam images derive from their matching workstation base and add native Steam, Steam device support, GameMode, MangoHud, Gamescope and the **Lyd Gamescope** SDDM session. The session starts the native Steam RPM directly in Gamepad UI.
+
+Build the Standard graphics Steam edition after the Standard base has been published:
+
+```bash
+bluebuild generate recipes/lyd-kde-steam.yml -o Containerfile
+bluebuild build recipes/lyd-kde-steam.yml
+```
+
+Published image: `ghcr.io/lydiaperspective/lyd-atomic-steam:latest`.
+
+Build the NVIDIA Steam edition after the NVIDIA base has been published:
+
+```bash
+bluebuild generate recipes/lyd-kde-nvidia-steam.yml -o Containerfile
+bluebuild build recipes/lyd-kde-nvidia-steam.yml
+```
+
+Published image: `ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest`.
 
 ## Server edition
 
@@ -47,8 +69,10 @@ Pushes to `main` and manual dispatch build the Standard, NVIDIA and Server base 
 
 Run **Build unified installer ISO** from GitHub Actions to create one ISO containing the Anaconda installer and the Lyd Atomic edition selector. The installer offers:
 
-- **Standard KDE** — the standard workstation image.
-- **NVIDIA KDE** — the workstation image with the proprietary NVIDIA driver included.
+- **Standard KDE** — standard workstation base without gaming RPMs.
+- **NVIDIA KDE** — workstation with the proprietary NVIDIA driver, without gaming RPMs.
+- **Steam KDE** — Standard graphics plus Steam and the Gamescope session.
+- **NVIDIA + Steam** — NVIDIA workstation plus Steam and the Gamescope session.
 - **Server** — the headless server image.
 
 The selected bootc image is downloaded from GHCR during installation; the five operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. Btrfs is enforced as the installed system's root filesystem; there is no filesystem dropdown that can accidentally select ext4 or XFS. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
