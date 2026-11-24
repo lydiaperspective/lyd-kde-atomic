@@ -229,6 +229,48 @@ setup_solaar() {
   echo "Launch it from the application menu or run: solaar"
 }
 
+# Fedora's Distrobox 1.8.2.5 shipped a malformed Podman mount option
+# (:ro:rslave). Upstream fixed this in Distrobox PR #2086. Keep a patched
+# user-local copy so immutable hosts do not need to modify /usr.
+prepare_distrobox_compat() {
+  local system_create compat_dir compat_create
+  system_create="$(command -v distrobox-create 2>/dev/null || true)"
+  [[ -n "$system_create" && -f "$system_create" ]] || die "Could not locate the distrobox-create script."
+
+  # Newer upstream Distrobox already emits the correct :ro,rslave option.
+  if grep -Fq 'rorslave=":ro,rslave"' "$system_create" &&
+     grep -Fq '${rorslave}' "$system_create"; then
+    return 0
+  fi
+
+  # Patch only the known affected implementation; fail safely on unknown variants.
+  if grep -Fq 'rslave=":rslave"' "$system_create" &&
+     grep -Fq ':ro${rslave}' "$system_create"; then
+    compat_dir="$HOME/.local/lib/lydsetup/distrobox-compat"
+    compat_create="$compat_dir/distrobox-create"
+    install -d -m 0755 "$compat_dir"
+    install -m 0755 "$system_create" "$compat_create"
+    sed -i \
+      -e '/rslave=""/a\        rorslave=":ro"' \
+      -e '/rslave=":rslave"/a\        rorslave=":ro,rslave"' \
+      -e 's/:ro${rslave}/${rorslave}/' \
+      "$compat_create"
+    if grep -Fq ':ro${rslave}' "$compat_create" ||
+       ! grep -Fq 'rorslave=":ro,rslave"' "$compat_create" ||
+       ! grep -Fq '${rorslave}' "$compat_create"; then
+      rm -f "$compat_create"
+      die "Could not safely apply the Distrobox Podman mount compatibility fix."
+    fi
+    chmod 0755 "$compat_create"
+    export PATH="$compat_dir:$PATH"
+    echo "Applied the Distrobox 1.8.2.5 read-only mount compatibility fix."
+    echo "Using a user-local distrobox-create override; the immutable system image is unchanged."
+    return 0
+  fi
+
+  echo "Distrobox does not contain the known ro:rslave bug; using the system version."
+}
+
 setup_devbox() {
   local config_dir config_file box_name
   box_name="lyd-atomic-dev"
@@ -237,6 +279,7 @@ setup_devbox() {
       command -v distrobox >/dev/null 2>&1 || die "Distrobox is still unavailable. Reboot into the new deployment, then run lydsetup again."
     command -v podman >/dev/null 2>&1 || die "Podman is still unavailable. Reboot into the new deployment, then run lydsetup again."
   fi
+  prepare_distrobox_compat
   config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox"
   config_file="$config_dir/lyd-atomic-dev.ini"
   mkdir -p "$config_dir"
@@ -269,6 +312,7 @@ DISTROBOX_CONFIG
 
 ensure_distrobox_host() {
   require_packages distrobox podman
+  prepare_distrobox_compat
   return 0
 }
 setup_androiddev() {
