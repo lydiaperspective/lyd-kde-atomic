@@ -15,7 +15,7 @@ systemctl enable lyd-swapfile.service
 
 install -d /etc/xdg
 kwriteconfig6 --file /etc/xdg/kdeglobals --group General --key BrowserApplication net.waterfox.waterfox.desktop
-kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze
+kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze-dark
 
 install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-standard-breeze-icons
 cat > /usr/libexec/lyd/lyd-standard-breeze-icons <<'ICON_HELPER'
@@ -23,7 +23,7 @@ cat > /usr/libexec/lyd/lyd-standard-breeze-icons <<'ICON_HELPER'
 set -Eeuo pipefail
 config_file="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
 mkdir -p "$(dirname "$config_file")"
-kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze
+kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze-dark
 ICON_HELPER
 chmod 0755 /usr/libexec/lyd/lyd-standard-breeze-icons
 
@@ -31,8 +31,8 @@ install -d /etc/xdg/autostart
 cat > /etc/xdg/autostart/lyd-standard-breeze-icons.desktop <<'AUTOSTART'
 [Desktop Entry]
 Type=Application
-Name=Lyd Breeze Icon Defaults
-Comment=Use the Breeze icon theme
+Name=Lyd Breeze Dark Icon Defaults
+Comment=Use the Breeze Dark icon theme
 Exec=/usr/libexec/lyd/lyd-standard-breeze-icons
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=2
