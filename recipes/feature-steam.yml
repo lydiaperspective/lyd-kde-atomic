@@ -1,0 +1,14 @@
+---
+modules:
+  - type: dnf
+    install:
+      packages:
+        - steam
+        - steam-devices
+        - gamemode
+        - mangohud
+        - gamescope
+  - type: files
+    files:
+      - source: steam
+        destination: /
