@@ -7,13 +7,11 @@ on:
         description: Edition to package into the ISO after all images build
         type: choice
         required: true
-        default: standard
+        default: workstation
         options:
-          - nvidia
-          - standard
+          - workstation
+          - nvidia-gaming
           - server
-          - steam
-          - nvidia-steam
 
 concurrency:
   group: build-all-and-iso-${{ github.ref }}
@@ -25,24 +23,26 @@ permissions:
   id-token: write
 
 jobs:
-  build-base:
-    name: Build base ${{ matrix.flavour }} image
+  build-components:
+    name: Build ${{ matrix.flavour }} component image
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
+          - flavour: base
+            recipe: lyd-atomic-base.yml
           - flavour: nvidia
-            recipe: lyd-kde.yml
-          - flavour: standard
-            recipe: lyd-kde-intel.yml
+            recipe: lyd-atomic-nvidia.yml
+          - flavour: nvidia-open
+            recipe: lyd-atomic-nvidia-open.yml
           - flavour: server
             recipe: lyd-server.yml
     steps:
-      - name: Build and publish base ${{ matrix.flavour }} image
+      - name: Build and publish ${{ matrix.flavour }} component
         uses: blue-build/github-action@v1
         with:
-          recipe: ${{ matrix.recipe }}
+          recipe: recipes/${{ matrix.recipe }}
           registry: ghcr.io
           registry_namespace: lydiaperspective
           registry_token: ${{ secrets.GITHUB_TOKEN }}
@@ -54,23 +54,23 @@ jobs:
           maximize_build_space: true
           build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
 
-  build-steam:
-    name: Build ${{ matrix.flavour }} gaming image
-    needs: build-base
+  build-final:
+    name: Build final ${{ matrix.flavour }} image
+    needs: build-components
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
-          - flavour: steam
-            recipe: lyd-kde-steam.yml
-          - flavour: nvidia-steam
-            recipe: lyd-kde-nvidia-steam.yml
+          - flavour: workstation
+            recipe: lyd-atomic-workstation.yml
+          - flavour: nvidia-gaming
+            recipe: lyd-atomic-nvidia-gaming.yml
     steps:
-      - name: Build and publish ${{ matrix.flavour }} image
+      - name: Build and publish ${{ matrix.flavour }}
         uses: blue-build/github-action@v1
         with:
-          recipe: ${{ matrix.recipe }}
+          recipe: recipes/${{ matrix.recipe }}
           registry: ghcr.io
           registry_namespace: lydiaperspective
           registry_token: ${{ secrets.GITHUB_TOKEN }}
@@ -84,7 +84,7 @@ jobs:
 
   iso:
     name: Build and release latest ${{ inputs.image_flavour }} ISO
-    needs: [build-base, build-steam]
+    needs: [build-components, build-final]
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
