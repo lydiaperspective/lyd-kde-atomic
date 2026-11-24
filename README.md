@@ -14,19 +14,19 @@ The Standard edition is intended for Intel and AMD graphics systems, and can als
 
 The Standard edition's optional driver installation uses the current RPM Fusion `akmod-nvidia` package. It is not guaranteed to match the NVIDIA edition's prebuilt 580.x driver branch. Secure Boot may require additional module-signing configuration; `lydsetup` warns when it detects Secure Boot and does not enroll keys automatically.
 
-The NVIDIA and Standard editions share the same KDE desktop, Waterfox Flatpak, Mystical theme, lydhelp and lydsetup commands. The Server edition is a separate headless image with server-focused tools and Cockpit.
+The Standard and NVIDIA images are workstation base images. The Steam editions are derived from those bases and add the gaming RPMs plus the dedicated SDDM Gamescope session. The Server edition is a separate headless image with server-focused tools and Cockpit.
 
 ## Project status
 
-Initial project foundation. Image builds, installer, update paths, NVIDIA driver operation, rollback and hardware support still require validation in a VM and on physical hardware. The unified installer is a new implementation and must be tested before relying on it for a real installation.
+Initial project foundation. Image builds, installer, update paths, NVIDIA driver operation, rollback and hardware support still require validation in a VM and on physical hardware. The unified installer offers Standard, NVIDIA, Steam, NVIDIA + Steam and Server choices. Steam images are built after their corresponding base image so shared workstation layers are reused. The installer is a new implementation and must be tested before relying on it for a real installation.
 
 ## Technology
 
-BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds all three editions and publishes them to GHCR.
+BlueBuild creates the Fedora Kinoite-based OCI images. The NVIDIA edition uses BlueBuild's Fedora 45 Kinoite NVIDIA base, which supplies the proprietary 580.x driver. The Standard edition uses the standard Fedora Kinoite base. GitHub Actions builds the Standard, NVIDIA and Server base images first, then builds the two Steam variants from their matching workstation base images and publishes all five to GHCR.
 
 ## Unified installer
 
-The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO. The unified installer image is built with Btrfs as its default filesystem selection; the actual target-disk layout must still be verified in Anaconda on each installer path.
+The **Build unified installer ISO** GitHub Actions workflow creates one graphical Anaconda installer ISO. Its Lyd Atomic Edition screen offers Standard KDE, NVIDIA KDE, Steam KDE, NVIDIA + Steam and Server. It downloads only the selected image from GHCR during installation, so an internet connection is required. The operating-system images are not bundled into the ISO. The unified installer image is built with Btrfs as its default filesystem selection; the actual target-disk layout must still be verified in Anaconda on each installer path.
 
 See [docs/BUILDING.md](docs/BUILDING.md) for build instructions, ISO generation, CI signing setup and Secure Boot notes.
 
@@ -120,7 +120,7 @@ Run `lydsetup` as your normal user:
 - Android development environment (`lydsetup dev androiddev enable`): Android Studio from Flathub plus a Fedora Distrobox with Git, Java 21 and Android platform tools
 - Container development environment (`lydsetup dev container enable`): Fedora Distrobox with Podman Compose, Buildah and Skopeo, forwarding Podman commands to the host's rootless engine
 
-Optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
+Gaming RPMs are deliberately excluded from the Standard and NVIDIA base images; choose Steam or NVIDIA + Steam in the installer, or switch later with `lydsetup steam` / `lydsetup nvidia-steam`. Optional Flatpak launchers and other optional packages are not included in the base image. Atomic package changes create a new deployment and normally require a reboot. NVIDIA setup takes two package deployments: one to add RPM Fusion, then another to install the driver.
 
 ## BlueBuild development environment
 
