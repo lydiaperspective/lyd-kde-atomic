@@ -77,7 +77,6 @@ EOF
 cat > /usr/libexec/lyd/lyd-mystical-breeze-icons <<'ICON_HELPER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-[[ "${XDG_CURRENT_DESKTOP:-}" == *KDE* || "${KDE_FULL_SESSION:-}" == true ]] || exit 0
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
 kwriteconfig6 --file "${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals" --group Icons --key Theme breeze
 ICON_HELPER
@@ -90,6 +89,7 @@ Comment=Use the standard Breeze icon theme
 Exec=/usr/libexec/lyd/lyd-mystical-breeze-icons
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=2
+X-KDE-autostart-enabled=true
 EOF
 
 # Konsole's matching colour scheme and profile are maintained in the theme repo.
