@@ -220,9 +220,11 @@ pods_move() {
   [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist."
   [[ ! -e "$destination" ]] || die "Destination already exists: $destination"
   [[ "$destination" == /lydsrv/Mnt/* ]] || die "Destination must be under /lydsrv/Mnt/<diskMountFolderName>/."
-  local disk_root="/lydsrv/Mnt/${destination#/lydsrv/Mnt/}"
-  disk_root="/lydsrv/Mnt/${disk_root%%/*}"
+  local destination_relative="${destination#/lydsrv/Mnt/}"
+  [[ "$destination_relative" == */* ]] || die "Destination must be a folder inside a named drive mount directory."
+  local disk_root="/lydsrv/Mnt/${destination_relative%%/*}"
   [[ -d "$disk_root" ]] || die "Drive mount directory does not exist: $disk_root"
+  [[ "$destination" == "$disk_root/"* ]] || die "Destination must be inside the selected drive mount."
   mountpoint -q "$disk_root" || die "$disk_root is not an active mount point. Mount the drive through Cockpit first."
   [[ -w "$disk_root" ]] || die "You do not have write access to $disk_root. Configure the drive mount permissions for the server administrator first."
 
