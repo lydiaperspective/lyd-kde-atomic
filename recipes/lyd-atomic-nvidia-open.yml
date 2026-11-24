@@ -1,0 +1,12 @@
+---
+name: lyd-atomic-nvidia-open
+description: Shared KDE workstation base with the current open NVIDIA kernel module driver.
+base-image: ghcr.io/blue-build/base-images/fedora-kinoite-nvidia-open
+image-version: "45"
+modules:
+  - from-file: workstation-base.yml
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+      - configure-workstation-nvidia-open.sh
+      - enable-bib-repositories.sh
