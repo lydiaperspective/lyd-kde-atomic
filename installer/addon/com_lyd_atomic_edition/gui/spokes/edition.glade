@@ -79,8 +79,10 @@
                   <object class="GtkLabel" id="editionDetails">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label">Standard KDE: Intel/AMD graphics, with optional NVIDIA driver setup after installation.
-NVIDIA KDE: KDE workstation with the proprietary NVIDIA driver included.
+                    <property name="label">Standard KDE: Intel/AMD graphics workstation without the gaming package set.
+NVIDIA KDE: Workstation with the proprietary NVIDIA driver, without the gaming package set.
+Steam KDE: Standard graphics plus native Steam, GameMode, MangoHud and the Lyd Gamescope session.
+NVIDIA + Steam: NVIDIA graphics plus native Steam, GameMode, MangoHud and the Lyd Gamescope session.
 Server: Headless Fedora bootc server with Podman and Cockpit.</property>
                     <property name="wrap">True</property>
                     <property name="xalign">0</property>
