@@ -581,6 +581,14 @@ main() {
         *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
       esac
       ;;
+    drives)
+      shift
+      drive_command "$@"
+      ;;
+    pods)
+      shift
+      pods_move "$@"
+      ;;
     lact)
       [[ "${2:-}" == "enable" && $# -eq 2 ]] || die "Usage: lydmanage lact enable"
       lact_enable
