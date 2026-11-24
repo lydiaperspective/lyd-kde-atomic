@@ -76,6 +76,7 @@ modules:
           url: https://flathub.org/repo/flathub.flatpakrepo
         install:
           - net.waterfox.waterfox
+          - org.kde.skanpage
           - com.github.zocker_160.SyncThingy
           - org.kde.haruna
           - org.kde.gwenview
