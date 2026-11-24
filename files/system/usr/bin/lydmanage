@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.0"
+VERSION="1.5.1"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -68,6 +68,14 @@ system_update() {
 system_status() {
   require_bootc
   bootc status
+}
+
+systemd_reload() {
+  need_user
+  need_sudo
+  echo "Reloading systemd unit files and generated configuration..."
+  sudo systemctl daemon-reload
+  echo "Systemd manager configuration reloaded."
 }
 
 system_rollback() {
@@ -407,6 +415,7 @@ Usage:
   lydmanage switch <newImage>       Switch to another bootc image
   lydmanage update                  Run bootc update and stage the latest image
   lydmanage status                  Show current, staged and rollback deployments
+  lydmanage systemd reload          Reload systemd unit files and generated configuration
   lydmanage rollback                Stage the previous deployment for rollback
   lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
   lydmanage plasma load <profile>   Restore a saved Plasma layout profile
@@ -453,6 +462,10 @@ main() {
     status)
       [[ $# -eq 1 ]] || die "Usage: lydmanage status"
       system_status
+      ;;
+    systemd)
+      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
+      systemd_reload
       ;;
     rollback)
       [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
@@ -605,6 +618,7 @@ Usage:
   lydmanage switch <newImage>       Switch to another bootc image
   lydmanage update                  Run bootc update and stage the latest image
   lydmanage status                  Show current, staged and rollback deployments
+  lydmanage systemd reload          Reload systemd unit files and generated configuration
   lydmanage rollback                Stage the previous deployment for rollback
   lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
   lydmanage plasma load <profile>   Restore a saved Plasma layout profile
@@ -646,6 +660,10 @@ main() {
     status)
       [[ $# -eq 1 ]] || die "Usage: lydmanage status"
       system_status
+      ;;
+    systemd)
+      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
+      systemd_reload
       ;;
     rollback)
       [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
@@ -876,6 +894,7 @@ Usage:
   lydmanage switch <newImage>       Switch to another bootc image
   lydmanage update                  Run bootc update and stage the latest image
   lydmanage status                  Show current, staged and rollback deployments
+  lydmanage systemd reload          Reload systemd unit files and generated configuration
   lydmanage rollback                Stage the previous deployment for rollback
   lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
   lydmanage plasma load <profile>   Restore a saved Plasma layout profile
@@ -917,6 +936,10 @@ main() {
     status)
       [[ $# -eq 1 ]] || die "Usage: lydmanage status"
       system_status
+      ;;
+    systemd)
+      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
+      systemd_reload
       ;;
     rollback)
       [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
