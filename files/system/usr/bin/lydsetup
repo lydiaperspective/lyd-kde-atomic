@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.6
+VERSION=0.6.7
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -552,6 +552,46 @@ setup_zed() {
   curl -f https://zed.dev/install.sh | sh
   echo "Zed installation finished. If needed, add ~/.local/bin to PATH."
 }
+setup_image_switch() {
+  local edition="$1" image="" label="" warning=""
+  case "$edition" in
+    server)
+      image="ghcr.io/lydiaperspective/lyd-atomic-server:latest"
+      label="Server"
+      warning="This replaces the workstation deployment with the headless Server edition. Plasma and the graphical login will no longer be available after reboot."
+      ;;
+    workstation|standard)
+      image="ghcr.io/lydiaperspective/lyd-atomic-standard:latest"
+      label="Standard workstation"
+      warning="This replaces the current deployment with the Standard KDE workstation edition."
+      ;;
+    nvidia)
+      image="ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest"
+      label="NVIDIA workstation"
+      warning="This replaces the current deployment with the NVIDIA KDE workstation edition."
+      ;;
+    *) die "Usage: lydsetup {server|workstation|nvidia}" ;;
+  esac
+
+  command -v bootc >/dev/null 2>&1 || die "bootc is not available on this system."
+  command -v sudo >/dev/null 2>&1 || die "sudo is required."
+  echo "You are switching to the Lyd Atomic $label image:"
+  echo "  $image"
+  echo
+  echo "WARNING: $warning"
+  echo "The image will be downloaded and staged as the next deployment."
+  echo "Your current deployment remains available for rollback."
+  echo
+  confirm "Continue with the image switch?" || return 0
+
+  echo "Switching to $label..."
+  sudo bootc switch "$image"
+  echo
+  echo "The $label deployment has been staged successfully."
+  echo "Reboot when ready to start using it:"
+  echo "  systemctl reboot"
+}
+
 setup_nvidia() {
   if rpm -q nvidia-driver >/dev/null 2>&1; then
     echo "The NVIDIA edition already includes its prebuilt proprietary driver."
@@ -567,6 +607,11 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
+    server|workstation|standard|nvidia)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup {server|workstation|nvidia}"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      setup_image_switch "$1"
+      exit 0 ;;
     printscan|media|mediaedit|gaming)
       [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup $1 enable"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
@@ -633,9 +678,12 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [server|workstation|nvidia|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
+  lydsetup server                      Switch to the headless Server image
+  lydsetup workstation                 Switch to the Standard KDE workstation image
+  lydsetup nvidia                      Switch to the NVIDIA KDE workstation image
   lydsetup                              Show this command list
   lydsetup --help                       Show this command list
   lydsetup --version                    Show version
@@ -670,7 +718,7 @@ Features:
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
   Gaming (Steam Flatpak, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
 
-All system RPMs are included in the image; lydsetup only enables and configures features.
+Image switching downloads and stages the selected bootc image; reboot to activate it.\nAll system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
 separate module-signing setup before the driver can load.
 Logs: $LOG
