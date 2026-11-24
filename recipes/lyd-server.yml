@@ -75,3 +75,4 @@ modules:
         - libvirtd.service
         - lyd-enable-user-linger.service
         - lyd-enable-user-linger.path
+        - lyd-setup-server-storage.service
