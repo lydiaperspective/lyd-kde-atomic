@@ -16,6 +16,31 @@ command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the 
 
 systemctl enable lyd-swapfile.service
 
+# Use the light-on-dark Breeze icon variant for KDE's dark desktop defaults.
+install -d /etc/xdg
+kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze-dark
+install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-nvidia-breeze-icons
+cat > /usr/libexec/lyd/lyd-nvidia-breeze-icons <<'ICON_HELPER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+config_file="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
+mkdir -p "$(dirname "$config_file")"
+kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze-dark
+ICON_HELPER
+chmod 0755 /usr/libexec/lyd/lyd-nvidia-breeze-icons
+install -d /etc/xdg/autostart
+cat > /etc/xdg/autostart/lyd-nvidia-breeze-icons.desktop <<'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Lyd Breeze Dark Icon Defaults
+Comment=Use the Breeze Dark icon theme on the NVIDIA edition
+Exec=/usr/libexec/lyd/lyd-nvidia-breeze-icons
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+X-KDE-autostart-enabled=true
+NoDisplay=true
+AUTOSTART
+
 install -d /etc/xdg
 cat > /etc/xdg/mimeapps.list <<'EOF'
 [Default Applications]
