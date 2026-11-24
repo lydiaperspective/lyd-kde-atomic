@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-\${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -28,17 +28,17 @@ jobs:
           recipe: lyd-atomic-base.yml
           registry: ghcr.io
           registry_namespace: lydiaperspective
-          registry_token: \${{ secrets.GITHUB_TOKEN }}
-          registry_username: \${{ github.actor }}
-          cosign_private_key: \${{ secrets.COSIGN_PRIVATE_KEY }}
-          cosign_public_key: \${{ secrets.COSIGN_PUBLIC_KEY }}
-          pr_event_number: \${{ github.event.number || 0 }}
-          push: \${{ github.event_name != 'pull_request' }}
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          pr_event_number: ${{ github.event.number || 0 }}
+          push: ${{ github.event_name != 'pull_request' }}
           maximize_build_space: true
-          build_opts: \${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
 
   build-components:
-    name: Build \${{ matrix.flavour }} component image
+    name: Build ${{ matrix.flavour }} component image
     needs: build-base
     runs-on: ubuntu-24.04
     strategy:
@@ -52,23 +52,23 @@ jobs:
           - flavour: server
             recipe: lyd-server.yml
     steps:
-      - name: Build and publish \${{ matrix.flavour }} image
+      - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
-          recipe: \${{ matrix.recipe }}
+          recipe: ${{ matrix.recipe }}
           registry: ghcr.io
           registry_namespace: lydiaperspective
-          registry_token: \${{ secrets.GITHUB_TOKEN }}
-          registry_username: \${{ github.actor }}
-          cosign_private_key: \${{ secrets.COSIGN_PRIVATE_KEY }}
-          cosign_public_key: \${{ secrets.COSIGN_PUBLIC_KEY }}
-          pr_event_number: \${{ github.event.number || 0 }}
-          push: \${{ github.event_name != 'pull_request' }}
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          pr_event_number: ${{ github.event.number || 0 }}
+          push: ${{ github.event_name != 'pull_request' }}
           maximize_build_space: true
-          build_opts: \${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
 
   build-final:
-    name: Build final \${{ matrix.flavour }} image
+    name: Build final ${{ matrix.flavour }} image
     needs: [build-base, build-components]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
@@ -81,17 +81,17 @@ jobs:
           - flavour: nvidia-gaming
             recipe: lyd-atomic-nvidia-gaming.yml
     steps:
-      - name: Build and publish \${{ matrix.flavour }} image
+      - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
-          recipe: \${{ matrix.recipe }}
+          recipe: ${{ matrix.recipe }}
           registry: ghcr.io
           registry_namespace: lydiaperspective
-          registry_token: \${{ secrets.GITHUB_TOKEN }}
-          registry_username: \${{ github.actor }}
-          cosign_private_key: \${{ secrets.COSIGN_PRIVATE_KEY }}
-          cosign_public_key: \${{ secrets.COSIGN_PUBLIC_KEY }}
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
           pr_event_number: 0
           push: true
           maximize_build_space: true
-          build_opts: \${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
