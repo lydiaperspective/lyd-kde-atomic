@@ -1,28 +1,91 @@
 #!/usr/bin/env bash
-# Update manager for Lyd Atomic.
+# Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
 need_root() { [[ $EUID -eq 0 ]] || die "This internal operation must run as root."; }
 need_sudo() { command -v sudo >/dev/null 2>&1 || die "sudo is required."; }
+confirm() {
+  local answer
+  read -r -p "$1 [y/N] " answer
+  [[ "$answer" =~ ^[Yy]$ ]]
+}
+require_bootc() {
+  command -v bootc >/dev/null 2>&1 || die "bootc is unavailable. This command requires a Lyd Atomic bootc installation."
+}
+
+resolve_image() {
+  case "$1" in
+    workstation|standard)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-workstation:latest" ;;
+    nvidia-gaming|nvidia)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest" ;;
+    server)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-server:latest" ;;
+    base)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-base:latest" ;;
+    nvidia-base)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest" ;;
+    nvidia-open)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-nvidia-open:latest" ;;
+    *)
+      # Accept a full OCI image reference, but reject whitespace, leading
+      # options and shell metacharacters. The value is still passed as one arg.
+      [[ "$1" != -* && "$1" =~ ^[A-Za-z0-9._:/@+-]+$ ]] ||
+        die "Invalid image reference. Use an image alias or a full OCI image reference."
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+switch_image() {
+  need_user
+  require_bootc
+  need_sudo
+  [[ $# -eq 1 ]] || die "Usage: lydmanage switch <newImage>"
+  local image
+  image="$(resolve_image "$1")"
+  echo "Target image: $image"
+  echo "bootc will download and stage this image as the next deployment."
+  echo "Your current deployment remains available for rollback."
+  confirm "Switch to this image?" || { echo "Cancelled."; return 0; }
+  sudo bootc switch "$image"
+  echo
+  echo "Image switch staged. Reboot when ready to use it:"
+  echo "  systemctl reboot"
+}
+
+system_update() {
+  need_user
+  require_bootc
+  need_sudo
+  echo "Checking the configured image source and staging any available update..."
+  echo "The running system will not be changed. Reboot to activate the staged deployment."
+  sudo bootc update
+}
+
+system_status() {
+  require_bootc
+  bootc status
+}
+
+system_rollback() {
+  need_user
+  require_bootc
+  need_sudo
+  echo "This stages the previous bootc deployment for the next boot."
+  confirm "Prepare rollback?" || { echo "Cancelled."; return 0; }
+  sudo bootc rollback
+  echo "Rollback staged. Reboot to activate it."
+}
 
 flatpak_update() {
   command -v flatpak >/dev/null 2>&1 || { echo "Flatpak is not installed; skipping."; return 0; }
   echo "Updating Flatpak applications..."
   flatpak update --assumeyes
-}
-
-system_update() {
-  command -v bootc >/dev/null 2>&1 || die "bootc is unavailable. This command requires a Lyd Atomic bootc installation."
-  need_sudo
-  echo "Checking for and staging the latest Lyd Atomic system image..."
-  echo "The update will become active after you reboot; this command will not reboot automatically."
-  sudo bootc upgrade
-  echo "Reloading systemd units and mount definitions after the update..."
-  sudo systemctl daemon-reload
 }
 
 firmware_update() {
@@ -35,23 +98,22 @@ firmware_update() {
 }
 
 auto_enable() {
+  need_user
   need_sudo
   echo "Enabling weekly automatic updates (Sunday at 03:00 local system time)."
   echo "The built-in bootc timer will be disabled so system updates follow this schedule."
   sudo systemctl daemon-reload
   sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
   sudo systemctl enable --now lydmanage-updates.timer
-  echo "Automatic updates are enabled."
-  echo "Flatpak system apps, the bootc image and available firmware will be updated weekly."
-  echo "System and firmware updates may require a reboot; the machine will not reboot automatically."
+  echo "Automatic updates are enabled. The computer will not reboot automatically."
 }
 
 auto_disable() {
+  need_user
   need_sudo
   sudo systemctl disable --now lydmanage-updates.timer
   sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
-  echo "Automatic updates are disabled."
-  echo "Manual updates remain available through lydmanage."
+  echo "Automatic updates are disabled. Manual updates remain available."
 }
 
 auto_status() {
@@ -60,7 +122,6 @@ auto_status() {
   else
     echo "Automatic updates: disabled"
   fi
-  systemctl status lydmanage-updates.timer --no-pager 2>/dev/null || true
   systemctl list-timers lydmanage-updates.timer --no-pager 2>/dev/null || true
 }
 
@@ -72,29 +133,22 @@ run_automatic_updates() {
   if command -v flatpak >/dev/null 2>&1; then
     echo "===== Flatpak system updates ====="
     flatpak update --system --assumeyes || { echo "Flatpak system update failed."; failures=$((failures + 1)); }
-  else
-    echo "Flatpak is not installed; skipping."
   fi
 
   if command -v bootc >/dev/null 2>&1; then
-    echo "===== bootc system image update ====="
-    if bootc upgrade; then
-      echo "Reloading systemd units and mount definitions after the update..."
+    echo "===== bootc image update ====="
+    if bootc update; then
       systemctl daemon-reload || { echo "systemd daemon-reload failed."; failures=$((failures + 1)); }
     else
-      echo "bootc upgrade failed."
+      echo "bootc update failed."
       failures=$((failures + 1))
     fi
-  else
-    echo "bootc is unavailable; skipping system image update."
   fi
 
   if command -v fwupdmgr >/dev/null 2>&1; then
     echo "===== Firmware updates ====="
     fwupdmgr refresh --force || { echo "Firmware metadata refresh failed."; failures=$((failures + 1)); }
     fwupdmgr update --assume-yes || { echo "Firmware update failed."; failures=$((failures + 1)); }
-  else
-    echo "fwupdmgr is not installed; skipping firmware updates."
   fi
 
   echo "===== Scheduled update run complete ====="
@@ -110,33 +164,56 @@ usage() {
 lydmanage $VERSION
 
 Usage:
-  lydmanage flatpak update       Update Flatpak applications
-  lydmanage system update        Stage the latest Lyd Atomic bootc image
-  lydmanage firmware update      Refresh LVFS metadata and install firmware updates
-  lydmanage updates auto enable  Enable weekly automatic updates (Sunday at 03:00)
-  lydmanage updates auto disable Disable automatic updates
+  lydmanage switch <newImage>    Switch to another bootc image
+  lydmanage update               Run bootc update and stage the latest image
+  lydmanage status               Show current, staged and rollback deployments
+  lydmanage rollback             Stage the previous deployment for rollback
+  lydmanage flatpak update       Update installed Flatpak applications
+  lydmanage firmware update      Refresh and install available firmware updates
+  lydmanage updates auto enable  Enable weekly automatic updates
+  lydmanage updates auto disable Disable weekly automatic updates
   lydmanage updates auto status  Show automatic update timer status
 
-Automatic updates run Flatpak system updates, bootc image updates and available
-firmware updates. System and firmware changes may require a reboot; the timer
-does not reboot the computer automatically.
+Image aliases:
+  workstation, nvidia-gaming, server
+  base, nvidia-base, nvidia-open
 
-Logs for scheduled updates:
+You can also provide a full OCI image reference, for example:
+  lydmanage switch ghcr.io/example/os:stable
+
+Updates and image switches are staged; reboot to activate the new deployment.
+Rollback selects the previous deployment for the next boot.
+
+Short alias:
+  lydm <same arguments>
+
+Scheduled update logs:
   journalctl -u lydmanage-updates.service
 HELP
 }
 
 main() {
   case "${1:-}" in
+    switch)
+      shift
+      switch_image "$@"
+      ;;
+    update)
+      [[ $# -eq 1 ]] || die "Usage: lydmanage update"
+      system_update
+      ;;
+    status)
+      [[ $# -eq 1 ]] || die "Usage: lydmanage status"
+      system_status
+      ;;
+    rollback)
+      [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
+      system_rollback
+      ;;
     flatpak)
       need_user
       [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage flatpak update"
       flatpak_update
-      ;;
-    system)
-      need_user
-      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage system update"
-      system_update
       ;;
     firmware)
       need_user
