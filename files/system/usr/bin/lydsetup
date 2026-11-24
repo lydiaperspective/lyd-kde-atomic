@@ -644,18 +644,10 @@ setup_image_switch() {
 }
 
 setup_nvidia() {
-  if rpm -q nvidia-driver >/dev/null 2>&1; then
-    echo "The NVIDIA edition already includes its prebuilt proprietary driver."
-    command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi || true
-    return 0
-  fi
-  require_packages akmod-nvidia xorg-x11-drv-nvidia xorg-x11-drv-nvidia-cuda
-  echo "NVIDIA driver packages are included in this image."
-  echo "Check module compilation before relying on the driver:"
-  echo "  systemctl status akmods"
-  echo "  journalctl -u akmods"
-  echo "  modinfo -F version nvidia"
+  echo "The complete NVIDIA 580 setup is provided by the NVIDIA Gaming Workstation image."
+  setup_image_switch nvidia-gaming
 }
+
 main() {
   case "${1:-}" in
     server|workstation|standard|nvidia|nvidia-gaming)
