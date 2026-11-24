@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.3.0"
+VERSION="1.4.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -207,6 +207,90 @@ plasma_load() {
   fi
 }
 
+
+pods_move() {
+  need_user
+  need_sudo
+  [[ $# -eq 3 && "$2" == "mv" ]] || die "Usage: lydmanage pods <Media|Pictures|Backups|Storage|Config> mv <newMountLocation>"
+  local folder="$1" destination="$3" source="/lydsrv/$1"
+  case "$folder" in Media|Pictures|Backups|Storage|Config) ;; *) die "Unknown standardized folder: $folder" ;; esac
+  [[ "$destination" == /* && "$destination" != "/" ]] || die "Destination must be an absolute path."
+  [[ "$destination" != *"/../"* && "$destination" != */.. && "$destination" != *"/./"* ]] || die "Destination must not contain . or .. path components."
+  [[ ! -L "$source" && -d "$source" ]] || die "$source must currently be a real directory, not a symlink."
+  [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist."
+  mountpoint -q "$(dirname "$destination")" || {
+    # Require the destination itself or an ancestor to be a mount point.
+    findmnt -T "$(dirname "$destination")" -n -o TARGET | grep -Fxq "$(findmnt -T "$(dirname "$destination")" -n -o TARGET)" || true
+  }
+  [[ ! -e "$destination" ]] || die "Destination already exists: $destination"
+  [[ "$destination" == /lydsrv/Mnt/* ]] || die "Destination must be under /lydsrv/Mnt/<diskMountFolderName>/."
+  local mount_root="/lydsrv/Mnt/${destination#/lydsrv/Mnt/}"
+  mount_root="/lydsrv/Mnt/${mount_root#/lydsrv/Mnt/}"
+  local disk_root="/lydsrv/Mnt/${destination#/lydsrv/Mnt/}"
+  disk_root="/lydsrv/Mnt/${disk_root%%/*}"
+  [[ -d "$disk_root" ]] || die "Drive mount directory does not exist: $disk_root"
+  mountpoint -q "$disk_root" || die "$disk_root is not an active mount point. Mount the drive through Cockpit first."
+  [[ -w "$disk_root" ]] || die "You do not have write access to $disk_root. Configure the drive mount permissions for the server administrator first."
+
+  local admin
+  admin="$(sudo cat /var/lib/lyd/admin-user 2>/dev/null || true)"
+  [[ "$admin" == "$USER" ]] || die "Only the install-time storage administrator ('$admin') can move standardized storage folders."
+
+  local ids=() running=() id inspect source_path running_state
+  command -v podman >/dev/null 2>&1 || die "Podman is not installed."
+  while IFS= read -r id; do
+    [[ -n "$id" ]] || continue
+    inspect="$(podman inspect "$id")"
+    if jq -e --arg src "$source" '.[0].Mounts[]? | select(.Type == "bind" and (.Source == $src or (.Source | startswith($src + "/"))))' <<< "$inspect" >/dev/null; then
+      ids+=("$id")
+      running_state="$(jq -r '.[0].State.Running' <<< "$inspect")"
+      [[ "$running_state" == true ]] && running+=("$id")
+    fi
+  done < <(podman ps -aq)
+
+  echo "This will move $source to $destination."
+  echo "Containers using this folder: ${#ids[@]} (running: ${#running[@]})."
+  confirm "Stop affected containers, move the data and restart them?" || { echo "Cancelled."; return 0; }
+
+  local stopped=() id
+  for id in "${running[@]}"; do
+    podman stop "$id" >/dev/null
+    stopped+=("$id")
+  done
+
+  local failed=0
+  if ! install -d -m 2775 "$destination"; then
+    failed=1
+  elif ! cp -a --no-preserve=ownership "$source/." "$destination/"; then
+    failed=1
+  fi
+  if (( failed )); then
+    echo "Data copy failed. Original data remains at $source; attempting to restart stopped containers." >&2
+    for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
+    die "Storage move aborted."
+  fi
+
+  # Ensure the install administrator owns the copied tree for rootless Podman.
+  if ! sudo chown -R "$USER:$(id -gn)" "$destination"; then
+    echo "Could not set destination ownership. Original data remains intact." >&2
+    for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
+    die "Storage move aborted."
+  fi
+
+  local backup="${source}.lyd-move-backup-$(date +%Y%m%d%H%M%S)"
+  if ! mv "$source" "$backup" || ! ln -s "$destination" "$source"; then
+    echo "Could not switch standardized folder to the new location. Data backup is at $backup." >&2
+    for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
+    die "Storage move incomplete; manual recovery may be required."
+  fi
+  echo "Original directory retained as: $backup"
+  for id in "${stopped[@]}"; do
+    podman start "$id" >/dev/null || { echo "Warning: could not restart container $id." >&2; failed=1; }
+  done
+  (( failed == 0 )) || die "Storage moved, but one or more containers did not restart."
+  echo "$source now points to $destination."
+}
+
 lact_enable() {
   need_user
   need_sudo
@@ -304,6 +388,7 @@ Usage:
   lydmanage flatpak update          Update installed Flatpak applications
   lydmanage firmware update        Refresh and install available firmware updates
   lydmanage lact enable            Enable and start the LACT daemon (NVIDIA images)
+  lydmanage pods <folder> mv <path> Move standardized server storage to a mounted drive
   lydmanage updates auto enable     Enable weekly automatic updates
   lydmanage updates auto disable    Disable weekly automatic updates
   lydmanage updates auto status     Show automatic update timer status
