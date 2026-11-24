@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Flatpak's GPGME verification can fail when Wayland sessions export DISPLAY=""
+# (an empty value, not a valid X11 display). Preserve real X11 DISPLAY values.
+if [[ -z "${DISPLAY:-}" ]]; then
+  unset DISPLAY
+fi
+exec /usr/bin/flatpak "$@"
