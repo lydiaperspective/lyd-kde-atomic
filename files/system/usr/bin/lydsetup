@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.4
+VERSION=0.6.5
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -25,17 +25,26 @@ require_packages() {
   echo "All required system packages are already included in this image."
 }
 
+# GPGME can pass an empty --display argument to GnuPG when sudo
+# strips DISPLAY. Some GPGME versions treat that as a fatal option error,
+# which Flatpak reports as a signature-verification failure. Signature
+# verification remains enabled; supply a harmless non-empty display value
+# only when the caller has no DISPLAY.
+flatpak_as_root() {
+  local display="${DISPLAY:-:0}"
+  sudo env "DISPLAY=$display" flatpak "$@"
+}
 ensure_flathub_system() {
   command -v flatpak >/dev/null 2>&1 || die "Flatpak is not installed."
   if ! flatpak remotes --system --columns=name | grep -qx flathub; then
     echo "Adding the system-wide Flathub repository."
-    sudo flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    flatpak_as_root remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
   fi
-  sudo flatpak remote-modify --system --prio=100 flathub
+  flatpak_as_root remote-modify --system --prio=100 flathub
 }
 install_flatpaks_system() {
   ensure_flathub_system
-  sudo flatpak install --system --assumeyes --or-update flathub "$@"
+  flatpak_as_root install --system --assumeyes --or-update flathub "$@"
 }
 setup_printscan() {
   echo "This enables CUPS printing, USB/network scanner support and Skanpage."
