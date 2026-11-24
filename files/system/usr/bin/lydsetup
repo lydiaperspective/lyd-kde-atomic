@@ -793,7 +793,7 @@ Features:
   Solaar Logitech device manager (preinstalled system package)
   Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
-  Gaming (system Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
+  Gaming (Steam editions include native Steam, GameMode, MangoHud and Gamescope; optional launcher Flatpaks via 'lydsetup gaming enable')
 
 Image switching downloads and stages the selected bootc image; reboot to activate it.\nAll system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
