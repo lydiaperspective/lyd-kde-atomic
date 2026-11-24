@@ -6,21 +6,13 @@ from com_lyd_atomic_edition.bootc import set_bootc_image
 from com_lyd_atomic_edition.categories.lyd_atomic import LydAtomicCategory
 
 EDITIONS = {
-    "standard": (
-        "ghcr.io/lydiaperspective/lyd-atomic-standard:latest",
-        "Standard KDE",
+    "workstation": (
+        "ghcr.io/lydiaperspective/lyd-atomic-workstation:latest",
+        "KDE Workstation",
     ),
-    "nvidia": (
-        "ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest",
-        "NVIDIA KDE",
-    ),
-    "steam": (
-        "ghcr.io/lydiaperspective/lyd-atomic-steam:latest",
-        "Steam KDE",
-    ),
-    "nvidia-steam": (
-        "ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest",
-        "NVIDIA + Steam",
+    "nvidia-gaming": (
+        "ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest",
+        "NVIDIA Gaming Workstation",
     ),
     "server": (
         "ghcr.io/lydiaperspective/lyd-atomic-server:latest",
