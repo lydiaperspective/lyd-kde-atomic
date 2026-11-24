@@ -47,6 +47,7 @@ modules:
         - fuse-libs
         - fuse3
         - fuse3-libs
+        - xorg-x11-server-Xwayland
         - xdg-desktop-portal
         - xdg-desktop-portal-kde
         - cups
