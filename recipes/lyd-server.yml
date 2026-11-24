@@ -23,6 +23,7 @@ modules:
         - cockpit-networkmanager
         - cockpit-selinux
         - cockpit-sosreport
+        - cockpit-files
         - firewalld
         - openssh-server
         - openssh-clients
