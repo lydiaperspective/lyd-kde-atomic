@@ -14,6 +14,14 @@ EDITIONS = {
         "ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest",
         "NVIDIA KDE",
     ),
+    "steam": (
+        "ghcr.io/lydiaperspective/lyd-atomic-steam:latest",
+        "Steam KDE",
+    ),
+    "nvidia-steam": (
+        "ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest",
+        "NVIDIA + Steam",
+    ),
     "server": (
         "ghcr.io/lydiaperspective/lyd-atomic-server:latest",
         "Server",
