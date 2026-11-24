@@ -81,7 +81,6 @@ modules:
         - gamemode
         - mangohud
         - gamescope
-        - protontricks
   - type: default-flatpaks
     configurations:
       - scope: system
@@ -95,7 +94,6 @@ modules:
           - org.kde.haruna
           - org.kde.gwenview
           - com.vixalien.sticky
-          - com.valvesoftware.Steam
   - type: files
     files:
       - source: system
