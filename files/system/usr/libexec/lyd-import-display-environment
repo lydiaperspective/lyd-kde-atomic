@@ -4,6 +4,8 @@ set -Eeuo pipefail
 # Native Wayland sessions may not have an X11 DISPLAY. Do not export an
 # empty DISPLAY value into D-Bus/systemd activation environments: GPGME and
 # other consumers can pass it through as an invalid --display= argument.
-if [[ -n "${DISPLAY:-}" ]]; then
-  exec /usr/bin/dbus-update-activation-environment --systemd DISPLAY
+# Some minimal sessions may not ship the dbus helper; skip the optional import
+# rather than showing a failed-autostart dialog during login.
+if [[ -n "${DISPLAY:-}" ]] && command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  dbus-update-activation-environment --systemd DISPLAY >/dev/null 2>&1 || true
 fi
