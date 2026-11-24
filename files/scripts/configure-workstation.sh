@@ -73,5 +73,5 @@ Fedora Kinoite 45 base
 Minimal KDE Plasma workstation
 Proprietary NVIDIA 580.x driver and prebuilt kernel module
 Waterfox is provided as a Flathub Flatpak and is the default web browser.
-Optional system features are managed with lydsetup.
+System image switching and updates are managed with lydmanage; see lydhelp.
 EOF
