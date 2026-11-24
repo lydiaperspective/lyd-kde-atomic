@@ -1,0 +1,9 @@
+---
+name: lyd-atomic-workstation
+description: Complete KDE workstation with virtualization, development tools and the Mystical theme.
+base-image: ghcr.io/lydiaperspective/lyd-atomic-base
+image-version: "latest"
+modules:
+  - from-file: feature-virtualization.yml
+  - from-file: feature-development.yml
+  - from-file: feature-mystic.yml
