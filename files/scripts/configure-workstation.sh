@@ -25,6 +25,44 @@ text/html=net.waterfox.waterfox.desktop
 application/xhtml+xml=net.waterfox.waterfox.desktop
 EOF
 
+# Keep the base Firefox RPM installed, but hide its launcher in favour of
+# Waterfox. This avoids an rpm-ostree override against the Fedora base.
+install -d /usr/local/share/applications
+while IFS= read -r desktop_file; do
+  [[ -n "$desktop_file" ]] || continue
+  cat > "/usr/local/share/applications/$desktop_file" <<'DESKTOP'
+[Desktop Entry]
+Hidden=true
+DESKTOP
+done < <(find /usr/share/applications -maxdepth 1 -type f -iname '*firefox*.desktop' -printf '%f\\n' 2>/dev/null)
+
+install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-default-waterfox
+cat > /usr/libexec/lyd/lyd-default-waterfox <<'BROWSER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+desktop=net.waterfox.waterfox.desktop
+current="$(xdg-settings get default-web-browser 2>/dev/null || true)"
+case "$current" in
+  ""|firefox.desktop|org.mozilla.firefox.desktop|org.mozilla.firefox-rpm.desktop)
+    xdg-settings set default-web-browser "$desktop" 2>/dev/null || true
+    xdg-mime default "$desktop" x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml
+    ;;
+esac
+BROWSER
+chmod 0755 /usr/libexec/lyd/lyd-default-waterfox
+install -d /etc/xdg/autostart
+cat > /etc/xdg/autostart/lyd-default-waterfox.desktop <<'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Lyd Default Browser
+Comment=Set Waterfox as the default when migrating from Firefox
+Exec=/usr/libexec/lyd/lyd-default-waterfox
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+X-KDE-autostart-enabled=true
+NoDisplay=true
+AUTOSTART
+
 install -d /usr/share/lyd
 cat > /usr/share/lyd/IMAGE-INFO <<'EOF'
 Lyd Atomic NVIDIA
