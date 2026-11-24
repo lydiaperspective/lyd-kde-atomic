@@ -25,6 +25,10 @@ Usage:
   lydmanage switch IMAGE   Switch to another bootc image
   lydmanage status         Show current and staged deployments
   lydm                    Short alias for lydmanage
+  lydmanage plasma save PROFILE   Save Plasma panels and widgets
+  lydmanage plasma load PROFILE   Restore a saved Plasma layout
+  lydmanage flatpak save          Export installed Flatpak application IDs
+  lydmanage flatpak load          Install apps from a saved Flatpak list
   lydev                   Enter the BlueBuild development Distrobox
 
 Tip: use 'command --help' or 'man command' for complete documentation.
@@ -138,6 +142,8 @@ FLATPAK
   flatpak update                 Update Flatpak apps
   flatpak uninstall ID           Remove an app
   flatpak info ID                Show application details
+  lydmanage flatpak save          Save installed app IDs to flatpak-apps.txt
+  lydmanage flatpak load          Restore apps from flatpak-apps.txt via Flathub
   flatpak remote-ls flathub      List apps available on Flathub
 EOF
 ;;
