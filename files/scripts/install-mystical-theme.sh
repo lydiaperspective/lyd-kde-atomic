@@ -11,7 +11,7 @@ fi
 
 # Pin the shared theme repository so image builds remain reproducible.
 THEME_REPO=https://github.com/lydiaperspective/lyd-kde-themes.git
-THEME_COMMIT=bc81f111747e10c53ad66a44041c128aa3b2abd1
+THEME_COMMIT=5b2cad161b12914115d718d36f515a5349ebfd3f
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
