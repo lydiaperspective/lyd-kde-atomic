@@ -6,8 +6,10 @@ A minimal KDE Plasma workstation built as Fedora Atomic desktop images with Blue
 
 | Edition | Image | Graphics |
 |---|---|---|
-| NVIDIA | `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest` | Proprietary NVIDIA 580.x driver included |
-| Standard | `ghcr.io/lydiaperspective/lyd-atomic-standard:latest` | Fedora in-kernel graphics stack; no proprietary NVIDIA driver by default |
+| NVIDIA | `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest` | Proprietary NVIDIA 580.x driver; workstation base |
+| Standard | `ghcr.io/lydiaperspective/lyd-atomic-standard:latest` | Fedora in-kernel graphics stack; workstation base |
+| Steam | `ghcr.io/lydiaperspective/lyd-atomic-steam:latest` | Standard graphics plus native Steam, GameMode, MangoHud and Lyd Gamescope session |
+| NVIDIA + Steam | `ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest` | NVIDIA graphics plus native Steam, GameMode, MangoHud and Lyd Gamescope session |
 | Server | `ghcr.io/lydiaperspective/lyd-atomic-server:latest` | Headless Fedora bootc server with Podman, Cockpit, KVM and firewalld |
 
 The Standard edition is intended for Intel and AMD graphics systems, and can also be used on a system with an NVIDIA GPU. To add the proprietary NVIDIA driver after installation, run `lydsetup` and select **NVIDIA proprietary driver**. The installer adds RPM Fusion in one deployment, then layers the driver packages in a second deployment after reboot.
@@ -42,16 +44,19 @@ cd lyd-kde-atomic
 bluebuild generate recipes/lyd-kde.yml -o Containerfile
 bluebuild build recipes/lyd-kde.yml
 
-# Standard edition
+# Standard base image
 bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
 bluebuild build recipes/lyd-kde-intel.yml
+
+# Steam variant (after publishing/building the Standard base)
+bluebuild generate recipes/lyd-kde-steam.yml -o Containerfile
+bluebuild build recipes/lyd-kde-steam.yml
 ```
 
 ## GitHub Actions
 
-- Pushes to `main` and manual dispatch build all three editions in parallel.
-- Pull requests validate all three recipes without publishing.
-- **Build unified installer ISO** creates a single ISO with all three edition choices.
+- Pushes to `main` and manual dispatch build the Standard, NVIDIA and Server base images first, then build both Steam variants from their corresponding workstation bases. Pull requests validate the base recipes without publishing.
+- **Build unified installer ISO** creates a single ISO with Standard, NVIDIA, Steam, NVIDIA + Steam and Server choices.
 - **Build installable ISO** remains available for creating a single-edition ISO from a published image.
 - ISO artifacts include SHA256 checksums.
 
