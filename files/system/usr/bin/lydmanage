@@ -297,7 +297,7 @@ drive_list() {
   local src target fs opts status found=0
   printf '%-18s %-28s %-10s %s\n' NAME DEVICE TYPE STATUS
   while read -r src target fs opts; do
-    [[ "$target" == /lydsrv/Mnt/* && "$target" != */*/* ]] || continue
+    [[ "$target" == /lydsrv/Mnt/* && "$target" != /lydsrv/Mnt/*/* ]] || continue
     found=1
     if findmnt -rn -M "$target" >/dev/null 2>&1; then status=mounted; else status=unmounted; fi
     [[ ",$opts," == *,x-systemd.automount,* ]] && status="$status (automount)"
