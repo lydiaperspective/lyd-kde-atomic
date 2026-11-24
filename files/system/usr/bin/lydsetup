@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.3
+VERSION=0.6.4
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -478,19 +478,39 @@ status_label() {
   if feature_enabled "$feature"; then state="Enabled"; else state="Disabled"; fi
   printf '\033[35m[%s]\033[0m' "$state"
 }
-show_feature_status() {
-  local feature
-  printf '  %-14s %s\n' "FEATURE" "STATUS"
-  printf '  %-14s %s\n' "--------------" "----------"
-  for feature in printscan media mediaedit gaming gamingui steamtheme 8bitdo solaar; do
-    printf '  %-14s %b\n' "$feature" "$(status_label "$feature")"
+show_feature_group() {
+  local heading="$1"
+  shift
+  local feature state label
+  local columns=2
+  local terminal_width="${COLUMNS:-}"
+  if [[ -z "$terminal_width" ]] && command -v tput >/dev/null 2>&1; then
+    terminal_width="$(tput cols 2>/dev/null || true)"
+  fi
+  if [[ "$terminal_width" =~ ^[0-9]+$ ]]; then
+    columns=$((terminal_width / 28))
+    (( columns < 1 )) && columns=1
+    (( columns > 4 )) && columns=4
+  fi
+
+  echo "$heading"
+  local index=0
+  for feature in "$@"; do
+    if feature_enabled "$feature"; then state="Enabled"; else state="Disabled"; fi
+    printf -v label '%s [%s]' "$feature" "$state"
+    printf '  %-27s' "$label"
+    index=$((index + 1))
+    if (( index % columns == 0 )); then printf '\n'; fi
   done
-  echo
-  echo "Development:"
-  for feature in devbox androiddev container theme; do
-    printf '  %-14s %b\n' "$feature" "$(status_label "$feature")"
-  done
+  (( index % columns == 0 )) || printf '\n'
 }
+
+show_feature_status() {
+  show_feature_group "Features:" printscan media mediaedit gaming gamingui steamtheme 8bitdo solaar
+  echo
+  show_feature_group "Development:" devbox androiddev container theme
+}
+
 dev_help() {
   cat <<HELP
 Usage:
