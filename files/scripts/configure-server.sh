@@ -60,6 +60,7 @@ test -f /etc/systemd/system/lyd-setup-server-storage.service || {
   echo "The Lyd server storage setup service is missing." >&2
   exit 1
 }
+chmod 0755 /usr/libexec/lyd/setup-server-storage
 ln -sfn /etc/systemd/system/lyd-setup-server-storage.service /etc/systemd/system/multi-user.target.wants/lyd-setup-server-storage.service
 
 echo "Server image configured: headless target, sleep disabled, Cockpit socket, rootless Podman restart, persistent user lingering, and standardized /lydsrv storage."
