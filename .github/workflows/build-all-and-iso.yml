@@ -12,6 +12,8 @@ on:
           - nvidia
           - standard
           - server
+          - steam
+          - nvidia-steam
 
 concurrency:
   group: build-all-and-iso-${{ github.ref }}
@@ -109,6 +111,8 @@ jobs:
           case "$IMAGE_FLAVOUR" in
             nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
             standard) IMAGE_NAME="lyd-atomic-standard" ;;
+            steam) IMAGE_NAME="lyd-atomic-steam" ;;
+            nvidia-steam) IMAGE_NAME="lyd-atomic-nvidia-steam" ;;
             server) IMAGE_NAME="lyd-atomic-server" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
