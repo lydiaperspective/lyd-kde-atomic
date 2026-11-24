@@ -42,13 +42,13 @@ systemctl --global enable podman-restart.service
 
 # Enable a boot-time account scan and a path watcher so accounts created later
 # (for example by first-boot setup) also receive lingering.
-test -f /usr/lib/systemd/system/lyd-enable-user-linger.path || {
+test -f /etc/systemd/system/lyd-enable-user-linger.path || {
   echo "The Lyd user-linger path unit is missing." >&2
   exit 1
 }
 mkdir -p /etc/systemd/system/multi-user.target.wants
-ln -sfn /usr/lib/systemd/system/lyd-enable-user-linger.service /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.service
+ln -sfn /etc/systemd/system/lyd-enable-user-linger.service /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.service
 mkdir -p /etc/systemd/system
-ln -sfn /usr/lib/systemd/system/lyd-enable-user-linger.path /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.path
+ln -sfn /etc/systemd/system/lyd-enable-user-linger.path /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.path
 
 echo "Server image configured: headless target, sleep disabled, Cockpit socket, global rootless Podman restart, and persistent user lingering."
