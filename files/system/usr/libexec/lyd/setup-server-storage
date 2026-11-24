@@ -37,7 +37,7 @@ uid="$(id -u "$admin")"
 gid="$(id -g "$admin")"
 install -d -o "$uid" -g "$gid" -m 2775 \
   /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups \
-  /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
+  /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt /lydsrv/Pods
 chown "$uid:$gid" /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
 chmod 2775 /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
 
