@@ -109,6 +109,9 @@ setup_gaming() {
 }
 
 setup_gamingui() {
+  if ! rpm -q steam steam-devices gamescope >/dev/null 2>&1; then
+    die "The Steam and Gamescope packages are not included in this image. Switch with 'lydsetup steam' or 'lydsetup nvidia-steam', then reboot."
+  fi
   echo "Checking the preinstalled Steam and Gamescope packages."
   require_packages steam steam-devices gamescope
   local bin_dir="$HOME/.local/bin"
@@ -161,6 +164,9 @@ setup_steamtheme() {
 }
 
 setup_8bitdo() {
+  if ! rpm -q steam-devices >/dev/null 2>&1; then
+    die "Steam controller device support is not included in this image. Switch with 'lydsetup steam' or 'lydsetup nvidia-steam', then reboot."
+  fi
   echo "Checking the preinstalled Steam controller device support."
   require_packages steam-devices
   local rule_file="/etc/udev/rules.d/71-8bitdo-pro2.rules"
