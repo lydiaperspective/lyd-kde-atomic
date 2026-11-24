@@ -107,8 +107,7 @@ setup_gaming() {
 
 setup_gamingui() {
   echo "Checking the preinstalled Steam and Gamescope packages."
-  require_packages steam-devices gamescope
-  rpm -q steam >/dev/null 2>&1 || die "The system Steam package is missing from this image."
+  require_packages steam steam-devices gamescope
   local bin_dir="$HOME/.local/bin"
   local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   mkdir -p "$bin_dir" "$app_dir"
@@ -462,7 +461,7 @@ feature_enabled() {
         [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]] ;;
     gaming)
       rpm -q steam-devices gamemode mangohud gamescope >/dev/null 2>&1 &&
-        flatpak_installed com.valvesoftware.Steam &&
+        rpm -q steam >/dev/null 2>&1 &&
         flatpak_installed com.github.Matoking.protontricks &&
         flatpak_installed com.vysp3r.ProtonPlus &&
         flatpak_installed net.lutris.Lutris &&
@@ -691,7 +690,7 @@ Available commands:
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
   lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
   lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
-  lydsetup steamtheme                   Explain Steam Flatpak theme compatibility (Millennium unsupported)
+  lydsetup steamtheme                   Check Lyd Mystical theme support for system Steam
   lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Use preinstalled Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
