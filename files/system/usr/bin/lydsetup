@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.1
+VERSION=0.6.2
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -77,17 +77,18 @@ setup_mediaedit() {
 
 setup_gaming() {
   echo "Checking the preinstalled gaming system packages."
-  require_packages steam-devices gamemode mangohud gamescope protontricks
-  flatpak_installed com.valvesoftware.Steam || die "Steam Flatpak is missing from this image."
-  echo "Installing Steam companion and game launchers from Flathub."
+  require_packages steam-devices gamemode mangohud gamescope
+  echo "Installing Steam, Protontricks and companion game launchers from Flathub."
   install_flatpaks_system \
+    com.valvesoftware.Steam \
+    com.github.Matoking.protontricks \
     com.vysp3r.ProtonPlus \
     net.lutris.Lutris \
     com.heroicgameslauncher.hgl
   echo
   echo "Gaming setup is complete."
-  echo "Steam is preinstalled as a system Flatpak. GameMode, MangoHud, Gamescope and Protontricks are included in the image."
-  echo "ProtonPlus, Lutris and Heroic are installed as system Flatpaks."
+  echo "Steam, Protontricks, ProtonPlus, Lutris and Heroic are installed as system Flatpaks."
+  echo "GameMode, MangoHud and Gamescope are included in the image."
   echo "Example Steam launch option for GameMode and MangoHud:"
   echo "  gamemoderun mangohud %command%"
 }
@@ -448,8 +449,9 @@ feature_enabled() {
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
         [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]] ;;
     gaming)
-      rpm -q steam-devices gamemode mangohud gamescope protontricks >/dev/null 2>&1 &&
+      rpm -q steam-devices gamemode mangohud gamescope >/dev/null 2>&1 &&
         flatpak_installed com.valvesoftware.Steam &&
+        flatpak_installed com.github.Matoking.protontricks &&
         flatpak_installed com.vysp3r.ProtonPlus &&
         flatpak_installed net.lutris.Lutris &&
         flatpak_installed com.heroicgameslauncher.hgl ;;
