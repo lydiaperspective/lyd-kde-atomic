@@ -218,14 +218,8 @@ pods_move() {
   [[ "$destination" != *"/../"* && "$destination" != */.. && "$destination" != *"/./"* ]] || die "Destination must not contain . or .. path components."
   [[ ! -L "$source" && -d "$source" ]] || die "$source must currently be a real directory, not a symlink."
   [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist."
-  mountpoint -q "$(dirname "$destination")" || {
-    # Require the destination itself or an ancestor to be a mount point.
-    findmnt -T "$(dirname "$destination")" -n -o TARGET | grep -Fxq "$(findmnt -T "$(dirname "$destination")" -n -o TARGET)" || true
-  }
   [[ ! -e "$destination" ]] || die "Destination already exists: $destination"
   [[ "$destination" == /lydsrv/Mnt/* ]] || die "Destination must be under /lydsrv/Mnt/<diskMountFolderName>/."
-  local mount_root="/lydsrv/Mnt/${destination#/lydsrv/Mnt/}"
-  mount_root="/lydsrv/Mnt/${mount_root#/lydsrv/Mnt/}"
   local disk_root="/lydsrv/Mnt/${destination#/lydsrv/Mnt/}"
   disk_root="/lydsrv/Mnt/${disk_root%%/*}"
   [[ -d "$disk_root" ]] || die "Drive mount directory does not exist: $disk_root"
