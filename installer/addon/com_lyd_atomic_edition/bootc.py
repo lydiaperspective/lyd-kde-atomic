@@ -1,23 +1,38 @@
-"""Helpers for keeping the selected bootc image in Anaconda Kickstart data."""
+"""Helpers for keeping the selected bootc image in Anaconda's configuration."""
 
 from pykickstart.commands.bootc import F45_Bootc
+from pyanaconda.modules.common.structures.bootc import BootcConfigurationData
 
 
-def set_bootc_image(data, image):
-    """Set the bootc source and update references on Anaconda Kickstart data.
+def set_bootc_image(data, image, payload=None):
+    """Update both Kickstart data and the active Anaconda bootc source.
 
-    Some installer startup paths do not expose the interactive-defaults.ks
-    bootc command on the UI data object. Create the Fedora 45 pykickstart
-    command in that case so the standard Anaconda bootc installation path
-    still receives a proper command object.
+    Anaconda processes the Kickstart bootc command into a separate payload
+    source configuration before the edition spoke is displayed. Updating only
+    data.bootc leaves that already-created payload source pointing at the
+    default image, so update both representations.
     """
+    source_ref = "registry:" + image
+
     command = getattr(data, "bootc", None)
     if command is None:
         command = F45_Bootc()
         command.seen = True
         data.bootc = command
 
-    command.sourceImgRef = "registry:" + image
+    command.sourceImgRef = source_ref
     command.targetImgRef = image
     command.seen = True
+
+    if payload is not None:
+        source_proxy = payload.get_source_proxy()
+        configuration = BootcConfigurationData.from_structure(
+            source_proxy.Configuration
+        )
+        configuration.sourceImgRef = source_ref
+        configuration.targetImgRef = image
+        source_proxy.Configuration = BootcConfigurationData.to_structure(
+            configuration
+        )
+
     return command
