@@ -15,7 +15,7 @@ need_firewalld() {
 }
 valid_zone() {
   local requested="$1" zone
-  for zone in $(sudo firewall-cmd --get-zones); do
+  for zone in $(sudo firewall-cmd --permanent --get-zones); do
     [[ "$zone" == "$requested" ]] && return 0
   done
   die "Unknown firewalld zone: $requested. Available zones: $(sudo firewall-cmd --get-zones)"
