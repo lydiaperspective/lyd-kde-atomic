@@ -101,7 +101,7 @@ class LydAtomicEditionTUISpoke(NormalTUISpoke):
             image for _, (key, image, _) in EDITIONS.items()
             if key == self._selected
         )
-        set_bootc_image(self.data, image)
+        set_bootc_image(self.data, image, self.payload)
 
     def execute(self):
         pass
