@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.5
+VERSION=0.6.6
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -87,6 +87,10 @@ setup_mediaedit() {
 setup_gaming() {
   echo "Checking the preinstalled gaming system packages."
   require_packages steam-devices gamemode mangohud gamescope
+  echo "Preparing Steam Input virtual-controller support."
+  sudo modprobe uinput || die "Could not load the uinput kernel module. Check that the running kernel provides CONFIG_INPUT_UINPUT."
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=misc
   echo "Installing Steam, Protontricks and companion game launchers from Flathub."
   install_flatpaks_system \
     com.valvesoftware.Steam \
