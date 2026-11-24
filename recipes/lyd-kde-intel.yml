@@ -82,6 +82,10 @@ modules:
         - gamemode
         - mangohud
         - gamescope
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
   - type: default-flatpaks
     configurations:
       - scope: system
