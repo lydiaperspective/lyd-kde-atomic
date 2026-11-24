@@ -55,7 +55,7 @@ class LydAtomicEditionSpoke(NormalSpoke):
         selected = next(
             (key for key, (image, _) in EDITIONS.items()
              if source in (image, "registry:" + image)),
-            "standard",
+            "workstation",
         )
         self._selector.set_active_id(selected)
         self._edition = selected
