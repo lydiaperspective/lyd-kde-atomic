@@ -109,10 +109,8 @@ jobs:
           mkdir -p output
 
           case "$IMAGE_FLAVOUR" in
-            nvidia) IMAGE_NAME="lyd-atomic-nvidia" ;;
-            standard) IMAGE_NAME="lyd-atomic-standard" ;;
-            steam) IMAGE_NAME="lyd-atomic-steam" ;;
-            nvidia-steam) IMAGE_NAME="lyd-atomic-nvidia-steam" ;;
+            workstation) IMAGE_NAME="lyd-atomic-workstation" ;;
+            nvidia-gaming) IMAGE_NAME="lyd-atomic-nvidia-gaming" ;;
             server) IMAGE_NAME="lyd-atomic-server" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
