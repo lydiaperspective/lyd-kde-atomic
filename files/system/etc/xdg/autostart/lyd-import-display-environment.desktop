@@ -2,8 +2,8 @@
 Type=Application
 Name=Lyd Desktop Environment Setup
 Comment=Export the graphical display environment to D-Bus and systemd user services
-Exec=/usr/bin/dbus-update-activation-environment --systemd DISPLAY
-TryExec=/usr/bin/dbus-update-activation-environment
+Exec=/usr/libexec/lyd-import-display-environment
+TryExec=/usr/libexec/lyd-import-display-environment
 OnlyShowIn=KDE;
 NoDisplay=true
 X-KDE-autostart-phase=1
