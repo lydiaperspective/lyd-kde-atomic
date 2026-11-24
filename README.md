@@ -21,7 +21,7 @@ BlueBuild recipes use reusable files under `recipes/`:
 
 - `workstation-base.yml` — KDE applications, core utilities, printing/scanning, Waterfox, SyncThingy and shared system files.
 - `feature-virtualization.yml` — QEMU/KVM, libvirt, virt-manager and libvirt service.
-- `feature-development.yml` — Distrobox, Podman and Podman Compose. Zed is installed per-user with the official installer with the official per-user installer when needed.
+- `feature-development.yml` — Distrobox, Podman and Podman Compose. Zed can be installed per-user with its official installer.
 - `feature-steam.yml` — native Steam, Steam device support, GameMode, MangoHud, Gamescope and the Lyd Gamescope session.
 - `feature-gaming.yml` — Protontricks, ProtonPlus, Lutris and Heroic Flatpaks.
 - `feature-mystic.yml` — the pinned Mystical KDE theme and coordinated boot assets.
@@ -57,6 +57,7 @@ The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation
 - `lydmanage updates auto enable|disable|status` — manage the weekly update timer.
 - `lydm` — short alias for `lydmanage`.
 - `lydhelp` — topic-based Linux and Lyd Atomic command reference.
+- `lydhelp manage` — built-in reference for the management commands.
 
 ## Project status
 
