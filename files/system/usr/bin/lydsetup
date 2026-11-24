@@ -86,7 +86,7 @@ setup_mediaedit() {
 
 setup_gaming() {
   if ! rpm -q steam steam-devices gamemode mangohud gamescope >/dev/null 2>&1; then
-    die "Gaming packages are not included in this image. Switch to the Steam edition with 'lydsetup steam', reboot, then run 'lydsetup gaming enable' again."
+    die "Gaming packages are not included in this image. Use the NVIDIA Gaming Workstation image; the gaming packages and launcher Flatpaks are preinstalled there."
   fi
   echo "Checking the preinstalled gaming system packages."
   require_packages steam steam-devices gamemode mangohud gamescope
@@ -110,7 +110,7 @@ setup_gaming() {
 
 setup_gamingui() {
   if ! rpm -q steam steam-devices gamescope >/dev/null 2>&1; then
-    die "The Steam and Gamescope packages are not included in this image. Switch with 'lydsetup steam' or 'lydsetup nvidia-steam', then reboot."
+    die "The Steam and Gamescope packages are not included in this image. Switch to the NVIDIA Gaming Workstation with 'lydsetup nvidia-gaming', then reboot."
   fi
   echo "Checking the preinstalled Steam and Gamescope packages."
   require_packages steam steam-devices gamescope
@@ -165,7 +165,7 @@ setup_steamtheme() {
 
 setup_8bitdo() {
   if ! rpm -q steam-devices >/dev/null 2>&1; then
-    die "Steam controller device support is not included in this image. Switch with 'lydsetup steam' or 'lydsetup nvidia-steam', then reboot."
+    die "Steam controller device support is not included in this image. Switch with 'lydsetup nvidia-gaming' or 'lydsetup nvidia-gaming', then reboot."
   fi
   echo "Checking the preinstalled Steam controller device support."
   require_packages steam-devices
@@ -612,26 +612,16 @@ setup_image_switch() {
       warning="This replaces the workstation deployment with the headless Server edition. Plasma and the graphical login will no longer be available after reboot."
       ;;
     workstation|standard)
-      image="ghcr.io/lydiaperspective/lyd-atomic-standard:latest"
-      label="Standard workstation"
-      warning="This replaces the current deployment with the Standard KDE workstation edition."
+      image="ghcr.io/lydiaperspective/lyd-atomic-workstation:latest"
+      label="KDE Workstation"
+      warning="This replaces the current deployment with the complete standard-graphics workstation, including virtualization, development tools and the Mystical theme."
       ;;
-    nvidia)
-      image="ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest"
-      label="NVIDIA workstation"
-      warning="This replaces the current deployment with the NVIDIA KDE workstation edition."
+    nvidia-gaming|nvidia)
+      image="ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest"
+      label="NVIDIA Gaming Workstation"
+      warning="This replaces the current deployment with the proprietary NVIDIA 580 gaming workstation, including Steam, launchers, virtualization, development tools and the Mystical theme."
       ;;
-    steam)
-      image="ghcr.io/lydiaperspective/lyd-atomic-steam:latest"
-      label="Steam workstation"
-      warning="This replaces the current deployment with the Standard KDE workstation plus native Steam, GameMode, MangoHud and the Gamescope session."
-      ;;
-    nvidia-steam)
-      image="ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest"
-      label="NVIDIA Steam workstation"
-      warning="This replaces the current deployment with the NVIDIA KDE workstation plus native Steam, GameMode, MangoHud and the Gamescope session."
-      ;;
-    *) die "Usage: lydsetup {server|workstation|nvidia|steam|nvidia-steam}" ;;
+    *) die "Usage: lydsetup {server|workstation|nvidia-gaming}" ;;
   esac
 
   command -v bootc >/dev/null 2>&1 || die "bootc is not available on this system."
@@ -668,8 +658,8 @@ setup_nvidia() {
 }
 main() {
   case "${1:-}" in
-    server|workstation|standard|nvidia|steam|nvidia-steam)
-      [[ $# -eq 1 ]] || die "Usage: lydsetup {server|workstation|nvidia|steam|nvidia-steam}"
+    server|workstation|standard|nvidia|nvidia-gaming)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup {server|workstation|nvidia-gaming}"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       setup_image_switch "$1"
       exit 0 ;;
@@ -751,7 +741,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [server|workstation|nvidia|steam|nvidia-steam|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [server|workstation|nvidia-gaming|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup server                      Switch to the headless Server image
@@ -765,7 +755,7 @@ Available commands:
   lydsetup printscan enable             Enable printing/scanning and install Skanpage
   lydsetup media enable                 Install media playback Flatpaks
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
-  lydsetup gaming enable                Install Protontricks, ProtonPlus, Lutris and Heroic on a Steam edition
+  lydsetup gaming enable                Verify and refresh the preinstalled gaming launchers
   lydsetup gamingui                     Configure the Steam Gamescope session menu shortcut
   lydsetup steamtheme                   Check Lyd Mystical theme support for system Steam
   lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
@@ -784,16 +774,16 @@ interactive feature menu. Run lydsetup with an explicit feature command to set i
 
 Features:
   NVIDIA proprietary driver packages (preinstalled; standard edition)
-  Virtualization (QEMU/KVM, libvirt, virt-manager and requirements)
+  Virtualization (preinstalled on complete workstation and server images)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
   Tailscale VPN client (preinstalled; all editions)
   Zed editor (official per-user Linux installer; workstation editions)
   BlueBuild development environment (Distrobox; all editions)
   Solaar Logitech device manager (preinstalled system package)
-  Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
+  Printing and scanning (preinstalled and enabled on workstation base images)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
-  Gaming (Steam editions include native Steam, GameMode, MangoHud and Gamescope; optional launcher Flatpaks via 'lydsetup gaming enable')
+  Gaming (NVIDIA Gaming Workstation includes Steam, GameMode, MangoHud, Gamescope, Lutris, Heroic and ProtonPlus)
 
 Image switching downloads and stages the selected bootc image; reboot to activate it.\nAll system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
