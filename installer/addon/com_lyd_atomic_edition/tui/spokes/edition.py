@@ -71,7 +71,7 @@ class LydAtomicEditionTUISpoke(NormalTUISpoke):
 
         self.window.add_with_separator(self._container)
         self.window.add_with_separator(TextWidget(
-            "Enter 1, 2, or 3 to change the selection, then press c to continue."
+            "Enter 1-5 to change the selection, then press c to continue."
         ))
 
     def _select(self, selected):
