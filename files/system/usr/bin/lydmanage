@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -32,8 +32,6 @@ resolve_image() {
     nvidia-open)
       printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-nvidia-open:latest" ;;
     *)
-      # Accept a full OCI image reference, but reject whitespace, leading
-      # options and shell metacharacters. The value is still passed as one arg.
       [[ "$1" != -* && "$1" =~ ^[A-Za-z0-9._:/@+-]+$ ]] ||
         die "Invalid image reference. Use an image alias or a full OCI image reference."
       printf '%s\n' "$1"
@@ -86,6 +84,126 @@ flatpak_update() {
   command -v flatpak >/dev/null 2>&1 || { echo "Flatpak is not installed; skipping."; return 0; }
   echo "Updating Flatpak applications..."
   flatpak update --assumeyes
+}
+
+flatpak_file() {
+  local path="${1:-flatpak-apps.txt}"
+  [[ "$path" != -* ]] || die "File paths must not begin with '-'."
+  printf '%s\n' "$path"
+}
+
+flatpak_save() {
+  need_user
+  command -v flatpak >/dev/null 2>&1 || die "Flatpak is not installed."
+  [[ $# -le 1 ]] || die "Usage: lydmanage flatpak save [file]"
+  local output tmp
+  output="$(flatpak_file "${1:-flatpak-apps.txt}")"
+  tmp="$(mktemp "${output}.XXXXXX")"
+  {
+    echo "# Lyd Atomic Flatpak application list v1"
+    echo "# Application IDs; restore installs from Flathub."
+    flatpak list --app --columns=application |
+      awk '/^[[:alnum:]][[:alnum:]._-]*$/ { print }' |
+      sort -u
+  } > "$tmp"
+  mv -- "$tmp" "$output"
+  echo "Saved installed Flatpak application IDs to: $output"
+}
+
+flatpak_load() {
+  need_user
+  command -v flatpak >/dev/null 2>&1 || die "Flatpak is not installed."
+  [[ $# -le 1 ]] || die "Usage: lydmanage flatpak load [file]"
+  local input app_id failures=0 installed=0 skipped=0
+  input="$(flatpak_file "${1:-flatpak-apps.txt}")"
+  [[ -r "$input" ]] || die "Cannot read Flatpak list: $input"
+
+  # Use a per-user Flathub remote so restoring the list never requires root.
+  flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  while IFS= read -r app_id || [[ -n "$app_id" ]]; do
+    [[ -z "$app_id" || "$app_id" == \#* ]] && continue
+    [[ "$app_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
+      echo "Skipping invalid application ID: $app_id" >&2
+      failures=$((failures + 1))
+      continue
+    }
+    if flatpak info --user "$app_id" >/dev/null 2>&1 ||
+       flatpak info --system "$app_id" >/dev/null 2>&1; then
+      echo "Already installed: $app_id"
+      skipped=$((skipped + 1))
+      continue
+    fi
+    echo "Installing: $app_id"
+    if flatpak install --user --assumeyes --noninteractive flathub "$app_id"; then
+      installed=$((installed + 1))
+    else
+      echo "Failed to install: $app_id" >&2
+      failures=$((failures + 1))
+    fi
+  done < "$input"
+
+  echo "Flatpak restore complete: $installed installed, $skipped already present, $failures failed."
+  (( failures == 0 )) || return 1
+}
+
+plasma_profile_file() {
+  local name="$1"
+  [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] ||
+    die "Profile names may contain only letters, numbers, dots, underscores and hyphens."
+  [[ "$name" == *.conf ]] || name="${name}.conf"
+  printf '%s\n' "$name"
+}
+
+plasma_save() {
+  need_user
+  [[ $# -eq 1 ]] || die "Usage: lydmanage plasma save <profilename>"
+  local output source tmp
+  output="$(plasma_profile_file "$1")"
+  source="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
+  [[ -s "$source" ]] || die "Plasma layout file was not found: $source. Run this command from your Plasma desktop session."
+  tmp="$(mktemp "${output}.XXXXXX")"
+  {
+    echo "# Lyd Atomic Plasma layout profile v1"
+    echo "# Contains Plasma panels, widgets and their configuration."
+    base64 -w 76 "$source"
+  } > "$tmp"
+  mv -- "$tmp" "$output"
+  echo "Saved Plasma layout and widget settings to: $output"
+}
+
+plasma_load() {
+  need_user
+  [[ $# -eq 1 ]] || die "Usage: lydmanage plasma load <profilename>"
+  local input target tmp
+  input="$(plasma_profile_file "$1")"
+  [[ -r "$input" ]] || die "Cannot read Plasma profile: $input"
+  IFS= read -r _ < "$input"
+  [[ "$_" == "# Lyd Atomic Plasma layout profile v1" ]] ||
+    die "Unsupported or invalid Plasma profile: $input"
+
+  target="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
+  install -d "$(dirname "$target")"
+  tmp="$(mktemp "${target}.XXXXXX")"
+  if ! tail -n +3 "$input" | base64 --decode > "$tmp"; then
+    rm -f "$tmp"
+    die "Could not decode Plasma profile: $input"
+  fi
+  if ! grep -q '^\[Containments\]' "$tmp"; then
+    rm -f "$tmp"
+    die "The profile does not contain a valid Plasma layout."
+  fi
+  chmod 0600 "$tmp"
+  mv -- "$tmp" "$target"
+  echo "Restored Plasma layout and widget settings from: $input"
+
+  if command -v plasmashell >/dev/null 2>&1 && command -v kquitapp6 >/dev/null 2>&1; then
+    kquitapp6 plasmashell >/dev/null 2>&1 || true
+    nohup plasmashell --replace >/dev/null 2>&1 </dev/null &
+    echo "Restarted Plasma Shell to apply the profile."
+  else
+    echo "Log out and back in to apply the restored Plasma layout."
+  fi
 }
 
 firmware_update() {
@@ -164,25 +282,26 @@ usage() {
 lydmanage $VERSION
 
 Usage:
-  lydmanage switch <newImage>    Switch to another bootc image
-  lydmanage update               Run bootc update and stage the latest image
-  lydmanage status               Show current, staged and rollback deployments
-  lydmanage rollback             Stage the previous deployment for rollback
-  lydmanage flatpak update       Update installed Flatpak applications
-  lydmanage firmware update      Refresh and install available firmware updates
-  lydmanage updates auto enable  Enable weekly automatic updates
-  lydmanage updates auto disable Disable weekly automatic updates
-  lydmanage updates auto status  Show automatic update timer status
+  lydmanage switch <newImage>       Switch to another bootc image
+  lydmanage update                  Run bootc update and stage the latest image
+  lydmanage status                  Show current, staged and rollback deployments
+  lydmanage rollback                Stage the previous deployment for rollback
+  lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
+  lydmanage plasma load <profile>   Restore a saved Plasma layout profile
+  lydmanage flatpak save [file]     Save installed Flatpak application IDs
+  lydmanage flatpak load [file]     Install apps from a saved Flatpak list
+  lydmanage flatpak update          Update installed Flatpak applications
+  lydmanage firmware update        Refresh and install available firmware updates
+  lydmanage updates auto enable     Enable weekly automatic updates
+  lydmanage updates auto disable    Disable weekly automatic updates
+  lydmanage updates auto status     Show automatic update timer status
 
 Image aliases:
   workstation, nvidia-gaming, server
   base, nvidia-base, nvidia-open
 
-You can also provide a full OCI image reference, for example:
-  lydmanage switch ghcr.io/example/os:stable
-
-Updates and image switches are staged; reboot to activate the new deployment.
-Rollback selects the previous deployment for the next boot.
+Profile and Flatpak list files are written in the current directory by default.
+Flatpak restore installs missing applications from Flathub in the user installation.
 
 Short alias:
   lydm <same arguments>
@@ -210,10 +329,20 @@ main() {
       [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
       system_rollback
       ;;
+    plasma)
+      case "${2:-}" in
+        save) shift 2; plasma_save "$@" ;;
+        load) shift 2; plasma_load "$@" ;;
+        *) die "Usage: lydmanage plasma {save|load} <profilename>" ;;
+      esac
+      ;;
     flatpak)
-      need_user
-      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage flatpak update"
-      flatpak_update
+      case "${2:-}" in
+        update) [[ $# -eq 2 ]] || die "Usage: lydmanage flatpak update"; need_user; flatpak_update ;;
+        save) shift 2; flatpak_save "$@" ;;
+        load) shift 2; flatpak_load "$@" ;;
+        *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
+      esac
       ;;
     firmware)
       need_user
@@ -238,7 +367,7 @@ main() {
       esac
       ;;
     --help|-h|"") usage ;;
-    --version) echo "$VERSION" ;;
+    --version) echo "lydmanage $VERSION" ;;
     *) usage >&2; die "Unknown command: $1" ;;
   esac
 }
