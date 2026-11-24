@@ -28,13 +28,12 @@ EOF
 # Keep the base Firefox RPM installed, but hide its launcher in favour of
 # Waterfox. This avoids an rpm-ostree override against the Fedora base.
 install -d /usr/local/share/applications
-while IFS= read -r desktop_file; do
-  [[ -n "$desktop_file" ]] || continue
+for desktop_file in firefox.desktop org.mozilla.firefox.desktop org.mozilla.firefox-rpm.desktop; do
   cat > "/usr/local/share/applications/$desktop_file" <<'DESKTOP'
 [Desktop Entry]
 Hidden=true
 DESKTOP
-done < <(find /usr/share/applications -maxdepth 1 -type f -iname '*firefox*.desktop' -printf '%f\\n' 2>/dev/null)
+done
 
 install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-default-waterfox
 cat > /usr/libexec/lyd/lyd-default-waterfox <<'BROWSER'
@@ -44,8 +43,12 @@ desktop=net.waterfox.waterfox.desktop
 current="$(xdg-settings get default-web-browser 2>/dev/null || true)"
 case "$current" in
   ""|firefox.desktop|org.mozilla.firefox.desktop|org.mozilla.firefox-rpm.desktop)
-    xdg-settings set default-web-browser "$desktop" 2>/dev/null || true
-    xdg-mime default "$desktop" x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml
+    if command -v xdg-settings >/dev/null 2>&1; then
+      xdg-settings set default-web-browser "$desktop" 2>/dev/null || true
+    fi
+    if command -v xdg-mime >/dev/null 2>&1; then
+      xdg-mime default "$desktop" x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml
+    fi
     ;;
 esac
 BROWSER
