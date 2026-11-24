@@ -1,5 +1,16 @@
 ---
 modules:
+  # The proprietary NVIDIA base brings in RPM Fusion's nonfree libfdk-aac.
+  # That package conflicts with Fedora/RPM Fusion's 32-bit free codec needed
+  # by Steam's 32-bit PipeWire dependency. Replace it with the compatible
+  # Fedora free build before resolving Steam's multilib dependencies.
+  - type: dnf
+    remove:
+      packages:
+        - libfdk-aac
+    install:
+      packages:
+        - fdk-aac-free
   - type: dnf
     install:
       packages:
