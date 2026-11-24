@@ -1,116 +1,117 @@
 # Building Lyd Atomic
 
-## Local image builds
+## Image architecture
 
-Install Podman and the BlueBuild CLI on a supported Linux host.
+The project uses one shared KDE workstation base and reusable BlueBuild module fragments. OCI images have one parent image, so the feature sets are composed into the final recipes during the build rather than attempting to merge several unrelated OCI images.
 
-### NVIDIA edition
+Reusable definitions:
 
-```bash
-bluebuild generate recipes/lyd-kde.yml -o Containerfile
-bluebuild build recipes/lyd-kde.yml
-```
+- `recipes/workstation-base.yml` — common KDE workstation packages, Waterfox, SyncThingy and printing/scanning.
+- `recipes/feature-virtualization.yml` — QEMU/KVM and libvirt.
+- `recipes/feature-development.yml` — Distrobox, Podman and Podman Compose.
+- `recipes/feature-steam.yml` — native Steam, Steam device support, GameMode, MangoHud and Gamescope.
+- `recipes/feature-gaming.yml` — Protontricks, ProtonPlus, Lutris and Heroic.
+- `recipes/feature-mystic.yml` — Mystical KDE theme and boot artwork.
 
-Published image: `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest`.
+## Build component images
 
-### Standard edition
+Install Podman and the BlueBuild CLI, then run from the repository root.
 
-```bash
-bluebuild generate recipes/lyd-kde-intel.yml -o Containerfile
-bluebuild build recipes/lyd-kde-intel.yml
-```
-
-Published image: `ghcr.io/lydiaperspective/lyd-atomic-standard:latest`.
-
-The Standard recipe uses the standard Fedora Kinoite base and does not install proprietary NVIDIA drivers or the gaming package set. It is intended for Intel/AMD systems, but an NVIDIA driver can be layered after installation using `lydsetup`.
-
-### Steam editions
-
-The Steam images derive from their matching workstation base and add native Steam, Steam device support, GameMode, MangoHud, Gamescope and the **Lyd Gamescope** SDDM session. The session starts the native Steam RPM directly in Gamepad UI.
-
-Build the Standard graphics Steam edition after the Standard base has been published:
+### Shared workstation base
 
 ```bash
-bluebuild generate recipes/lyd-kde-steam.yml -o Containerfile
-bluebuild build recipes/lyd-kde-steam.yml
+bluebuild generate recipes/lyd-atomic-base.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-base.yml
 ```
 
-Published image: `ghcr.io/lydiaperspective/lyd-atomic-steam:latest`.
+Published as `ghcr.io/lydiaperspective/lyd-atomic-base:latest`.
 
-Build the NVIDIA Steam edition after the NVIDIA base has been published:
+### NVIDIA driver bases
+
+The proprietary image uses BlueBuild's Fedora Kinoite NVIDIA base with the 580.x driver branch:
 
 ```bash
-bluebuild generate recipes/lyd-kde-nvidia-steam.yml -o Containerfile
-bluebuild build recipes/lyd-kde-nvidia-steam.yml
+bluebuild generate recipes/lyd-atomic-nvidia.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-nvidia.yml
 ```
 
-Published image: `ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest`.
+The current open kernel module branch is built separately:
 
-## Server edition
+```bash
+bluebuild generate recipes/lyd-atomic-nvidia-open.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-nvidia-open.yml
+```
 
-Build the headless server image with:
+Both driver bases reuse the same `workstation-base.yml` module file. The open driver branch supports newer NVIDIA hardware; the proprietary 580 branch is retained for supported older cards. Check the upstream BlueBuild base-image release and GPU support before choosing a driver.
+
+### Final workstation editions
+
+Build these after their parent images have been published:
+
+```bash
+bluebuild generate recipes/lyd-atomic-workstation.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-workstation.yml
+
+bluebuild generate recipes/lyd-atomic-nvidia-gaming.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-nvidia-gaming.yml
+```
+
+Published final images:
+
+- `ghcr.io/lydiaperspective/lyd-atomic-workstation:latest`
+- `ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest`
+
+The standard workstation is derived from `lyd-atomic-base` and adds virtualization, development and Mystical modules. The NVIDIA gaming workstation is derived from `lyd-atomic-nvidia` and adds virtualization, development, Steam, gaming launchers and Mystical modules.
+
+### Server
 
 ```bash
 bluebuild generate recipes/lyd-server.yml -o Containerfile
 bluebuild build recipes/lyd-server.yml
 ```
 
-Published image: `ghcr.io/lydiaperspective/lyd-atomic-server:latest`.
-
-The server recipe uses Fedora's Fedora 45 bootc base, installs Podman and Podman Compose, Cockpit with the Podman, Machines, Storage, NetworkManager, SELinux and SOS report modules, plus KVM/libvirt virtualization support. It enables `cockpit.socket`, `firewalld`, `sshd` and `libvirtd` at boot.
-
-The default public firewalld zone permits SSH (TCP 22), Cockpit (TCP 9090) and DHCPv6 client traffic. Container-published ports are intentionally not opened automatically because the required ports depend on each workload.
+Published as `ghcr.io/lydiaperspective/lyd-atomic-server:latest`.
 
 ## GitHub Actions
 
-Pushes to `main` and manual dispatch build the Standard, NVIDIA and Server base images first, then build the two Steam variants from their matching workstation bases. Pull requests validate the three base recipes without publishing; derived images are built on pushes after their bases are available. The build workflow publishes each image under its recipe name.
+The regular build workflow builds four independent component images first: shared workstation base, NVIDIA 580 base, NVIDIA open base and server. Once those are published, it builds the final workstation and NVIDIA gaming images. Pull requests validate the independent component recipes; final images are built on pushes because their custom parent images must already exist in GHCR.
+
+**Build all images and latest ISO** builds the complete set and then creates an ISO for the selected final edition. **Build unified installer ISO** builds the Anaconda installer ISO with the edition selector. **Build installable ISO** converts one already-published final image to a single-edition ISO.
 
 ## Unified installer ISO
 
-Run **Build unified installer ISO** from GitHub Actions to create one ISO containing the Anaconda installer and the Lyd Atomic edition selector. The installer offers:
+The installer offers:
 
-- **Standard KDE** — standard workstation base without gaming RPMs.
-- **NVIDIA KDE** — workstation with the proprietary NVIDIA driver, without gaming RPMs.
-- **Steam KDE** — Standard graphics plus Steam and the Gamescope session.
-- **NVIDIA + Steam** — NVIDIA workstation plus Steam and the Gamescope session.
-- **Server** — the headless server image.
+- **KDE Workstation** — standard graphics, printing/scanning, Waterfox, SyncThingy, virtualization, development tools and Mystical theme.
+- **NVIDIA Gaming Workstation** — proprietary NVIDIA 580, Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris, Heroic, virtualization, development tools and Mystical theme.
+- **Server** — headless Fedora bootc server with Podman, Cockpit, SSH, firewalld and KVM/libvirt.
 
-The selected bootc image is downloaded from GHCR during installation; the five operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. Btrfs is enforced as the installed system's root filesystem; there is no filesystem dropdown that can accidentally select ext4 or XFS. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
+The selected image is downloaded from GHCR during installation; the operating-system images are not embedded in the ISO. An internet connection is required. Test the ISO in a UEFI virtual machine before physical installation and verify edition selection, storage layout, user creation, login, updates and rollback.
 
-The older **Build installable ISO** workflow remains available for generating a single-edition ISO from one published image.
+## Signing
 
-## Image installation
-
-Test the unified ISO in a UEFI virtual machine before physical installation. Verify that the edition spoke appears, that each choice downloads the matching image, and that storage, user creation, KDE login (for workstation editions), updates, rollback, shutdown and reboot all work. Review storage choices carefully before confirming any disk changes.
-
-## GitHub Actions signing
-
-The build workflow can publish unsigned bootstrap images so the first build works without extra setup. For signed images, create a Cosign key pair once on a trusted workstation:
+For signed images, create a Cosign key pair:
 
 ```bash
 cosign generate-key-pair
 ```
 
-Add the contents of `cosign.key` as the repository Actions secret `COSIGN_PRIVATE_KEY` and the contents of `cosign.pub` as `COSIGN_PUBLIC_KEY`. Keep the private key out of the repository. When both secrets are present, the workflow signs the image; otherwise it uses BlueBuild's `--no-sign` option. GitHub Actions uses its token to publish images to GHCR.
+Add `cosign.key` as the Actions secret `COSIGN_PRIVATE_KEY` and `cosign.pub` as `COSIGN_PUBLIC_KEY`. Keep the private key out of the repository. Without both secrets, the workflow uses BlueBuild's `--no-sign` option.
 
-## NVIDIA driver and Secure Boot
+## NVIDIA and Secure Boot
 
-The NVIDIA edition is based on BlueBuild's Fedora 45 Kinoite NVIDIA image, which provides the proprietary NVIDIA 580.x driver and a prebuilt, signed kernel module. The NVIDIA recipe verifies that the installed kernel module reports version 580.x. This branch is intended for supported older NVIDIA GPUs; newer GPUs should use a current driver branch instead.
+The proprietary NVIDIA image uses the 580.x driver branch. The open NVIDIA image uses the current open kernel module branch. Driver compatibility depends on the GPU generation; verify the card is supported by the selected branch. Secure Boot behavior depends on the upstream base image's signed modules and enrolled signing key. Test driver loading with `nvidia-smi` after installation.
 
-The Standard edition can add the current RPM Fusion NVIDIA driver using `lydsetup`. The setup is deliberately staged:
+## Mystical theme
 
-1. Add the RPM Fusion repository release packages to a new deployment.
-2. Reboot and run `lydsetup` again.
-3. Layer `akmod-nvidia`, `xorg-x11-drv-nvidia` and `xorg-x11-drv-nvidia-cuda`.
-4. Reboot into the new deployment and allow the akmods service time to compile the kernel module.
-5. Verify with `nvidia-smi` and `modinfo -F version nvidia`.
+The Mystical theme is maintained in [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes). `files/scripts/install-mystical-theme.sh` pins a specific theme commit to keep builds reproducible. Update that pin only when intentionally moving to a new theme revision.
 
-This uses the current RPM Fusion driver branch, which may differ from the NVIDIA edition's pinned 580.x driver. If Secure Boot is enabled, the generated module may be blocked unless module signing is configured and its certificate is enrolled. `lydsetup` detects Secure Boot and warns, but does not generate or enroll signing keys. Keep a working deployment available before enabling the driver.
+## Development tooling
 
-## Mystical theme dependency
+The final workstation editions include Distrobox, Podman and Podman Compose. Zed remains a per-user application and is installed with Zed's official Linux installer by running:
 
-The Mystical KDE theme and its supporting assets are maintained in [lyd-kde-themes](https://github.com/lydiaperspective/lyd-kde-themes). The image build script `files/scripts/install-mystical-theme.sh` clones that repository and checks out a specific commit before installing the assets. Update the pinned commit in that script when intentionally moving the images to a newer theme revision. Do not change it to a floating branch name: commit pinning makes image builds reproducible.
+```bash
+lydsetup zed
+```
 
-## Optional feature manager
-
-On all editions, `lydsetup` can prepare a BlueBuild development environment using Distrobox. If Distrobox is missing, it layers the package into the next host deployment; reboot, run `lydsetup` again, and select the development option. The setup creates `lyd-atomic-dev` from BlueBuild's official `ghcr.io/blue-build/cli:latest-distrobox` image, exports the `bluebuild` binary, and routes Podman commands back to the host engine. Enter it with `lydev` (equivalent to `distrobox enter lyd-atomic-dev`), clone this repository in the shared home directory, and build one of the recipes with `bluebuild build recipes/<recipe>.yml`. The container is rootless and intended for building/testing, not locally rebasing the host; use CI for publishing.
+The BlueBuild development Distrobox can be configured with `lydsetup devbox`; enter it with `lydev`. Use the recipe names above when building locally.
