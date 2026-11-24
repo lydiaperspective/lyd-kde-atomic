@@ -1,0 +1,12 @@
+---
+name: lyd-atomic-nvidia
+description: Shared KDE workstation base with the proprietary NVIDIA 580 driver.
+base-image: ghcr.io/blue-build/base-images/fedora-kinoite-nvidia
+image-version: "45"
+modules:
+  - from-file: workstation-base.yml
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+      - configure-workstation.sh
+      - enable-bib-repositories.sh
