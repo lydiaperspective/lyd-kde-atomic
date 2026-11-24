@@ -1,7 +1,7 @@
 ---
 name: lyd-atomic-nvidia-steam
 description: NVIDIA KDE workstation with native Steam, gaming tools and a dedicated Gamescope session.
-base-image: ghcr.io/lydiaperspective/lyd-atomic-nvidia
+base-image: ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest
 image-version: "45"
 modules:
   - type: dnf
