@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Native Wayland sessions may not have an X11 DISPLAY. Do not export an
-# empty DISPLAY value into D-Bus/systemd activation environments: GPGME and
-# other consumers can pass it through as an invalid --display= argument.
-# Some minimal sessions may not ship the dbus helper; skip the optional import
-# rather than showing a failed-autostart dialog during login.
-if [[ -n "${DISPLAY:-}" ]] && command -v dbus-update-activation-environment >/dev/null 2>&1; then
+# Wayland sessions may export DISPLAY as an empty string. GPGME interprets
+# that as an invalid X11 display argument and Flatpak signature verification
+# fails with "GnuPG: General error".
+if [[ -z "${DISPLAY:-}" ]]; then
+  unset DISPLAY
+  if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+    dbus-update-activation-environment --systemd --unset=DISPLAY >/dev/null 2>&1 || true
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user unset-environment DISPLAY >/dev/null 2>&1 || true
+  fi
+elif command -v dbus-update-activation-environment >/dev/null 2>&1; then
   dbus-update-activation-environment --systemd DISPLAY >/dev/null 2>&1 || true
 fi
