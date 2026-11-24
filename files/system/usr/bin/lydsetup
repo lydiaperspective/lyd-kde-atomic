@@ -165,7 +165,7 @@ setup_steamtheme() {
 
 setup_8bitdo() {
   if ! rpm -q steam-devices >/dev/null 2>&1; then
-    die "Steam controller device support is not included in this image. Switch with 'lydsetup nvidia-gaming' or 'lydsetup nvidia-gaming', then reboot."
+    die "Steam controller device support is not included in this image. Switch to the NVIDIA Gaming Workstation with 'lydsetup nvidia-gaming', then reboot."
   fi
   echo "Checking the preinstalled Steam controller device support."
   require_packages steam-devices
@@ -666,6 +666,11 @@ main() {
         gaming) setup_gaming ;;
       esac
       exit 0 ;;
+    zed)
+      [[ $# -eq 1 ]] || die "Usage: lydsetup zed"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      setup_zed
+      exit 0 ;;
     steamtheme)
       [[ $# -eq 1 ]] || die "Usage: lydsetup steamtheme"
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
@@ -733,14 +738,13 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [server|workstation|nvidia-gaming|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [server|workstation|nvidia-gaming|zed|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup server                      Switch to the headless Server image
   lydsetup workstation                 Switch to the Standard KDE workstation image
-  lydsetup nvidia                      Switch to the NVIDIA KDE workstation image
-  lydsetup steam                       Switch to the Standard KDE + Steam/Gamescope image
-  lydsetup nvidia-steam                Switch to the NVIDIA KDE + Steam/Gamescope image
+  lydsetup nvidia-gaming                Switch to the complete NVIDIA gaming workstation image
+  lydsetup zed                          Run Zed's official per-user Linux installer
   lydsetup                              Show this command list
   lydsetup --help                       Show this command list
   lydsetup --version                    Show version
@@ -765,7 +769,7 @@ Running lydsetup without arguments displays this list instead of opening the
 interactive feature menu. Run lydsetup with an explicit feature command to set it up.
 
 Features:
-  NVIDIA proprietary driver packages (preinstalled; standard edition)
+  NVIDIA proprietary 580 driver (NVIDIA Gaming Workstation)
   Virtualization (preinstalled on complete workstation and server images)
   CoolerControl system package and daemon
   TuneD + tuned-ppd (replaces power-profiles-daemon)
