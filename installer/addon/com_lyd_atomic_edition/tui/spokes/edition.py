@@ -14,26 +14,16 @@ __all__ = ["LydAtomicEditionTUISpoke"]
 
 EDITIONS = {
     "1": (
-        "standard",
-        "ghcr.io/lydiaperspective/lyd-atomic-standard:latest",
-        "Standard KDE",
+        "workstation",
+        "ghcr.io/lydiaperspective/lyd-atomic-workstation:latest",
+        "KDE Workstation",
     ),
     "2": (
-        "nvidia",
-        "ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest",
-        "NVIDIA KDE",
+        "nvidia-gaming",
+        "ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest",
+        "NVIDIA Gaming Workstation",
     ),
     "3": (
-        "steam",
-        "ghcr.io/lydiaperspective/lyd-atomic-steam:latest",
-        "Steam KDE",
-    ),
-    "4": (
-        "nvidia-steam",
-        "ghcr.io/lydiaperspective/lyd-atomic-nvidia-steam:latest",
-        "NVIDIA + Steam",
-    ),
-    "5": (
         "server",
         "ghcr.io/lydiaperspective/lyd-atomic-server:latest",
         "Server",
@@ -81,7 +71,7 @@ class LydAtomicEditionTUISpoke(NormalTUISpoke):
 
         self.window.add_with_separator(self._container)
         self.window.add_with_separator(TextWidget(
-            "Enter 1-5 to change the selection, then press c to continue."
+            "Enter 1-3 to change the selection, then press c to continue."
         ))
 
     def _select(self, selected):
