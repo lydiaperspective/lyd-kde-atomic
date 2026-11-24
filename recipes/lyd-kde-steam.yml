@@ -1,0 +1,18 @@
+---
+name: lyd-atomic-steam
+description: Standard KDE workstation with native Steam, gaming tools and a dedicated Gamescope session.
+base-image: ghcr.io/lydiaperspective/lyd-atomic-standard
+image-version: "45"
+modules:
+  - type: dnf
+    install:
+      packages:
+        - steam
+        - steam-devices
+        - gamemode
+        - mangohud
+        - gamescope
+  - type: files
+    files:
+      - source: steam
+        destination: /
