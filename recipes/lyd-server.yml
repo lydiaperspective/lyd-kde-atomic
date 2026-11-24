@@ -73,3 +73,4 @@ modules:
         - sshd.service
         - libvirtd.service
         - lyd-enable-user-linger.service
+        - lyd-enable-user-linger.path
