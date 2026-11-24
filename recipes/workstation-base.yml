@@ -1,0 +1,91 @@
+---
+# Shared KDE workstation layer used by standard and NVIDIA driver images.
+modules:
+  - type: dnf
+    repos:
+      nonfree: rpmfusion
+      copr:
+        - codifryed/CoolerControl
+    install:
+      packages:
+        - dolphin
+        - konsole
+        - kate
+        - ark
+        - okular
+        - kup-backup
+        - libdisplay-info
+        - spectacle
+        - kcalc
+        - plasma-discover
+        - plasma-discover-flatpak
+        - sddm-breeze
+        - flatpak
+        - git
+        - curl
+        - wget
+        - jq
+        - python3
+        - python3-pip
+        - bash-completion
+        - htop
+        - fastfetch
+        - btrfs-progs
+        - util-linux
+        - grub2-tools
+        - grub2-tools-extra
+        - plymouth
+        - plymouth-plugin-script
+        - plymouth-scripts
+        - librsvg2-tools
+        - xcursorgen
+        - aurorae
+        - breeze-icon-theme
+        - hicolor-icon-theme
+        - gtk-update-icon-cache
+        - fuse
+        - fuse-libs
+        - fuse3
+        - fuse3-libs
+        - xdg-desktop-portal
+        - xdg-desktop-portal-kde
+        - cups
+        - sane-backends
+        - sane-backends-drivers-scanners
+        - sane-airscan
+        - ipp-usb
+        - avahi
+        - tuned
+        - tuned-ppd
+        - tailscale
+        - solaar
+        - coolercontrol
+        - coolercontrold
+        - liquidctl
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+          url: https://flathub.org/repo/flathub.flatpakrepo
+        install:
+          - net.waterfox.waterfox
+          - com.github.zocker_160.SyncThingy
+          - org.kde.haruna
+          - org.kde.gwenview
+          - com.vixalien.sticky
+  - type: systemd
+    system:
+      enabled:
+        - cups.service
+        - avahi-daemon.service
+  - type: files
+    files:
+      - source: system
+        destination: /
