@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -205,6 +205,16 @@ plasma_load() {
   else
     echo "Log out and back in to apply the restored Plasma layout."
   fi
+}
+
+lact_enable() {
+  need_user
+  need_sudo
+  command -v lact >/dev/null 2>&1 || die "LACT is not installed. This command is available on NVIDIA images."
+  systemctl cat lactd.service >/dev/null 2>&1 || die "The lactd.service unit is not installed."
+  echo "Enabling and starting the LACT GPU management daemon."
+  sudo systemctl enable --now lactd.service
+  echo "LACT is enabled and running. It will start automatically on future boots."
 }
 
 firmware_update() {
