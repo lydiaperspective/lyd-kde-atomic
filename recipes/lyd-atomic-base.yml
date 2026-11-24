@@ -1,0 +1,12 @@
+---
+name: lyd-atomic-base
+description: Shared KDE workstation base with printing, scanning, Waterfox and SyncThingy.
+base-image: quay.io/fedora-ostree-desktops/kinoite
+image-version: "45"
+modules:
+  - from-file: workstation-base.yml
+  - type: script
+    scripts:
+      - install-lyd-tools.sh
+      - configure-workstation-intel.sh
+      - enable-bib-repositories.sh
