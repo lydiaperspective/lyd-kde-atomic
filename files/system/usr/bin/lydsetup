@@ -58,7 +58,7 @@ firewall_port_remove() {
 }
 
 firewall_port_list() {
-  need_sudo; need_firewalld
+  need_user; need_sudo; need_firewalld
   local zone ports
   printf '%-20s %s\n' "ZONE" "PERMANENT PORTS"
   for zone in $(sudo firewall-cmd --get-zones); do
@@ -83,11 +83,8 @@ tailscale_enable() {
 
     # Tailscale creates tailscale0 when the daemon starts. Bind it to a
     # dedicated zone so Serve traffic is handled separately from LAN traffic.
-    if ip link show tailscale0 >/dev/null 2>&1; then
-      sudo firewall-cmd --permanent --zone=tailscale --add-interface=tailscale0
-    else
-      echo "Warning: tailscale0 does not exist yet; it will need to be assigned to the tailscale zone once the interface appears." >&2
-    fi
+    # Firewalld can persist an interface binding before the interface exists.
+    sudo firewall-cmd --permanent --zone=tailscale --add-interface=tailscale0
 
     # Tailscale Serve and Tailscale Services use HTTPS on the tailnet.
     sudo firewall-cmd --permanent --zone=tailscale --add-port=443/tcp
