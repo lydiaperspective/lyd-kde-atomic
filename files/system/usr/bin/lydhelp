@@ -20,7 +20,10 @@ Usage:
   lydhelp appimage        Run and troubleshoot AppImage applications
   lydhelp archives        Create and extract archives
   lydhelp atomic          Understand Atomic updates and rollbacks
-  lydev                   Enter the BlueBuild development Distrobox (after setup)
+  lydmanage update         Stage the latest operating-system image update
+  lydmanage switch IMAGE   Switch to another bootc image
+  lydmanage status         Show current and staged deployments
+  lydev                   Enter the BlueBuild development Distrobox
 
 Tip: use 'command --help' or 'man command' for complete documentation.
 EOF
@@ -110,15 +113,19 @@ NETWORK
 EOF
 ;;
 packages) cat <<'EOF'
-FEDORA PACKAGES
-  rpm-ostree status              Show the current and pending deployments
-  rpm-ostree upgrade             Download an OS update for the next boot
-  rpm-ostree install PACKAGE     Layer a system RPM (reboot required)
-  rpm-ostree uninstall PACKAGE   Remove a layered RPM (reboot required)
-  rpm-ostree rollback            Select the previous deployment
-  rpm -q PACKAGE                 Check whether an RPM is installed
-  dnf search KEYWORD             Search packages (read-only)
+SYSTEM IMAGE AND PACKAGES
+  bootc status                   Show the current, staged and rollback deployments
+  rpm -q PACKAGE                 Check whether an RPM is included in the image
+  dnf search KEYWORD             Search package metadata (read-only)
   dnf info PACKAGE               Show package details
+  flatpak list                   List installed Flatpak applications
+  lydmanage update               Stage an update to the configured bootc image
+  lydmanage switch IMAGE         Switch to a different bootc image
+  lydmanage rollback             Stage the previous deployment
+  lydmanage status               Show bootc deployment status
+
+Lyd Atomic system RPMs are supplied by the image. Update the image instead
+of layering or removing system RPMs on the running deployment.
 EOF
 ;;
 flatpak) cat <<'EOF'
@@ -158,16 +165,36 @@ ARCHIVES
 EOF
 ;;
 atomic) cat <<'EOF'
-ATOMIC SYSTEM
-  rpm-ostree status       Inspect deployments and layered packages
-  rpm-ostree upgrade      Stage an operating-system update
-  systemctl reboot        Reboot into the staged deployment
-  rpm-ostree rollback     Prepare the previous deployment for next boot
-  bootc status            Show bootc image and update status (if available)
-  flatpak update          Update applications independently of the OS image
+BOOTC / ATOMIC SYSTEM
+  lydmanage update                    Stage an update from the current image source
+  lydmanage switch <newImage>         Switch to another bootc image
+  lydmanage status                    Show current, staged and rollback deployments
+  lydmanage rollback                  Stage the previous deployment
+  systemctl reboot                    Boot into the staged deployment
+  lydmanage flatpak update            Update Flatpak applications
+  lydmanage firmware update           Check for firmware updates
 
-Atomic package changes usually create a new deployment and require a reboot.
-Keep a known-good deployment until you have confirmed the new one works.
+Image updates and switches are staged; they do not change the running system.
+Reboot to activate the staged deployment. Keep a known-good deployment so
+you can roll back if the new image does not work as expected.
+EOF
+;;
+manage) cat <<'EOF'
+LYD ATOMIC MANAGEMENT
+  lydmanage switch workstation       Switch to the standard workstation
+  lydmanage switch nvidia-gaming    Switch to the NVIDIA gaming workstation
+  lydmanage switch server           Switch to the headless server
+  lydmanage switch IMAGE            Switch to a full OCI image reference
+  lydmanage update                  Update the current bootc image
+  lydmanage status                  Show deployment status
+  lydmanage rollback                Stage the previous deployment
+  lydmanage flatpak update          Update Flatpak applications
+  lydmanage firmware update         Update supported device firmware
+  lydmanage updates auto enable     Enable weekly automatic updates
+  lydmanage updates auto disable    Disable automatic updates
+  lydmanage updates auto status     Show automatic update status
+
+The short command 'lydm' is an alias for 'lydmanage'.
 EOF
 ;;
 *) printf 'Unknown topic: %s\n\n' "$topic" >&2; show_index; exit 2 ;;
