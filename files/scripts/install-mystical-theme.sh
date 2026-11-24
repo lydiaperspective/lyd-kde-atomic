@@ -72,6 +72,26 @@ OnlyShowIn=KDE;
 X-KDE-autostart-phase=2
 EOF
 
+# Existing accounts may have a saved icon theme that overrides /etc/xdg.
+# Enforce Breeze for the requested default icon set at each Plasma login.
+cat > /usr/libexec/lyd/lyd-mystical-breeze-icons <<'ICON_HELPER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ "${XDG_CURRENT_DESKTOP:-}" == *KDE* || "${KDE_FULL_SESSION:-}" == true ]] || exit 0
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
+kwriteconfig6 --file "${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals" --group Icons --key Theme breeze
+ICON_HELPER
+chmod 0755 /usr/libexec/lyd/lyd-mystical-breeze-icons
+cat > /etc/xdg/autostart/lyd-mystical-breeze-icons.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Lyd Breeze Icon Defaults
+Comment=Use the standard Breeze icon theme
+Exec=/usr/libexec/lyd/lyd-mystical-breeze-icons
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+EOF
+
 # Konsole's matching colour scheme and profile are maintained in the theme repo.
 KONSOLE="$WORK/theme/konsole"
 if [[ -d "$KONSOLE" ]]; then
