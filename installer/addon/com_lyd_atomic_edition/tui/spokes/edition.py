@@ -39,7 +39,7 @@ class LydAtomicEditionTUISpoke(NormalTUISpoke):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title = "Lyd Atomic Edition"
-        self._selected = "standard"
+        self._selected = "workstation"
         self._container = None
 
     def setup(self, args=None):
