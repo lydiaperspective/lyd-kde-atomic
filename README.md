@@ -21,7 +21,7 @@ BlueBuild recipes use reusable files under `recipes/`:
 
 - `workstation-base.yml` — KDE applications, core utilities, printing/scanning, Waterfox, SyncThingy and shared system files.
 - `feature-virtualization.yml` — QEMU/KVM, libvirt, virt-manager and libvirt service.
-- `feature-development.yml` — Distrobox, Podman and Podman Compose. Zed is installed per-user with the official installer via `lydsetup zed`.
+- `feature-development.yml` — Distrobox, Podman and Podman Compose. Zed is installed per-user with the official installer with the official per-user installer when needed.
 - `feature-steam.yml` — native Steam, Steam device support, GameMode, MangoHud, Gamescope and the Lyd Gamescope session.
 - `feature-gaming.yml` — Protontricks, ProtonPlus, Lutris and Heroic Flatpaks.
 - `feature-mystic.yml` — the pinned Mystical KDE theme and coordinated boot assets.
@@ -46,13 +46,17 @@ The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation
 
 ## Management commands
 
-- `lydsetup workstation` — switch to the complete standard workstation.
-- `lydsetup nvidia-gaming` — switch to the complete NVIDIA gaming workstation.
-- `lydsetup server` — switch to the headless server.
-- `lydsetup zed` — run Zed's official per-user installer.
-- `lydsetup` — show available setup features.
-- `lydhelp` — topic-based terminal help.
-- `lydev` — enter the BlueBuild development Distrobox when configured.
+- `lydmanage switch workstation` — switch to the standard workstation image.
+- `lydmanage switch nvidia-gaming` — switch to the NVIDIA gaming workstation.
+- `lydmanage switch server` — switch to the headless server.
+- `lydmanage switch <newImage>` — switch to any supported bootc OCI image reference.
+- `lydmanage update` — run `bootc update` and stage the latest image.
+- `lydmanage status` — show current, staged and rollback deployments.
+- `lydmanage rollback` — stage the previous deployment.
+- `lydmanage flatpak update` and `lydmanage firmware update` — update applications and supported firmware.
+- `lydmanage updates auto enable|disable|status` — manage the weekly update timer.
+- `lydm` — short alias for `lydmanage`.
+- `lydhelp` — topic-based Linux and Lyd Atomic command reference.
 
 ## Project status
 
