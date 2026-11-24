@@ -51,7 +51,7 @@ ln -sfn /etc/systemd/system/lyd-enable-user-linger.service /etc/systemd/system/m
 mkdir -p /etc/systemd/system
 ln -sfn /etc/systemd/system/lyd-enable-user-linger.path /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.path
 
-# Initialize the standardized /lydsrv tree for the install-time wheel administrator.
+# Initialize the standardized /var/lydsrv tree for the install-time wheel administrator.
 test -f /usr/libexec/lyd/setup-server-storage || {
   echo "The Lyd server storage setup helper is missing." >&2
   exit 1
@@ -63,4 +63,4 @@ test -f /etc/systemd/system/lyd-setup-server-storage.service || {
 chmod 0755 /usr/libexec/lyd/setup-server-storage
 ln -sfn /etc/systemd/system/lyd-setup-server-storage.service /etc/systemd/system/multi-user.target.wants/lyd-setup-server-storage.service
 
-echo "Server image configured: headless target, sleep disabled, Cockpit socket, rootless Podman restart, persistent user lingering, and standardized /lydsrv storage."
+echo "Server image configured: headless target, sleep disabled, Cockpit socket, rootless Podman restart, persistent user lingering, and standardized /var/lydsrv storage."
