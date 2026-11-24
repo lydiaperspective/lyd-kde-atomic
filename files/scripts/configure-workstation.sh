@@ -16,30 +16,51 @@ command -v nvidia-smi >/dev/null 2>&1 || { echo "nvidia-smi is missing from the 
 
 systemctl enable lyd-swapfile.service
 
-# Use the light-on-dark Breeze icon variant for KDE's dark desktop defaults.
-install -d /etc/xdg
+# Set Breeze Dark icons as the system default, migrate existing Plasma profiles at
+# login, and configure the separate SDDM greeter icon theme.
+install -d /etc/xdg /etc/xdg/autostart /usr/libexec/lyd /etc/sddm.conf.d /usr/share/sddm/themes/breeze
 kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze-dark
-install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-nvidia-breeze-icons
-cat > /usr/libexec/lyd/lyd-nvidia-breeze-icons <<'ICON_HELPER'
+
+install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-set-breeze-icons
+cat > /usr/libexec/lyd/lyd-set-breeze-icons <<'ICON_HELPER'
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -u
 config_file="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
-mkdir -p "$(dirname "$config_file")"
-kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze-dark
+command -v kwriteconfig6 >/dev/null 2>&1 || exit 0
+mkdir -p "$(dirname "$config_file")" || exit 0
+kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze-dark >/dev/null 2>&1 || exit 0
 ICON_HELPER
-chmod 0755 /usr/libexec/lyd/lyd-nvidia-breeze-icons
-install -d /etc/xdg/autostart
-cat > /etc/xdg/autostart/lyd-nvidia-breeze-icons.desktop <<'AUTOSTART'
+chmod 0755 /usr/libexec/lyd/lyd-set-breeze-icons
+
+cat > /etc/xdg/autostart/lyd-set-breeze-icons.desktop <<'AUTOSTART'
 [Desktop Entry]
 Type=Application
-Name=Lyd Breeze Dark Icon Defaults
-Comment=Use the Breeze Dark icon theme on the NVIDIA edition
-Exec=/usr/libexec/lyd/lyd-nvidia-breeze-icons
+Name=Lyd Breeze Dark Icons
+Comment=Apply Breeze Dark icons to Plasma and the lock screen
+Exec=/usr/bin/bash /usr/libexec/lyd/lyd-set-breeze-icons
+TryExec=/usr/bin/bash
 OnlyShowIn=KDE;
-X-KDE-autostart-phase=2
+X-KDE-autostart-phase=1
 X-KDE-autostart-enabled=true
 NoDisplay=true
 AUTOSTART
+
+# SDDM is a separate Qt greeter: its theme configuration must select the icon
+# theme explicitly; the Plasma kdeglobals setting does not configure SDDM.
+sddm_theme_config=/usr/share/sddm/themes/breeze/theme.conf.user
+if [[ ! -f "$sddm_theme_config" ]]; then
+  printf '[General]\n' > "$sddm_theme_config"
+fi
+sed -i '/^iconTheme[[:space:]]*=/d' "$sddm_theme_config"
+if grep -q '^\[General\]' "$sddm_theme_config"; then
+  sed -i '/^\[General\]/a iconTheme=breeze-dark' "$sddm_theme_config"
+else
+  printf '\n[General]\niconTheme=breeze-dark\n' >> "$sddm_theme_config"
+fi
+cat > /etc/sddm.conf.d/20-lyd-breeze.conf <<'SDDM'
+[Theme]
+Current=breeze
+SDDM
 
 install -d /etc/xdg
 cat > /etc/xdg/mimeapps.list <<'EOF'
