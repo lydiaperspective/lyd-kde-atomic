@@ -1,0 +1,3 @@
+# Grant the active local user access to Steam Input's virtual gamepad device.
+# Mirrors Valve's upstream steam-devices udev rule; access is seat-scoped via uaccess.
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
