@@ -15,14 +15,16 @@ Usage:
   lydhelp storage         Inspect disks, filesystems and mounts
   lydhelp processes       Inspect and manage processes
   lydhelp network         Inspect network connections
-  lydhelp packages        Manage Fedora packages and deployments
+  lydhelp packages        Inspect image packages and deployments
   lydhelp flatpak         Manage Flatpak applications
   lydhelp appimage        Run and troubleshoot AppImage applications
   lydhelp archives        Create and extract archives
-  lydhelp atomic          Understand Atomic updates and rollbacks
+  lydhelp atomic          Understand bootc updates, image switching and rollbacks
+  lydhelp manage          Manage Lyd Atomic images and system updates
   lydmanage update         Stage the latest operating-system image update
   lydmanage switch IMAGE   Switch to another bootc image
   lydmanage status         Show current and staged deployments
+  lydm                    Short alias for lydmanage
   lydev                   Enter the BlueBuild development Distrobox
 
 Tip: use 'command --help' or 'man command' for complete documentation.
