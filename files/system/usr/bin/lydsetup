@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.2
+VERSION=0.6.3
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -476,17 +476,19 @@ feature_enabled() {
 status_label() {
   local feature="$1" state
   if feature_enabled "$feature"; then state="Enabled"; else state="Disabled"; fi
-  printf '\\033[35m[%s]\\033[0m' "$state"
+  printf '\033[35m[%s]\033[0m' "$state"
 }
 show_feature_status() {
   local feature
+  printf '  %-14s %s\n' "FEATURE" "STATUS"
+  printf '  %-14s %s\n' "--------------" "----------"
   for feature in printscan media mediaedit gaming gamingui steamtheme 8bitdo solaar; do
-    printf '  %s\\n    Status: %b\\n' "$feature" "$(status_label "$feature")"
+    printf '  %-14s %b\n' "$feature" "$(status_label "$feature")"
   done
   echo
   echo "Development:"
   for feature in devbox androiddev container theme; do
-    printf '  %s\\n    Status: %b\\n' "$feature" "$(status_label "$feature")"
+    printf '  %-14s %b\n' "$feature" "$(status_label "$feature")"
   done
 }
 dev_help() {
