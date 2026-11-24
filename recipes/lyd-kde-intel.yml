@@ -25,6 +25,8 @@ modules:
         - sddm-breeze
         - flatpak
         - git
+        - gh
+        - android-tools
         - curl
         - wget
         - jq
