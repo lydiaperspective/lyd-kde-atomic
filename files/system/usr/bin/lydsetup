@@ -699,6 +699,12 @@ main() {
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
       setup_devbox
       exit 0 ;;
+    container)
+      [[ "${2:-}" == "enable" ]] || die "Usage: lydsetup container enable"
+      [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
+      command -v sudo >/dev/null 2>&1 || die "sudo is required."
+      setup_containerdev
+      exit 0 ;;
     dev|development)
       [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."
       command -v sudo >/dev/null 2>&1 || die "sudo is required."
@@ -720,7 +726,7 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [server|workstation|nvidia|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [server|workstation|nvidia|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup server                      Switch to the headless Server image
@@ -738,6 +744,7 @@ Available commands:
   lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Use preinstalled Solaar system-wide
   lydsetup devbox                       Set up BlueBuild image/ISO Distrobox
+  lydsetup container enable             Set up Fedora container-development tools
   lydsetup dev devbox enable            Same as above
   lydsetup dev androiddev enable        Set up Android Studio development
   lydsetup dev container enable        Set up Podman container development
