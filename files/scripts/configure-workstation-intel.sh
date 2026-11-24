@@ -4,7 +4,34 @@ set -Eeuo pipefail
 
 systemctl enable lyd-swapfile.service
 
+# Make Waterfox and Breeze explicit system-wide KDE defaults for this edition.
 install -d /etc/xdg
+kwriteconfig6 --file /etc/xdg/kdeglobals --group General --key BrowserApplication net.waterfox.waterfox.desktop
+kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze
+
+# Existing user configs take precedence over /etc/xdg defaults, so reapply
+# Breeze at Plasma login without changing any other user KDE preferences.
+install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-standard-breeze-icons
+cat > /usr/libexec/lyd/lyd-standard-breeze-icons <<'ICON_HELPER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+config_file="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
+mkdir -p "$(dirname "$config_file")"
+kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze
+ICON_HELPER
+chmod 0755 /usr/libexec/lyd/lyd-standard-breeze-icons
+install -d /etc/xdg/autostart
+cat > /etc/xdg/autostart/lyd-standard-breeze-icons.desktop <<'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Lyd Breeze Icon Defaults
+Comment=Use the Breeze icon theme on the Standard edition
+Exec=/usr/libexec/lyd/lyd-standard-breeze-icons
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+X-KDE-autostart-enabled=true
+NoDisplay=true
+AUTOSTART
 cat > /etc/xdg/mimeapps.list <<'EOF'
 [Default Applications]
 x-scheme-handler/http=net.waterfox.waterfox.desktop
