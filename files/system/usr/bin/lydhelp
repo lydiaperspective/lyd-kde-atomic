@@ -201,6 +201,10 @@ LYD ATOMIC MANAGEMENT
   lydmanage updates auto enable     Enable weekly automatic updates
   lydmanage updates auto disable    Disable automatic updates
   lydmanage updates auto status     Show automatic update status
+  lydmanage plasma save PROFILE    Save Plasma panels, widgets and layout
+  lydmanage plasma load PROFILE    Restore a saved Plasma layout profile
+  lydmanage flatpak save           Export installed Flatpak application IDs
+  lydmanage flatpak load           Restore apps from flatpak-apps.txt via Flathub
 
 The short command 'lydm' is an alias for 'lydmanage'.
 EOF
