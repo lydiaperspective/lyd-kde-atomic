@@ -10,3 +10,14 @@ modules:
       - install-lyd-tools.sh
       - configure-workstation-nvidia-open.sh
       - enable-bib-repositories.sh
+  - type: dnf
+    repos:
+      copr:
+        - ilyaz/LACT
+    install:
+      packages:
+        - lact
+  - type: systemd
+    system:
+      disabled:
+        - lactd.service
