@@ -303,6 +303,7 @@ Usage:
   lydmanage flatpak load [file]     Install apps from a saved Flatpak list
   lydmanage flatpak update          Update installed Flatpak applications
   lydmanage firmware update        Refresh and install available firmware updates
+  lydmanage lact enable            Enable and start the LACT daemon (NVIDIA images)
   lydmanage updates auto enable     Enable weekly automatic updates
   lydmanage updates auto disable    Disable weekly automatic updates
   lydmanage updates auto status     Show automatic update timer status
@@ -354,6 +355,10 @@ main() {
         load) shift 2; flatpak_load "$@" ;;
         *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
       esac
+      ;;
+    lact)
+      [[ "${2:-}" == "enable" && $# -eq 2 ]] || die "Usage: lydmanage lact enable"
+      lact_enable
       ;;
     firmware)
       need_user
