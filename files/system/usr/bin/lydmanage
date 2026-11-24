@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.1"
+VERSION="1.5.2"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -314,410 +314,26 @@ drive_list() {
   (( found )) || echo "No Lyd-managed drives configured."
 }
 drive_add() {
-  need_user; need_sudo
-  command -v jq >/dev/null || die "jq is required."
+  need_user
+  need_sudo
+  command -v jq >/dev/null 2>&1 || die "jq is required."
   local -a rows=()
   local row dev uuid fs label size choice name target auto opts uid gid admin
   while IFS= read -r row; do rows+=("$row"); done < <(
     lsblk --json --paths --output NAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS |
       jq -r '.blockdevices[] as $d | ($d.children // [])[] | select(.type=="part" and .uuid!=null and .fstype!=null and ((.mountpoints // [])|all(.==null))) | [.name,.uuid,.fstype,(.label // "-"),.size] | @tsv'
   )
-  (("\${#rows[@]}" > 0)) || die "No unmounted, formatted partitions with UUIDs found. Nothing will be formatted."
+  (("${#rows[@]}" > 0)) || die "No unmounted, formatted partitions with UUIDs found. Nothing will be formatted."
   echo "Available existing partitions (no formatting or erasing):"
   local i=1
-  for row in "\${rows[@]}"; do
-    IFS=
-  need_user
-  need_sudo
-  command -v lact >/dev/null 2>&1 || die "LACT is not installed. This command is available on NVIDIA images."
-  systemctl cat lactd.service >/dev/null 2>&1 || die "The lactd.service unit is not installed."
-  echo "Enabling and starting the LACT GPU management daemon."
-  sudo systemctl enable --now lactd.service
-  echo "LACT is enabled and running. It will start automatically on future boots."
-}
-
-firmware_update() {
-  command -v fwupdmgr >/dev/null 2>&1 || die "fwupdmgr is not installed."
-  need_sudo
-  echo "Refreshing firmware metadata from configured remotes..."
-  sudo fwupdmgr refresh --force
-  echo "Checking for and installing available firmware updates..."
-  sudo fwupdmgr update
-}
-
-auto_enable() {
-  need_user
-  need_sudo
-  echo "Enabling weekly automatic updates (Sunday at 03:00 local system time)."
-  echo "The built-in bootc timer will be disabled so system updates follow this schedule."
-  sudo systemctl daemon-reload
-  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
-  sudo systemctl enable --now lydmanage-updates.timer
-  echo "Automatic updates are enabled. The computer will not reboot automatically."
-}
-
-auto_disable() {
-  need_user
-  need_sudo
-  sudo systemctl disable --now lydmanage-updates.timer
-  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
-  echo "Automatic updates are disabled. Manual updates remain available."
-}
-
-auto_status() {
-  if systemctl is-enabled --quiet lydmanage-updates.timer 2>/dev/null; then
-    echo "Automatic updates: enabled"
-  else
-    echo "Automatic updates: disabled"
-  fi
-  systemctl list-timers lydmanage-updates.timer --no-pager 2>/dev/null || true
-}
-
-run_automatic_updates() {
-  need_root
-  local failures=0
-  echo "===== Lyd Atomic scheduled updates: $(date --iso-8601=seconds) ====="
-
-  if command -v flatpak >/dev/null 2>&1; then
-    echo "===== Flatpak system updates ====="
-    flatpak update --system --assumeyes || { echo "Flatpak system update failed."; failures=$((failures + 1)); }
-  fi
-
-  if command -v bootc >/dev/null 2>&1; then
-    echo "===== bootc image update ====="
-    if bootc update; then
-      systemctl daemon-reload || { echo "systemd daemon-reload failed."; failures=$((failures + 1)); }
-    else
-      echo "bootc update failed."
-      failures=$((failures + 1))
-    fi
-  fi
-
-  if command -v fwupdmgr >/dev/null 2>&1; then
-    echo "===== Firmware updates ====="
-    fwupdmgr refresh --force || { echo "Firmware metadata refresh failed."; failures=$((failures + 1)); }
-    fwupdmgr update --assume-yes || { echo "Firmware update failed."; failures=$((failures + 1)); }
-  fi
-
-  echo "===== Scheduled update run complete ====="
-  if (( failures > 0 )); then
-    echo "$failures update task(s) failed. Review: journalctl -u lydmanage-updates.service"
-    return 1
-  fi
-  echo "All available update tasks completed."
-}
-
-usage() {
-  cat <<HELP
-lydmanage $VERSION
-
-Usage:
-  lydmanage switch <newImage>       Switch to another bootc image
-  lydmanage update                  Run bootc update and stage the latest image
-  lydmanage status                  Show current, staged and rollback deployments
-  lydmanage systemd reload          Reload systemd unit files and generated configuration
-  lydmanage rollback                Stage the previous deployment for rollback
-  lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
-  lydmanage plasma load <profile>   Restore a saved Plasma layout profile
-  lydmanage flatpak save [file]     Save installed Flatpak application IDs
-  lydmanage flatpak load [file]     Install apps from a saved Flatpak list
-  lydmanage flatpak update          Update installed Flatpak applications
-  lydmanage firmware update        Refresh and install available firmware updates
-  lydmanage lact enable            Enable and start the LACT daemon (NVIDIA images)
-  lydmanage pods <folder> mv <path> Move standardized server storage to a mounted drive
-  lydmanage drives add             Guided setup for an existing drive
-  lydmanage drives list            List configured drives and status
-  lydmanage drives umount <name>   Unmount a configured drive
-  lydmanage drives rm <name>       Remove mount config without deleting data
-  lydmanage drives edit <name>     Edit mount name or automount setting
-  lydmanage updates auto enable     Enable weekly automatic updates
-  lydmanage updates auto disable    Disable weekly automatic updates
-  lydmanage updates auto status     Show automatic update timer status
-
-Image aliases:
-  workstation, nvidia-gaming, server
-  base, nvidia-base, nvidia-open
-
-Profile and Flatpak list files are written in the current directory by default.
-Flatpak restore installs missing applications from Flathub in the user installation.
-
-Short alias:
-  lydm <same arguments>
-
-Scheduled update logs:
-  journalctl -u lydmanage-updates.service
-HELP
-}
-
-main() {
-  case "${1:-}" in
-    switch)
-      shift
-      switch_image "$@"
-      ;;
-    update)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage update"
-      system_update
-      ;;
-    status)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage status"
-      system_status
-      ;;
-    systemd)
-      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
-      systemd_reload
-      ;;
-    rollback)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
-      system_rollback
-      ;;
-    plasma)
-      case "${2:-}" in
-        save) shift 2; plasma_save "$@" ;;
-        load) shift 2; plasma_load "$@" ;;
-        *) die "Usage: lydmanage plasma {save|load} <profilename>" ;;
-      esac
-      ;;
-    flatpak)
-      case "${2:-}" in
-        update) [[ $# -eq 2 ]] || die "Usage: lydmanage flatpak update"; need_user; flatpak_update ;;
-        save) shift 2; flatpak_save "$@" ;;
-        load) shift 2; flatpak_load "$@" ;;
-        *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
-      esac
-      ;;
-    drives)
-      shift
-      drive_command "$@"
-      ;;
-    lact)
-      [[ "${2:-}" == "enable" && $# -eq 2 ]] || die "Usage: lydmanage lact enable"
-      lact_enable
-      ;;
-    firmware)
-      need_user
-      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage firmware update"
-      firmware_update
-      ;;
-    updates)
-      case "${2:-}" in
-        auto)
-          case "${3:-}" in
-            enable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto enable"; auto_enable ;;
-            disable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto disable"; auto_disable ;;
-            status) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto status"; auto_status ;;
-            *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
-          esac
-          ;;
-        run)
-          [[ $# -eq 2 ]] || die "Invalid internal update invocation."
-          run_automatic_updates
-          ;;
-        *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
-      esac
-      ;;
-    --help|-h|"") usage ;;
-    --version) echo "lydmanage $VERSION" ;;
-    *) usage >&2; die "Unknown command: $1" ;;
-  esac
-}
-
-main "$@"
-\t' read -r dev uuid fs label size <<< "$row"
+  for row in "${rows[@]}"; do
+    IFS=$'\t' read -r dev uuid fs label size <<< "$row"
     printf ' %d) %s  %s  %s  %s  UUID=%s\n' "$i" "$dev" "$size" "$fs" "$label" "$uuid"
     ((i+=1))
   done
   read -r -p "Choose a partition number: " choice
-  [[ "$choice" =~ ^[0-9]+$ ]] && ((choice>=1 && choice<=\${#rows[@]})) || die "Invalid selection."
-  IFS=
-  need_user
-  need_sudo
-  command -v lact >/dev/null 2>&1 || die "LACT is not installed. This command is available on NVIDIA images."
-  systemctl cat lactd.service >/dev/null 2>&1 || die "The lactd.service unit is not installed."
-  echo "Enabling and starting the LACT GPU management daemon."
-  sudo systemctl enable --now lactd.service
-  echo "LACT is enabled and running. It will start automatically on future boots."
-}
-
-firmware_update() {
-  command -v fwupdmgr >/dev/null 2>&1 || die "fwupdmgr is not installed."
-  need_sudo
-  echo "Refreshing firmware metadata from configured remotes..."
-  sudo fwupdmgr refresh --force
-  echo "Checking for and installing available firmware updates..."
-  sudo fwupdmgr update
-}
-
-auto_enable() {
-  need_user
-  need_sudo
-  echo "Enabling weekly automatic updates (Sunday at 03:00 local system time)."
-  echo "The built-in bootc timer will be disabled so system updates follow this schedule."
-  sudo systemctl daemon-reload
-  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
-  sudo systemctl enable --now lydmanage-updates.timer
-  echo "Automatic updates are enabled. The computer will not reboot automatically."
-}
-
-auto_disable() {
-  need_user
-  need_sudo
-  sudo systemctl disable --now lydmanage-updates.timer
-  sudo systemctl disable --now bootc-fetch-apply-updates.timer 2>/dev/null || true
-  echo "Automatic updates are disabled. Manual updates remain available."
-}
-
-auto_status() {
-  if systemctl is-enabled --quiet lydmanage-updates.timer 2>/dev/null; then
-    echo "Automatic updates: enabled"
-  else
-    echo "Automatic updates: disabled"
-  fi
-  systemctl list-timers lydmanage-updates.timer --no-pager 2>/dev/null || true
-}
-
-run_automatic_updates() {
-  need_root
-  local failures=0
-  echo "===== Lyd Atomic scheduled updates: $(date --iso-8601=seconds) ====="
-
-  if command -v flatpak >/dev/null 2>&1; then
-    echo "===== Flatpak system updates ====="
-    flatpak update --system --assumeyes || { echo "Flatpak system update failed."; failures=$((failures + 1)); }
-  fi
-
-  if command -v bootc >/dev/null 2>&1; then
-    echo "===== bootc image update ====="
-    if bootc update; then
-      systemctl daemon-reload || { echo "systemd daemon-reload failed."; failures=$((failures + 1)); }
-    else
-      echo "bootc update failed."
-      failures=$((failures + 1))
-    fi
-  fi
-
-  if command -v fwupdmgr >/dev/null 2>&1; then
-    echo "===== Firmware updates ====="
-    fwupdmgr refresh --force || { echo "Firmware metadata refresh failed."; failures=$((failures + 1)); }
-    fwupdmgr update --assume-yes || { echo "Firmware update failed."; failures=$((failures + 1)); }
-  fi
-
-  echo "===== Scheduled update run complete ====="
-  if (( failures > 0 )); then
-    echo "$failures update task(s) failed. Review: journalctl -u lydmanage-updates.service"
-    return 1
-  fi
-  echo "All available update tasks completed."
-}
-
-usage() {
-  cat <<HELP
-lydmanage $VERSION
-
-Usage:
-  lydmanage switch <newImage>       Switch to another bootc image
-  lydmanage update                  Run bootc update and stage the latest image
-  lydmanage status                  Show current, staged and rollback deployments
-  lydmanage systemd reload          Reload systemd unit files and generated configuration
-  lydmanage rollback                Stage the previous deployment for rollback
-  lydmanage plasma save <profile>   Save Plasma panels, widgets and layout
-  lydmanage plasma load <profile>   Restore a saved Plasma layout profile
-  lydmanage flatpak save [file]     Save installed Flatpak application IDs
-  lydmanage flatpak load [file]     Install apps from a saved Flatpak list
-  lydmanage flatpak update          Update installed Flatpak applications
-  lydmanage firmware update        Refresh and install available firmware updates
-  lydmanage lact enable            Enable and start the LACT daemon (NVIDIA images)
-  lydmanage pods <folder> mv <path> Move standardized server storage to a mounted drive
-  lydmanage updates auto enable     Enable weekly automatic updates
-  lydmanage updates auto disable    Disable weekly automatic updates
-  lydmanage updates auto status     Show automatic update timer status
-
-Image aliases:
-  workstation, nvidia-gaming, server
-  base, nvidia-base, nvidia-open
-
-Profile and Flatpak list files are written in the current directory by default.
-Flatpak restore installs missing applications from Flathub in the user installation.
-
-Short alias:
-  lydm <same arguments>
-
-Scheduled update logs:
-  journalctl -u lydmanage-updates.service
-HELP
-}
-
-main() {
-  case "${1:-}" in
-    switch)
-      shift
-      switch_image "$@"
-      ;;
-    update)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage update"
-      system_update
-      ;;
-    status)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage status"
-      system_status
-      ;;
-    systemd)
-      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
-      systemd_reload
-      ;;
-    rollback)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
-      system_rollback
-      ;;
-    plasma)
-      case "${2:-}" in
-        save) shift 2; plasma_save "$@" ;;
-        load) shift 2; plasma_load "$@" ;;
-        *) die "Usage: lydmanage plasma {save|load} <profilename>" ;;
-      esac
-      ;;
-    flatpak)
-      case "${2:-}" in
-        update) [[ $# -eq 2 ]] || die "Usage: lydmanage flatpak update"; need_user; flatpak_update ;;
-        save) shift 2; flatpak_save "$@" ;;
-        load) shift 2; flatpak_load "$@" ;;
-        *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
-      esac
-      ;;
-    lact)
-      [[ "${2:-}" == "enable" && $# -eq 2 ]] || die "Usage: lydmanage lact enable"
-      lact_enable
-      ;;
-    firmware)
-      need_user
-      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage firmware update"
-      firmware_update
-      ;;
-    updates)
-      case "${2:-}" in
-        auto)
-          case "${3:-}" in
-            enable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto enable"; auto_enable ;;
-            disable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto disable"; auto_disable ;;
-            status) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto status"; auto_status ;;
-            *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
-          esac
-          ;;
-        run)
-          [[ $# -eq 2 ]] || die "Invalid internal update invocation."
-          run_automatic_updates
-          ;;
-        *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
-      esac
-      ;;
-    --help|-h|"") usage ;;
-    --version) echo "lydmanage $VERSION" ;;
-    *) usage >&2; die "Unknown command: $1" ;;
-  esac
-}
-
-main "$@"
-\t' read -r dev uuid fs label size <<< "\${rows[$((choice-1))]}"
+  [[ "$choice" =~ ^[0-9]+$ ]] && ((choice>=1 && choice<=${#rows[@]})) || die "Invalid selection."
+  IFS=$'\t' read -r dev uuid fs label size <<< "${rows[$((choice-1))]}"
   read -r -p "Mount folder name under /lydsrv/Mnt: " name
   target="$(drive_target "$name")"
   [[ ! -e "$target" && ! -L "$target" ]] || die "Mount path already exists."
@@ -726,24 +342,34 @@ main "$@"
   read -r -p "Enable systemd automount when the path is accessed? [y/N] " auto
   admin="$(sudo cat /var/lib/lyd/admin-user 2>/dev/null || true)"
   [[ "$admin" == "$USER" ]] || die "Only the recorded storage administrator can add drives."
-  uid="$(id -u "$USER")"; gid="$(id -g "$USER")"
+  uid="$(id -u "$USER")"
+  gid="$(id -g "$USER")"
   case "$fs" in
     vfat|fat|msdos) opts="uid=$uid,gid=$gid,umask=002" ;;
     exfat|ntfs|ntfs3) opts="uid=$uid,gid=$gid,fmask=0002,dmask=0002" ;;
     *) opts=defaults ;;
   esac
-  if [[ "$auto" =~ ^[Yy]$ ]]; then opts="$opts,x-systemd.automount,nofail,x-systemd.device-timeout=10s"; else opts="$opts,noauto,nofail"; fi
+  if [[ "$auto" =~ ^[Yy]$ ]]; then
+    opts="$opts,x-systemd.automount,nofail,x-systemd.device-timeout=10s"
+  else
+    opts="$opts,noauto,nofail"
+  fi
   printf 'Device: %s\nFilesystem: %s\nUUID: %s\nMount path: %s\nAutomount: %s\n' "$dev" "$fs" "$uuid" "$target" "$([[ "$auto" =~ ^[Yy]$ ]] && echo yes || echo no)"
-  confirm "Add this existing filesystem without formatting it?" || { echo Cancelled.; return 0; }
+  confirm "Add this existing filesystem without formatting it?" || { echo "Cancelled."; return 0; }
   sudo install -d -o "$uid" -g "$gid" -m 2775 "$target"
   sudo cp -a /etc/fstab "/etc/fstab.lyd-backup.$(date +%Y%m%d%H%M%S)"
   printf 'UUID=%s %s %s %s 0 2\n' "$uuid" "$target" "$fs" "$opts" | sudo tee -a /etc/fstab >/dev/null
   sudo systemctl daemon-reload
   if [[ "$auto" =~ ^[Yy]$ ]]; then
     sudo mount "$target" || die "Mount failed; fstab entry retained for troubleshooting."
-    case "$fs" in vfat|fat|msdos|exfat|ntfs|ntfs3) ;; *) sudo chown "$uid:$gid" "$target"; sudo chmod 2775 "$target" ;; esac
+    case "$fs" in
+      vfat|fat|msdos|exfat|ntfs|ntfs3) ;;
+      *) sudo chown "$uid:$gid" "$target"; sudo chmod 2775 "$target" ;;
+    esac
     echo "Drive added and mounted at $target."
-  else echo "Drive configured. Mount it with: sudo mount $target"; fi
+  else
+    echo "Drive configured. Mount it with: sudo mount $target"
+  fi
   echo "Existing contents and file ownership were not recursively changed."
 }
 drive_entry() {
@@ -776,12 +402,12 @@ drive_edit() {
   [[ $# -eq 1 ]] || die "Usage: lydmanage drives edit <name>"
   local old entry src fs opts uuid name new auto newopts tmp was=0
   old="$(drive_target "$1")"; entry="$(drive_entry "$old")" || die "No configured drive named $1."
-  read -r src _ fs opts <<< "$entry"; uuid="\${src#UUID=}"
+  read -r src _ fs opts <<< "$entry"; uuid="${src#UUID=}"
   read -r -p "New mount folder name (blank keeps '$1'): " name; [[ -n "$name" ]] || name="$1"
   new="$(drive_target "$name")"
   [[ "$new" == "$old" || ( ! -e "$new" && ! -L "$new" ) ]] || die "New mount path already exists."
   read -r -p "Enable systemd automount? [y/N] " auto
-  newopts="$opts"; newopts="\${newopts//,x-systemd.automount/}"; newopts="\${newopts//,noauto/}"; newopts="\${newopts//,nofail/}"; newopts="\${newopts//,x-systemd.device-timeout=10s/}"
+  newopts="$opts"; newopts="${newopts//,x-systemd.automount/}"; newopts="${newopts//,noauto/}"; newopts="${newopts//,nofail/}"; newopts="${newopts//,x-systemd.device-timeout=10s/}"
   if [[ "$auto" =~ ^[Yy]$ ]]; then newopts="$newopts,x-systemd.automount,nofail,x-systemd.device-timeout=10s"; else newopts="$newopts,noauto,nofail"; fi
   confirm "Change mount to $new with automount $([[ "$auto" =~ ^[Yy]$ ]] && echo enabled || echo disabled)?" || return 0
   if findmnt -rn -M "$old" >/dev/null 2>&1; then was=1; sudo umount "$old" || die "Could not unmount $old."; fi
@@ -795,7 +421,7 @@ drive_edit() {
   echo "Drive configuration updated."
 }
 drive_command() {
-  case "\${1:-}" in
+  case "${1:-}" in
     add) [[ $# -eq 1 ]] || die "Usage: lydmanage drives add"; drive_add ;;
     list) [[ $# -eq 1 ]] || die "Usage: lydmanage drives list"; drive_list ;;
     umount) shift; drive_umount "$@" ;;
@@ -804,7 +430,6 @@ drive_command() {
     *) die "Usage: lydmanage drives {add|list|umount|rm|edit}" ;;
   esac
 }
-
 lact_enable() {
   need_user
   need_sudo
@@ -814,7 +439,6 @@ lact_enable() {
   sudo systemctl enable --now lactd.service
   echo "LACT is enabled and running. It will start automatically on future boots."
 }
-
 firmware_update() {
   command -v fwupdmgr >/dev/null 2>&1 || die "fwupdmgr is not installed."
   need_sudo
@@ -823,7 +447,6 @@ firmware_update() {
   echo "Checking for and installing available firmware updates..."
   sudo fwupdmgr update
 }
-
 auto_enable() {
   need_user
   need_sudo
@@ -885,7 +508,6 @@ run_automatic_updates() {
   fi
   echo "All available update tasks completed."
 }
-
 usage() {
   cat <<HELP
 lydmanage $VERSION
@@ -922,7 +544,6 @@ Scheduled update logs:
   journalctl -u lydmanage-updates.service
 HELP
 }
-
 main() {
   case "${1:-}" in
     switch)
@@ -993,3 +614,4 @@ main() {
 }
 
 main "$@"
+
