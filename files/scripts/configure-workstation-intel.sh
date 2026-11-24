@@ -92,5 +92,5 @@ Minimal KDE Plasma workstation
 This edition uses the standard Fedora graphics stack.
 Waterfox is provided as a Flathub Flatpak and is the default web browser.
 The Fedora base Firefox launcher is hidden; the RPM remains available in the base image.
-Optional system features are preinstalled and managed with lydsetup.
+System image switching and updates are managed with lydmanage; see lydhelp.
 EOF
