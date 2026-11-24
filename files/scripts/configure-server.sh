@@ -30,7 +30,9 @@ else
 fi
 
 # Enable Podman's rootless restart helper for every user systemd manager.
-# Containers must have --restart=always or --restart=unless-stopped.
+# Containers must be created as the intended admin user with --restart=always
+# or --restart=unless-stopped. Linger keeps that user's manager alive at boot
+# and after logout.
 user_restart_unit="/usr/lib/systemd/user/podman-restart.service"
 if [[ ! -f "$user_restart_unit" ]]; then
   echo "Podman's rootless podman-restart.service is missing." >&2
@@ -38,4 +40,15 @@ if [[ ! -f "$user_restart_unit" ]]; then
 fi
 systemctl --global enable podman-restart.service
 
-echo "Server image configured: headless target, Cockpit socket, TCP 9090, global rootless Podman restart."
+# Enable a boot-time account scan and a path watcher so accounts created later
+# (for example by first-boot setup) also receive lingering.
+test -f /usr/lib/systemd/system/lyd-enable-user-linger.path || {
+  echo "The Lyd user-linger path unit is missing." >&2
+  exit 1
+}
+mkdir -p /etc/systemd/system/multi-user.target.wants
+ln -sfn /usr/lib/systemd/system/lyd-enable-user-linger.service /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.service
+mkdir -p /etc/systemd/system
+ln -sfn /usr/lib/systemd/system/lyd-enable-user-linger.path /etc/systemd/system/multi-user.target.wants/lyd-enable-user-linger.path
+
+echo "Server image configured: headless target, sleep disabled, Cockpit socket, global rootless Podman restart, and persistent user lingering."
