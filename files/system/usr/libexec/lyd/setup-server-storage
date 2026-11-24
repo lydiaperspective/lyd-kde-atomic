@@ -36,9 +36,9 @@ fi
 uid="$(id -u "$admin")"
 gid="$(id -g "$admin")"
 install -d -o "$uid" -g "$gid" -m 2775 \
-  /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups \
-  /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt /lydsrv/Pods
-chown "$uid:$gid" /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt /lydsrv/Pods
-chmod 2775 /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt /lydsrv/Pods
+  /var/lydsrv /var/lydsrv/Media /var/lydsrv/Pictures /var/lydsrv/Backups \
+  /var/lydsrv/Storage /var/lydsrv/Config /var/lydsrv/Mnt /var/lydsrv/Pods
+chown "$uid:$gid" /var/lydsrv /var/lydsrv/Media /var/lydsrv/Pictures /var/lydsrv/Backups /var/lydsrv/Storage /var/lydsrv/Config /var/lydsrv/Mnt /var/lydsrv/Pods
+chmod 2775 /var/lydsrv /var/lydsrv/Media /var/lydsrv/Pictures /var/lydsrv/Backups /var/lydsrv/Storage /var/lydsrv/Config /var/lydsrv/Mnt /var/lydsrv/Pods
 
 echo "Lyd server storage initialized for administrator '$admin' (UID $uid)."
