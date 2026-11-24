@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Persist the first regular wheel-group account as the server storage administrator.
+state_dir=/var/lib/lyd
+state_file="$state_dir/admin-user"
+install -d -m 0755 "$state_dir"
+
+if [[ -s "$state_file" ]]; then
+  admin="$(<"$state_file")"
+  getent passwd "$admin" >/dev/null || {
+    echo "Recorded Lyd storage administrator '$admin' no longer exists." >&2
+    exit 1
+  }
+else
+  wheel_members="$(getent group wheel | awk -F: '{print $4}')"
+  admin=""
+  IFS=, read -r -a members <<< "$wheel_members"
+  for candidate in "${members[@]}"; do
+    entry="$(getent passwd "$candidate" || true)"
+    [[ -n "$entry" ]] || continue
+    uid="$(cut -d: -f3 <<< "$entry")"
+    if [[ "$uid" =~ ^[0-9]+$ ]] && (( uid >= 1000 && uid < 60000 )); then
+      admin="$candidate"
+      break
+    fi
+  done
+  [[ -n "$admin" ]] || {
+    echo "No regular wheel-group administrator found yet; storage ownership setup will retry on the next account change or boot." >&2
+    exit 0
+  }
+  printf '%s\n' "$admin" > "$state_file"
+  chmod 0644 "$state_file"
+fi
+
+uid="$(id -u "$admin")"
+gid="$(id -g "$admin")"
+install -d -o "$uid" -g "$gid" -m 2775 \
+  /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups \
+  /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
+chown "$uid:$gid" /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
+chmod 2775 /lydsrv /lydsrv/Media /lydsrv/Pictures /lydsrv/Backups /lydsrv/Storage /lydsrv/Config /lydsrv/Mnt
+
+echo "Lyd server storage initialized for administrator '$admin' (UID $uid)."
