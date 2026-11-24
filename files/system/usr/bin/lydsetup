@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# Lyd Atomic service and firewall setup helper.
+set -Eeuo pipefail
+
+VERSION="1.0.0"
+
+die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
+need_sudo() {
+  command -v sudo >/dev/null 2>&1 || die "sudo is required."
+}
+need_firewalld() {
+  command -v firewall-cmd >/dev/null 2>&1 || die "firewall-cmd is not installed."
+  sudo firewall-cmd --state >/dev/null 2>&1 || die "firewalld is not running."
+}
+valid_zone() {
+  local requested="$1" zone
+  for zone in $(sudo firewall-cmd --get-zones); do
+    [[ "$zone" == "$requested" ]] && return 0
+  done
+  die "Unknown firewalld zone: $requested. Available zones: $(sudo firewall-cmd --get-zones)"
+}
+valid_port_spec() {
+  local spec="$1" port proto
+  [[ "$spec" == */tcp || "$spec" == */udp ]] || die "Port must use <port>/tcp or <port>/udp (for example 8123/tcp)."
+  port="${spec%/*}"
+  proto="${spec##*/}"
+  [[ "$port" =~ ^[0-9]+(-[0-9]+)?$ ]] || die "Invalid port or port range: $port"
+  if [[ "$port" == *-* ]]; then
+    local first="${port%-*}" last="${port#*-}"
+    (( first >= 1 && first <= 65535 && last >= first && last <= 65535 )) || die "Port range must be between 1 and 65535 and in ascending order."
+  else
+    (( port >= 1 && port <= 65535 )) || die "Port must be between 1 and 65535."
+  fi
+  [[ "$proto" == tcp || "$proto" == udp ]] || die "Protocol must be tcp or udp."
+}
+
+firewall_port_add() {
+  need_user; need_sudo; need_firewalld
+  [[ $# -eq 2 ]] || die "Usage: lydsetup firewall port add <port/tcp|port/udp> <zoneName>"
+  local spec="$1" zone="$2"
+  valid_port_spec "$spec"
+  valid_zone "$zone"
+  sudo firewall-cmd --permanent --zone="$zone" --add-port="$spec"
+  sudo firewall-cmd --reload
+  echo "Allowed $spec in firewalld zone '$zone'."
+}
+
+firewall_port_remove() {
+  need_user; need_sudo; need_firewalld
+  [[ $# -eq 2 ]] || die "Usage: lydsetup firewall port remove <port/tcp|port/udp> <zoneName>"
+  local spec="$1" zone="$2"
+  valid_port_spec "$spec"
+  valid_zone "$zone"
+  sudo firewall-cmd --permanent --zone="$zone" --remove-port="$spec"
+  sudo firewall-cmd --reload
+  echo "Removed $spec from firewalld zone '$zone'."
+}
+
+firewall_port_list() {
+  need_sudo; need_firewalld
+  local zone ports
+  printf '%-20s %s\n' "ZONE" "PERMANENT PORTS"
+  for zone in $(sudo firewall-cmd --get-zones); do
+    ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
+    [[ -n "$ports" ]] && printf '%-20s %s\n' "$zone" "$ports"
+  done
+}
+
+tailscale_enable() {
+  need_user; need_sudo
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  systemctl cat tailscaled.service >/dev/null 2>&1 || die "tailscaled.service is not installed."
+
+  echo "Enabling and starting tailscaled.service..."
+  sudo systemctl enable --now tailscaled.service
+
+  if command -v firewall-cmd >/dev/null 2>&1 && sudo firewall-cmd --state >/dev/null 2>&1; then
+    echo "Configuring firewalld for Tailscale..."
+    if ! sudo firewall-cmd --permanent --get-zones | tr ' ' '\n' | grep -Fxq tailscale; then
+      sudo firewall-cmd --permanent --new-zone=tailscale
+    fi
+
+    # Tailscale creates tailscale0 when the daemon starts. Bind it to a
+    # dedicated zone so Serve traffic is handled separately from LAN traffic.
+    if ip link show tailscale0 >/dev/null 2>&1; then
+      sudo firewall-cmd --permanent --zone=tailscale --add-interface=tailscale0
+    else
+      echo "Warning: tailscale0 does not exist yet; it will need to be assigned to the tailscale zone once the interface appears." >&2
+    fi
+
+    # Tailscale Serve and Tailscale Services use HTTPS on the tailnet.
+    sudo firewall-cmd --permanent --zone=tailscale --add-port=443/tcp
+    sudo firewall-cmd --reload
+    echo "Firewalld reloaded. Tailscale zone is configured."
+  else
+    echo "Firewalld is not running; skipping firewall configuration."
+  fi
+
+  echo "Tailscale daemon is enabled and running."
+  echo "Authenticate this machine if it has not been connected yet: sudo tailscale up"
+}
+
+usage() {
+  cat <<HELP
+lydsetup $VERSION
+
+Usage:
+  lydsetup tailscale enable
+      Enable and start tailscaled; configure the tailscale firewalld zone if firewalld is running.
+
+  lydsetup firewall port add <port/tcp|port/udp> <zoneName>
+      Permanently allow a port or port range in a firewalld zone, then reload firewalld.
+
+  lydsetup firewall port remove <port/tcp|port/udp> <zoneName>
+      Permanently remove a port or port range from a firewalld zone, then reload firewalld.
+
+  lydsetup firewall port list
+      List permanently configured ports in all firewalld zones.
+
+Examples:
+  lydsetup tailscale enable
+  lydsetup firewall port add 8123/tcp public
+  lydsetup firewall port remove 8123/tcp public
+  lydsetup firewall port list
+HELP
+}
+
+main() {
+  case "${1:-}" in
+    tailscale)
+      [[ "${2:-}" == enable && $# -eq 2 ]] || die "Usage: lydsetup tailscale enable"
+      tailscale_enable
+      ;;
+    firewall)
+      [[ "${2:-}" == port ]] || die "Usage: lydsetup firewall port {add|remove|list}"
+      case "${3:-}" in
+        add) shift 3; firewall_port_add "$@" ;;
+        remove) shift 3; firewall_port_remove "$@" ;;
+        list) [[ $# -eq 3 ]] || die "Usage: lydsetup firewall port list"; firewall_port_list ;;
+        *) die "Usage: lydsetup firewall port {add|remove|list}" ;;
+      esac
+      ;;
+    --version) echo "$VERSION" ;;
+    --help|-h|"") usage ;;
+    *) usage >&2; die "Unknown command: $1" ;;
+  esac
+}
+
+main "$@"
