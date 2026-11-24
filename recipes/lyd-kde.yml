@@ -77,11 +77,6 @@ modules:
         - coolercontrol
         - coolercontrold
         - liquidctl
-        - steam
-        - steam-devices
-        - gamemode
-        - mangohud
-        - gamescope
   - type: default-flatpaks
     configurations:
       - scope: system
