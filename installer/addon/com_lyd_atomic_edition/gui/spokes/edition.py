@@ -40,6 +40,18 @@ class LydAtomicEditionSpoke(NormalSpoke):
         self._selector = self.builder.get_object("editionSelector")
         for edition, (_, label) in EDITIONS.items():
             self._selector.append(edition, label)
+        # Persist a selection as soon as it changes. This avoids relying only
+        # on Anaconda's spoke-leave apply hook to update the bootc Kickstart
+        # command before the install transaction starts.
+        self._selector.connect("changed", self._on_edition_changed)
+
+    def _on_edition_changed(self, selector):
+        selected = selector.get_active_id()
+        if selected not in EDITIONS:
+            return
+        self._edition = selected
+        image = EDITIONS[selected][0]
+        set_bootc_image(self.data, image)
 
     def refresh(self):
         bootc_data = getattr(self.data, "bootc", None)
