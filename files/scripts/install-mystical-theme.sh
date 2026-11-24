@@ -49,7 +49,7 @@ cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" /usr/share/plasma/look
 cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/desktoptheme/
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
 # The custom Mystical icon theme is intentionally disabled for now.
-# Keep Breeze as the icon theme until the artwork is ready.
+# Use Breeze Dark icons with the dark Mystical desktop until custom artwork is ready.
 # Add coordinated GRUB, animated Plymouth and Xcursor assets. Record the
 # exact source revision so the boot setup service can detect image updates.
 bash "$WORK/theme/scripts/install-mystical-boot-assets.sh"
@@ -84,7 +84,7 @@ chmod 0755 /usr/libexec/lyd/lyd-mystical-breeze-icons
 cat > /etc/xdg/autostart/lyd-mystical-breeze-icons.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=Lyd Breeze Icon Defaults
+Name=Lyd Breeze Dark Icon Defaults
 Comment=Use the Breeze Dark icon theme
 Exec=/usr/libexec/lyd/lyd-mystical-breeze-icons
 OnlyShowIn=KDE;
