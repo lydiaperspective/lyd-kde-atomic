@@ -106,6 +106,7 @@ cat > /etc/xdg/kdeglobals <<'EOF'
 [General]
 ColorScheme=Mystical
 AccentColor=152,116,196
+BrowserApplication=net.waterfox.waterfox.desktop
 
 [KDE]
 LookAndFeelPackage=org.lydark.mystical.desktop
