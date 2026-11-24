@@ -18,8 +18,8 @@ permissions:
   id-token: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.flavour }} image
+  build-base:
+    name: Build base ${{ matrix.flavour }} image
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -32,7 +32,7 @@ jobs:
           - flavour: server
             recipe: lyd-server.yml
     steps:
-      - name: Build and publish ${{ matrix.flavour }} image
+      - name: Build and publish base ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
           recipe: ${{ matrix.recipe }}
@@ -44,5 +44,34 @@ jobs:
           cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
           pr_event_number: ${{ github.event.number || 0 }}
           push: ${{ github.event_name != 'pull_request' }}
+          maximize_build_space: true
+          build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+
+  build-steam:
+    name: Build ${{ matrix.flavour }} gaming image
+    needs: build-base
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavour: steam
+            recipe: lyd-kde-steam.yml
+          - flavour: nvidia-steam
+            recipe: lyd-kde-nvidia-steam.yml
+    steps:
+      - name: Build and publish ${{ matrix.flavour }} image
+        uses: blue-build/github-action@v1
+        with:
+          recipe: ${{ matrix.recipe }}
+          registry: ghcr.io
+          registry_namespace: lydiaperspective
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          pr_event_number: 0
+          push: true
           maximize_build_space: true
           build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
