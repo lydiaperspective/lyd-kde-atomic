@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Native Wayland sessions may not have an X11 DISPLAY. Do not export an
+# empty DISPLAY value into D-Bus/systemd activation environments: GPGME and
+# other consumers can pass it through as an invalid --display= argument.
+if [[ -n "${DISPLAY:-}" ]]; then
+  exec /usr/bin/dbus-update-activation-environment --systemd DISPLAY
+fi
