@@ -108,10 +108,8 @@ The Mystical theme is maintained in [lyd-kde-themes](https://github.com/lydiaper
 
 ## Development tooling
 
-The final workstation editions include Distrobox, Podman and Podman Compose. Zed remains a per-user application and is installed with Zed's official Linux installer by running:
+The final workstation editions include Distrobox, Podman and Podman Compose. Zed remains a separate per-user application and can be installed with Zed's official Linux installer.
 
-```bash
-Run Zed's official per-user installer if you want the editor installed.
-```
+Install Zed separately with the official per-user installer if you want the editor.
 
-The BlueBuild development Distrobox is part of the development image setup; enter it with `lydev`. Use the recipe names above when building locally.
+The BlueBuild development Distrobox is available in the development image; enter it with `lydev`. Use the recipe names above when building locally.
