@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for newly created Lyd Atomic server accounts
+
+[Path]
+PathChanged=/etc/passwd
+Unit=lyd-enable-user-linger.service
+
+[Install]
+WantedBy=multi-user.target
