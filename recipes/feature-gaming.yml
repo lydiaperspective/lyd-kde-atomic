@@ -1,0 +1,15 @@
+---
+modules:
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+          url: https://flathub.org/repo/flathub.flatpakrepo
+        install:
+          - com.github.Matoking.protontricks
+          - com.vysp3r.ProtonPlus
+          - net.lutris.Lutris
+          - com.heroicgameslauncher.hgl
