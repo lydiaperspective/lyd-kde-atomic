@@ -41,7 +41,7 @@ The default public firewalld zone permits SSH (TCP 22), Cockpit (TCP 9090) and D
 
 ## GitHub Actions
 
-Pushes to `main` and manual dispatch build the NVIDIA, Standard and Server editions in parallel. Pull requests validate all three recipes without publishing. The build workflow publishes each image under its recipe name.
+Pushes to `main` and manual dispatch build the Standard, NVIDIA and Server base images first, then build the two Steam variants from their matching workstation bases. Pull requests validate the three base recipes without publishing; derived images are built on pushes after their bases are available. The build workflow publishes each image under its recipe name.
 
 ## Unified installer ISO
 
@@ -51,7 +51,7 @@ Run **Build unified installer ISO** from GitHub Actions to create one ISO contai
 - **NVIDIA KDE** — the workstation image with the proprietary NVIDIA driver included.
 - **Server** — the headless server image.
 
-The selected bootc image is downloaded from GHCR during installation; the three operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. Btrfs is enforced as the installed system's root filesystem; there is no filesystem dropdown that can accidentally select ext4 or XFS. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
+The selected bootc image is downloaded from GHCR during installation; the five operating-system images are not embedded in the ISO. An internet connection is therefore required throughout installation. Btrfs is enforced as the installed system's root filesystem; there is no filesystem dropdown that can accidentally select ext4 or XFS. Successful ISO builds are attached to a GitHub Release and uploaded as a workflow artifact with SHA256 checksums.
 
 The older **Build installable ISO** workflow remains available for generating a single-edition ISO from one published image.
 
