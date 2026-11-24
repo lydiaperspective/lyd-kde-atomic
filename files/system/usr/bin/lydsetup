@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.7
+VERSION=0.6.8
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -86,21 +86,20 @@ setup_mediaedit() {
 
 setup_gaming() {
   echo "Checking the preinstalled gaming system packages."
-  require_packages steam-devices gamemode mangohud gamescope
+  require_packages steam steam-devices gamemode mangohud gamescope
   echo "Preparing Steam Input virtual-controller support."
   sudo modprobe uinput || die "Could not load the uinput kernel module. Check that the running kernel provides CONFIG_INPUT_UINPUT."
   sudo udevadm control --reload-rules
   sudo udevadm trigger --subsystem-match=misc
-  echo "Installing Steam, Protontricks and companion game launchers from Flathub."
+  echo "Steam is preinstalled as a system RPM. Installing Protontricks and companion game launchers from Flathub."
   install_flatpaks_system \
-    com.valvesoftware.Steam \
     com.github.Matoking.protontricks \
     com.vysp3r.ProtonPlus \
     net.lutris.Lutris \
     com.heroicgameslauncher.hgl
   echo
   echo "Gaming setup is complete."
-  echo "Steam, Protontricks, ProtonPlus, Lutris and Heroic are installed as system Flatpaks."
+  echo "Steam is installed as a system RPM. Protontricks, ProtonPlus, Lutris and Heroic are installed as system Flatpaks."
   echo "GameMode, MangoHud and Gamescope are included in the image."
   echo "Example Steam launch option for GameMode and MangoHud:"
   echo "  gamemoderun mangohud %command%"
@@ -109,7 +108,7 @@ setup_gaming() {
 setup_gamingui() {
   echo "Checking the preinstalled Steam and Gamescope packages."
   require_packages steam-devices gamescope
-  flatpak_installed com.valvesoftware.Steam || die "Steam Flatpak is missing from this image."
+  rpm -q steam >/dev/null 2>&1 || die "The system Steam package is missing from this image."
   local bin_dir="$HOME/.local/bin"
   local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   mkdir -p "$bin_dir" "$app_dir"
@@ -156,7 +155,7 @@ EOF
   echo "At SDDM, choose 'Lyd Gamescope'. To return, log out and choose 'Plasma (Wayland)'."
 }
 setup_steamtheme() {
-  die "The Steam Flatpak is now the supported client. Millennium does not support Flatpak Steam, so the Lyd Mystical Steam client theme is temporarily unavailable."
+  die "The native Steam RPM is now the supported client. The Lyd Mystical Steam theme installer is not yet implemented in this image."
 }
 
 setup_8bitdo() {
@@ -458,7 +457,7 @@ feature_enabled() {
         flatpak_installed org.soundconverter.SoundConverter ;;
     gamingui)
       rpm -q steam-devices gamescope >/dev/null 2>&1 &&
-        flatpak_installed com.valvesoftware.Steam &&
+        rpm -q steam >/dev/null 2>&1 &&
         [[ -x "$HOME/.local/bin/lyd-gamescope-switch" ]] &&
         [[ -f /usr/share/wayland-sessions/lyd-gamescope.desktop ]] ;;
     gaming)
@@ -716,7 +715,7 @@ Features:
   Solaar Logitech device manager (preinstalled system package)
   Printing and scanning (CUPS, SANE, AirScan, IPP-over-USB and Skanpage)
   Media apps (Spotify, Stremio, Jellyfin Desktop, Finamp and FCast Receiver)
-  Gaming (Steam Flatpak, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
+  Gaming (system Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic)
 
 Image switching downloads and stages the selected bootc image; reboot to activate it.\nAll system RPMs are included in the image; lydsetup only enables and configures features.
 NVIDIA module compilation may take several minutes. Secure Boot may require
