@@ -7,13 +7,11 @@ on:
         description: Hardware image to install
         type: choice
         required: true
-        default: standard
+        default: workstation
         options:
-          - nvidia
-          - standard
+          - workstation
+          - nvidia-gaming
           - server
-          - steam
-          - nvidia-steam
       image_tag:
         description: Published image tag to convert
         required: true
