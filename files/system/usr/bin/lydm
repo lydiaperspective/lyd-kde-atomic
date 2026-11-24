@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Short alias for the Lyd Atomic management command.
+exec /usr/bin/lydmanage "$@"
