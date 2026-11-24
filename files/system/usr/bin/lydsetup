@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Optional feature manager for Lyd Atomic.
 set -Eeuo pipefail
-VERSION=0.6.8
+VERSION=0.6.9
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/lydsetup/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
@@ -612,7 +612,7 @@ setup_image_switch() {
       label="NVIDIA workstation"
       warning="This replaces the current deployment with the NVIDIA KDE workstation edition."
       ;;
-    *) die "Usage: lydsetup {server|workstation|nvidia}" ;;
+    *) die "Usage: lydsetup {server|workstation|nvidia|steam|nvidia-steam}" ;;
   esac
 
   command -v bootc >/dev/null 2>&1 || die "bootc is not available on this system."
@@ -732,20 +732,20 @@ main() {
 lydsetup $VERSION
 Optional-feature manager for Lyd Atomic.
 
-Usage: lydsetup [server|workstation|nvidia|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
+Usage: lydsetup [server|workstation|nvidia|steam|nvidia-steam|media enable|mediaedit enable|printscan enable|gaming enable|gamingui|steamtheme|8bitdo|solaar enable|container enable|androiddev|theme reapply|dev|development|devbox ...]
 
 Available commands:
   lydsetup server                      Switch to the headless Server image
   lydsetup workstation                 Switch to the Standard KDE workstation image
-  lydsetup nvidia                      Switch to the NVIDIA KDE workstation image
+  lydsetup nvidia                      Switch to the NVIDIA KDE workstation image\n  lydsetup steam                       Switch to the Standard KDE + Steam/Gamescope image\n  lydsetup nvidia-steam                Switch to the NVIDIA KDE + Steam/Gamescope image
   lydsetup                              Show this command list
   lydsetup --help                       Show this command list
   lydsetup --version                    Show version
   lydsetup printscan enable             Enable printing/scanning and install Skanpage
   lydsetup media enable                 Install media playback Flatpaks
   lydsetup mediaedit enable             Install media editing/conversion Flatpaks
-  lydsetup gaming enable                Install Steam, gaming tools and launcher Flatpaks
-  lydsetup gamingui                     Install Steam Gamescope session and menu shortcut
+  lydsetup gaming enable                Install Protontricks, ProtonPlus, Lutris and Heroic on a Steam edition
+  lydsetup gamingui                     Configure the Steam Gamescope session menu shortcut
   lydsetup steamtheme                   Check Lyd Mystical theme support for system Steam
   lydsetup 8bitdo                       Configure preinstalled Steam device support and 8BitDo Pro 2 udev permissions
   lydsetup solaar enable                Use preinstalled Solaar system-wide
