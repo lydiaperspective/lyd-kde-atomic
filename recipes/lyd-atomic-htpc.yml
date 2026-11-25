@@ -61,6 +61,14 @@ modules:
         - python3-aiohttp
         - python3-evdev
         - qrencode
+    # Discover on this bootc image is Flatpak-only. Remove the RPM/PackageKit
+    # backends inherited or pulled in by weak dependencies; they try to start
+    # PackageKit, which is not a supported package-management path here.
+    remove:
+      packages:
+        - plasma-discover-offline-updates
+        - plasma-discover-packagekit
+        - plasma-discover-rpm-ostree
   - type: default-flatpaks
     configurations:
       - scope: system
