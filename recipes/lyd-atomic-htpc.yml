@@ -20,7 +20,6 @@ modules:
         - wireplumber
         - bluez
         - bluez-tools
-        - game-devices-udev
         - steam-devices
         - evtest
         - libva-intel-driver
