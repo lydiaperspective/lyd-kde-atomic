@@ -1,7 +1,7 @@
 diff --git a/crates/receiver-ui/src/gui.rs b/crates/receiver-ui/src/gui.rs
 --- a/crates/receiver-ui/src/gui.rs
 +++ b/crates/receiver-ui/src/gui.rs
-@@ -657,8 +657,22 @@ fn handle_command(ui: MainWindow, cmd: UpdateGuiCommand, damper: &mut TickDamper) {
+@@ -657,6 +657,18 @@ fn handle_command(ui: MainWindow, cmd: UpdateGuiCommand, damper: &mut TickDamper) {
      let bridge = ui.global::<Bridge>();
  
      match cmd {
@@ -21,3 +21,4 @@ diff --git a/crates/receiver-ui/src/gui.rs b/crates/receiver-ui/src/gui.rs
 +                log_if_err!(ui.window().hide());
 +            }
 +        }
+         UpdateGuiCommand::SetFullscreen {
