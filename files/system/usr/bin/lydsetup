@@ -163,10 +163,15 @@ firewall_config_load() {
       seen_zones["$zone"]=1
       cfg_services["$zone"]=""
       cfg_ports["$zone"]=""
-    elif [[ "$line" =~ ^(services|ports)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+    elif [[ "$line" =~ ^services[[:space:]]*=[[:space:]]*(.*)$ ]]; then
       [[ -n "$zone" ]] || die "Found a setting before the first [zone] section."
-      key="${BASH_REMATCH[1]}"; value="${BASH_REMATCH[2]}"
-      if [[ "$key" == services ]]; then cfg_services["$zone"]="$value"; else cfg_ports["$zone"]="$value"; fi
+      cfg_services["$zone"]="${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^ports[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+      [[ -n "$zone" ]] || die "Found a setting before the first [zone] section."
+      cfg_ports["$zone"]+=" ${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^port[[:space:]]*=[[:space:]]*([^[:space:]]+)$ ]]; then
+      [[ -n "$zone" ]] || die "Found a setting before the first [zone] section."
+      cfg_ports["$zone"]+=" ${BASH_REMATCH[1]}"
     else
       die "Invalid line in $FIREWALL_CONFIG: $line"
     fi
