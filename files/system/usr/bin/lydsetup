@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -316,6 +316,156 @@ tailscale_serve_list() {
   tailscale serve status
 }
 
+
+tailscale_cockpit_hostname() {
+  local hostname
+  hostname="$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Self", {}).get("DNSName", "").rstrip("."))')" \
+    || die "Could not read this device's Tailscale DNS name."
+  [[ -n "$hostname" ]] || die "This device is not connected to Tailscale. Run 'sudo tailscale up' first."
+  printf '%s' "$hostname"
+}
+
+tailscale_cockpit_enable() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  command -v python3 >/dev/null 2>&1 || die "python3 is required to safely update Cockpit's INI configuration."
+  systemctl cat cockpit.socket >/dev/null 2>&1 || die "Cockpit is not installed (cockpit.socket is missing)."
+  local hostname url serve_status config="/etc/cockpit/cockpit.conf" backup=""
+  hostname="$(tailscale_cockpit_hostname)"
+  url="https://${hostname}"
+
+  serve_status="$(tailscale serve status 2>&1 || true)"
+  if grep -Fq '|-- / proxy ' <<< "$serve_status" &&
+     ! grep -Fq '|-- / proxy http://127.0.0.1:9090' <<< "$serve_status"; then
+    die "Tailscale Serve already has a different root handler. It was left unchanged; move that handler or configure Cockpit on a separate hostname/service first."
+  fi
+
+  if [[ -f "$config" ]]; then
+    backup="${config}.lyd-backup-$(date +%Y%m%d-%H%M%S)"
+    sudo cp -a "$config" "$backup"
+    echo "Backed up Cockpit configuration to $backup"
+  fi
+
+  sudo install -d -m 0755 /etc/cockpit
+  sudo python3 - "$config" "$url" <<'PYCOCKPIT'
+import os, sys, tempfile
+path, https_origin = sys.argv[1:3]
+wss_origin = "wss://" + https_origin.removeprefix("https://")
+try:
+    with open(path, encoding="utf-8") as f:
+        lines = f.readlines()
+except FileNotFoundError:
+    lines = []
+
+out = []
+section = None
+webservice_seen = False
+origins_seen = False
+protocol_seen = False
+origins = []
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if section == "WebService" and not origins_seen:
+            out.append("Origins = " + " ".join(dict.fromkeys(origins + [https_origin, wss_origin])) + "\n")
+            origins_seen = True
+        if section == "WebService" and not protocol_seen:
+            out.append("ProtocolHeader = X-Forwarded-Proto\n")
+            protocol_seen = True
+        section = stripped[1:-1]
+        if section == "WebService":
+            webservice_seen = True
+        out.append(line)
+        continue
+    if section == "WebService" and stripped and not stripped.startswith(("#", ";")):
+        key, sep, value = line.partition("=")
+        if sep and key.strip().lower() == "origins":
+            origins.extend(value.split())
+            if not origins_seen:
+                out.append("__LYD_ORIGINS_PLACEHOLDER__\n")
+                origins_seen = True
+            continue
+        if sep and key.strip().lower() == "protocolheader":
+            if not protocol_seen:
+                out.append("ProtocolHeader = X-Forwarded-Proto\n")
+                protocol_seen = True
+            continue
+    out.append(line)
+
+if section == "WebService":
+    if not origins_seen:
+        out.append("Origins = " + " ".join(dict.fromkeys(origins + [https_origin, wss_origin])) + "\n")
+    if not protocol_seen:
+        out.append("ProtocolHeader = X-Forwarded-Proto\n")
+if not webservice_seen:
+    if out and not out[-1].endswith("\n"):
+        out[-1] += "\n"
+    out.extend(["\n[WebService]\n",
+                "Origins = " + https_origin + " " + wss_origin + "\n",
+                "ProtocolHeader = X-Forwarded-Proto\n"])
+
+for i, line in enumerate(out):
+    if line == "__LYD_ORIGINS_PLACEHOLDER__\n":
+        out[i] = "Origins = " + " ".join(dict.fromkeys(origins + [https_origin, wss_origin])) + "\n"
+
+fd, tmp = tempfile.mkstemp(prefix=".cockpit.conf.", dir=os.path.dirname(path), text=True)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.writelines(out)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+finally:
+    if os.path.exists(tmp):
+        os.unlink(tmp)
+PYCOCKPIT
+
+  echo "Restarting Cockpit socket..."
+  sudo systemctl restart cockpit.socket
+  sudo systemctl try-restart cockpit.service >/dev/null 2>&1 || true
+
+  echo "Configuring Tailscale Serve at $url..."
+  if ! grep -Fq '|-- / proxy http://127.0.0.1:9090' <<< "$serve_status"; then
+    tailscale serve --bg --https=443 http://127.0.0.1:9090
+  else
+    echo "Cockpit is already configured as the Tailscale Serve root handler."
+  fi
+  echo
+  echo "Cockpit Tailscale access is configured:"
+  echo "  $url"
+  echo "Cockpit backend: http://127.0.0.1:9090 (local only)"
+  echo "Tailnet ACLs still control which devices and users can connect."
+}
+
+tailscale_cockpit_status() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  local hostname
+  hostname="$(tailscale_cockpit_hostname)"
+  echo "Cockpit Tailscale URL: https://${hostname}"
+  echo
+  tailscale serve status
+  echo
+  if sudo test -r /etc/cockpit/cockpit.conf; then
+    echo "Cockpit WebService configuration:"
+    sudo sed -n '/^\[WebService\]/,/^\[/p' /etc/cockpit/cockpit.conf | sed '$d'
+  else
+    echo "No /etc/cockpit/cockpit.conf file exists."
+  fi
+}
+
+tailscale_cockpit_disable() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  local status
+  status="$(tailscale serve status 2>&1 || true)"
+  grep -Fq '|-- / proxy http://127.0.0.1:9090' <<< "$status" ||
+    die "The Tailscale Serve root handler is not configured for Cockpit; leaving Serve unchanged."
+  echo "Disabling the Cockpit root handler in Tailscale Serve..."
+  tailscale serve --https=443 off
+  echo "Cockpit is no longer published through Tailscale Serve."
+  echo "Cockpit's allowed-origin and proxy-header settings were retained in /etc/cockpit/cockpit.conf."
+}
+
 tailscale_forward_add() {
   need_user
   [[ $# -ge 1 && $# -le 2 ]] || die "Usage: lydsetup tailscale forward add <port> [tcp|udp]"
@@ -362,6 +512,15 @@ Usage:
 
   lydsetup tailscale serve remove <service-name>
       Remove all Serve endpoint mappings for the named Service.
+
+  lydsetup tailscale cockpit enable
+      Allow Cockpit through Tailscale Serve using this device's HTTPS DNS name.
+
+  lydsetup tailscale cockpit status
+      Show Cockpit's Tailscale Serve endpoint and WebService configuration.
+
+  lydsetup tailscale cockpit disable
+      Remove the Cockpit Tailscale Serve root handler; retain Cockpit settings.
 
   lydsetup tailscale forward add <port> [tcp|udp]
       Allow direct access to this node's Tailscale IP on the given port.
@@ -421,6 +580,9 @@ Examples:
   lydsetup tailscale serve add minecraft 25565 --tcp
   lydsetup tailscale serve list
   lydsetup tailscale serve remove immich
+  lydsetup tailscale cockpit enable
+  lydsetup tailscale cockpit status
+  lydsetup tailscale cockpit disable
   lydsetup tailscale forward add 25566 tcp
   lydsetup tailscale forward list
   lydsetup tailscale forward remove 25566 tcp
@@ -468,6 +630,22 @@ main() {
             *) die "Unknown Tailscale Serve command: ${3:-}" ;;
           esac
           ;;
+        cockpit)
+          if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
+            echo "Cockpit over Tailscale Serve commands:"
+            echo "  lydsetup tailscale cockpit enable"
+            echo "  lydsetup tailscale cockpit status"
+            echo "  lydsetup tailscale cockpit disable"
+            exit 0
+          fi
+          [[ $# -eq 3 ]] || die "Usage: lydsetup tailscale cockpit {enable|status|disable}"
+          case "$3" in
+            enable|setup) tailscale_cockpit_enable ;;
+            status|list) tailscale_cockpit_status ;;
+            disable|remove) tailscale_cockpit_disable ;;
+            *) die "Unknown Cockpit Tailscale command: $3" ;;
+          esac
+          ;;
         forward)
           if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
             echo "Direct Tailscale-IP port forwarding commands:"
@@ -484,7 +662,7 @@ main() {
             *) die "Unknown Tailscale forward command: ${3:-}" ;;
           esac
           ;;
-        *) die "Usage: lydsetup tailscale {enable|serve|forward}" ;;
+        *) die "Usage: lydsetup tailscale {enable|serve|cockpit|forward}" ;;
       esac
       ;;
     firewalld)
