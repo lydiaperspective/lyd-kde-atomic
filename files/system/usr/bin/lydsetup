@@ -125,7 +125,23 @@ FIREWALL_CONFIG="/var/lydsrv/System/Config/firewalld.conf"
 firewall_config_save() {
   need_user; need_sudo; need_firewalld
   sudo install -d -o "$(id -u)" -g "$(id -g)" -m 2775 "$(dirname "$FIREWALL_CONFIG")"
-  local tmp zone services ports
+  local tmp zone services ports port line config_zone label
+  local -A saved_port_labels=()
+  # Preserve existing inline descriptions when refreshing the firewall snapshot.
+  if [[ -r "$FIREWALL_CONFIG" ]]; then
+    config_zone=""
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line#"${line%%[![:space:]]*}"}"
+      if [[ "$line" =~ ^\[([a-zA-Z0-9_-]+)\]$ ]]; then
+        config_zone="${BASH_REMATCH[1]}"
+      elif [[ -n "$config_zone" && "$line" =~ ^port[[:space:]]*=[[:space:]]*([^[:space:]#]+)[[:space:]]*(#(.*))?$ ]]; then
+        port="${BASH_REMATCH[1]}"
+        label="${BASH_REMATCH[3]:-}"
+        label="${label#"${label%%[![:space:]]*}"}"
+        [[ -n "$label" ]] && saved_port_labels["$config_zone|$port"]="$label"
+      fi
+    done < "$FIREWALL_CONFIG"
+  fi
   tmp="$(mktemp)"
   {
     printf '# Lyd Atomic firewalld configuration\n'
@@ -138,7 +154,11 @@ firewall_config_save() {
       services="$(sudo firewall-cmd --permanent --zone="$zone" --list-services)"
       ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
       printf '\n[%s]\nservices=%s\n' "$zone" "$services"
-      for port in $ports; do printf 'port=%s\n' "$port"; done
+      for port in $ports; do
+        label="${saved_port_labels["$zone|$port"]:-}"
+        if [[ -n "$label" ]]; then printf 'port=%s # %s\n' "$port" "$label"
+        else printf 'port=%s\n' "$port"; fi
+      done
     done < <(sudo firewall-cmd --permanent --get-zones | tr ' ' '\n' | sed '/^$/d')
   } > "$tmp"
   sudo install -o "$(id -u)" -g "$(id -g)" -m 0664 "$tmp" "$FIREWALL_CONFIG"
