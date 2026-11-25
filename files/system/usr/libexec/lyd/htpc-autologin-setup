@@ -1,0 +1,40 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+
+CONFIG_DIR=/etc/sddm.conf.d
+CONFIG_FILE="$CONFIG_DIR/10-lyd-htpc-autologin.conf"
+STATE_DIR=/var/lib/lyd-htpc
+STATE_FILE="$STATE_DIR/autologin-configured"
+
+if [[ -e "$STATE_FILE" && -s "$CONFIG_FILE" ]]; then
+    exit 0
+fi
+
+selected_user=""
+while IFS=: read -r username _ uid _ _ home shell; do
+    [[ "$uid" =~ ^[0-9]+$ ]] || continue
+    (( uid >= 1000 && uid < 60000 )) || continue
+    [[ "$username" != "nobody" && "$home" != "/root" ]] || continue
+    [[ "$shell" != */nologin && "$shell" != */false ]] || continue
+    [[ -d "$home" ]] || continue
+    selected_user="$username"
+    break
+done < <(getent passwd)
+
+if [[ -z "$selected_user" ]]; then
+    echo "No regular user account exists yet; SDDM will remain at its login screen."
+    exit 0
+fi
+
+install -d -m 0755 "$CONFIG_DIR" "$STATE_DIR"
+tmp_file="$(mktemp "$CONFIG_DIR/.10-lyd-htpc.XXXXXX")"
+cat > "$tmp_file" <<EOF
+[Autologin]
+User=$selected_user
+Session=plasma-bigscreen-wayland.desktop
+Relogin=true
+EOF
+chmod 0644 "$tmp_file"
+mv -f "$tmp_file" "$CONFIG_FILE"
+touch "$STATE_FILE"
+echo "Configured Plasma Bigscreen autologin for $selected_user."
