@@ -51,7 +51,16 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/flathub/org.fcast.Receiver.git /tmp/fcast-flatpak
           cp files/patches/fcast-htpc-autoshow.patch /tmp/fcast-flatpak/
-          sed -i '/commit: 54b70120c44733140ed8a958603d6dbb71030b38/a\\        patches:\\n          - type: file\\n            path: fcast-htpc-autoshow.patch' /tmp/fcast-flatpak/org.fcast.Receiver.yaml
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("/tmp/fcast-flatpak/org.fcast.Receiver.yaml")
+          text = manifest.read_text()
+          needle = "        commit: 54b70120c44733140ed8a958603d6dbb71030b38\\n"
+          replacement = needle + "        patches:\\n          - type: file\\n            path: fcast-htpc-autoshow.patch\\n"
+          if needle not in text:
+              raise SystemExit("Pinned FCast source commit was not found in the Flathub manifest")
+          manifest.write_text(text.replace(needle, replacement, 1))
+          PY
       - name: Build FCast Flatpak
         working-directory: /tmp/fcast-flatpak
         run: |
