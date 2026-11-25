@@ -652,7 +652,7 @@ main() {
       system_update
       ;;
     status)
-      [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]] || die "Usage: lydm status"
+      if [[ $# -gt 1 ]]; then echo "Usage: lydm status"; echo "Show current, staged and rollback bootc deployments."; exit 0; fi
       system_status
       ;;
     systemd)
@@ -665,7 +665,7 @@ main() {
       systemd_reload
       ;;
     rollback)
-      [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]] || die "Usage: lydm rollback"
+      if [[ $# -gt 1 ]]; then echo "Usage: lydm rollback"; echo "Stage the previous bootc deployment for the next boot."; exit 0; fi
       system_rollback
       ;;
     plasma)
