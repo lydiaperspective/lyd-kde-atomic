@@ -130,15 +130,15 @@ firewall_config_save() {
   {
     printf '# Lyd Atomic firewalld configuration\n'
     printf '# Edit services and ports, then run: lydsetup firewalld load\n'
-    printf '# Each section is a firewalld zone. Lists are space-separated.\n'
-    printf '# Port entries must include a protocol: PORT/tcp or PORT/udp.\n'
-    printf '# Mixed-protocol example: ports=8123/tcp 5353/udp 25565/tcp 25565/udp\n'
-    printf '# To allow one port over BOTH protocols, list it twice: 8123/tcp 8123/udp\n'
-    printf '# Multiple ports can be separated by spaces. Port ranges are also supported.\n'
+    printf '# Each section is a firewalld zone. Services are space-separated.\n'
+    printf '# Add one port per line: port=PORT/tcp # What this port is for\n'
+    printf '# Mixed protocols and both TCP/UDP are supported.\n'
+    printf '# Example: port=8123/tcp # Home Assistant web interface\n'
     while IFS= read -r zone; do
       services="$(sudo firewall-cmd --permanent --zone="$zone" --list-services)"
       ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
-      printf '\n[%s]\nservices=%s\nports=%s\n' "$zone" "$services" "$ports"
+      printf '\n[%s]\nservices=%s\n' "$zone" "$services"
+      for port in $ports; do printf 'port=%s\n' "$port"; done
     done < <(sudo firewall-cmd --permanent --get-zones | tr ' ' '\n' | sed '/^$/d')
   } > "$tmp"
   sudo install -o "$(id -u)" -g "$(id -g)" -m 0664 "$tmp" "$FIREWALL_CONFIG"
