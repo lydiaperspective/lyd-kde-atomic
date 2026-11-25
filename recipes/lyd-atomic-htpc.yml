@@ -37,7 +37,7 @@ modules:
         - mesa-dri-drivers
         - ffmpeg-free
         - curl
-        - jq
+        - jq\n        - python3-aiohttp\n        - python3-evdev\n        - qrencode
   - type: default-flatpaks
     configurations:
       - scope: system
