@@ -11,6 +11,21 @@ set -Eeuo pipefail
 install -d /etc/systemd/system
 ln -sfn /dev/null /etc/systemd/system/systemd-remount-fs.service
 
+# Discover on the HTPC is intentionally Flatpak-only. The default launcher
+# otherwise loads every available backend, including PackageKit/rpm-ostree,
+# which exposes host system packages and can attempt to activate PackageKit.
+discover_desktop=/usr/share/applications/org.kde.discover.desktop
+if [[ -f "$discover_desktop" ]]; then
+    sed -i -E '/^Exec=plasma-discover([[:space:]]|$)/ {
+        /^Exec=plasma-discover --backends flatpak([[:space:]]|$)/! s|^Exec=plasma-discover|Exec=plasma-discover --backends flatpak|
+    }' "$discover_desktop"
+fi
+
+# PackageKit is not used by this Flatpak-only image. Mask its service/socket
+# and offline updater so they cannot be started by activation or update hooks.
+for unit in packagekit.service packagekit.socket packagekit-offline-update.service; do
+    ln -sfn /dev/null "/etc/systemd/system/$unit"
+done
 
 chmod 0755 /usr/libexec/lyd/htpc-autologin-setup
 # Enable wireless networking and Bluetooth at every boot. The image includes
