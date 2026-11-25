@@ -21,7 +21,11 @@ modules:
         - NetworkManager-wifi
         - wpa_supplicant
         - wireless-regdb
+        - iw
+        - rfkill
         - linux-firmware
+        - iwlwifi-mvm-firmware
+        - iwlwifi-dvm-firmware
         - flatpak
         - xdg-desktop-portal
         - xdg-desktop-portal-kde
