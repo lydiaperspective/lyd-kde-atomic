@@ -229,7 +229,10 @@ pods_move() {
   destination="$(realpath -m -- "$destination")"
   [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist: $(dirname "$destination")"
   command -v rsync >/dev/null 2>&1 || die "rsync is required for a progress-reporting storage move."
-  [[ ! -e "$destination" ]] || die "Destination already exists: $destination"
+  if [[ -e "$destination" ]]; then
+    [[ -d "$destination" && ! -L "$destination" ]] || die "Destination exists and is not a regular directory: $destination"
+    [[ -z "$(find "$destination" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "Destination directory is not empty: $destination. Choose an empty folder so existing data is not overwritten."
+  fi
   [[ "$destination" == /var/lydsrv/Mnt/* ]] || die "Destination must be under /var/lydsrv/Mnt/<diskMountFolderName>/."
   local destination_relative="${destination#/var/lydsrv/Mnt/}"
   [[ "$destination_relative" == */* ]] || die "Destination must be a folder inside a named drive mount directory."
@@ -320,7 +323,7 @@ drive_list() {
     found=1
     if findmnt -rn -M "$target" >/dev/null 2>&1; then status=mounted; else status=unmounted; fi
     [[ ",$opts," == *,x-systemd.automount,* ]] && status="$status (automount)"
-    printf '%-18s %-28s %-10s %s\n' "\${target##*/}" "$src" "$fs" "$status"
+    printf '%-18s %-28s %-10s %s\n' "${target##*/}" "$src" "$fs" "$status"
   done < <(awk '!/^[[:space:]]*#/ && NF >= 4 {print $1,$2,$3,$4}' /etc/fstab)
   (( found )) || echo "No Lyd-managed drives configured."
 }
