@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.7"
+VERSION="1.5.8"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -255,9 +255,21 @@ pods_move() {
   case "$folder" in Media|Pictures|Backups|Storage|Config) ;; *) die "Unknown standardized folder: $folder" ;; esac
   [[ "$destination" == /* && "$destination" != "/" ]] || die "Destination must be an absolute path."
   [[ "$destination" != *"/../"* && "$destination" != */.. && "$destination" != *"/./"* ]] || die "Destination must not contain . or .. path components."
-  [[ ! -L "$source" && -d "$source" ]] || die "$source must currently be a real directory, not a symlink."
-  # Resolve aliases such as /lydsrv -> /var/lydsrv before validating the mount path.
+
+  # Accept either the original directory or a symlink left by an earlier move.
+  local physical_source
+  if [[ -L "$source" ]]; then
+    [[ -d "$source" ]] || die "$source is a symlink, but its target is missing or is not a directory. Repair the existing link before moving this folder."
+    physical_source="$(realpath -e -- "$source")" || die "Could not resolve the current storage location for $source."
+  elif [[ -d "$source" ]]; then
+    physical_source="$(realpath -e -- "$source")" || die "Could not resolve $source."
+  else
+    die "$source does not exist as a directory or a valid directory symlink."
+  fi
+
   destination="$(realpath -m -- "$destination")"
+  [[ "$destination" != "$physical_source" ]] || die "Destination is already the current storage location."
+  [[ "$destination" != "$physical_source/"* && "$physical_source" != "$destination/"* ]] || die "Source and destination must not contain one another."
   [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist: $(dirname "$destination")"
   command -v rsync >/dev/null 2>&1 || die "rsync is required for a progress-reporting storage move."
   local destination_preexisting=0
@@ -279,7 +291,7 @@ pods_move() {
   admin="$(sudo cat /var/lib/lyd/admin-user 2>/dev/null || true)"
   [[ "$admin" == "$USER" ]] || die "Only the install-time storage administrator ('$admin') can move standardized storage folders."
 
-  local ids=() running=() id inspect source_path running_state
+  local ids=() running=() id inspect running_state
   command -v podman >/dev/null 2>&1 || die "Podman is not installed."
   while IFS= read -r id; do
     [[ -n "$id" ]] || continue
@@ -291,9 +303,11 @@ pods_move() {
     fi
   done < <(podman ps -aq)
 
-  echo "This will move $source to $destination."
+  echo "Current data directory: $physical_source"
+  echo "New data directory:     $destination"
+  echo "Standardized path:      $source -> $destination"
   echo "Containers using this folder: ${#ids[@]} (running: ${#running[@]})."
-  confirm "Stop affected containers, move the data and restart them?" || { echo "Cancelled."; return 0; }
+  confirm "Stop affected containers, move the data and update the symlink? The previous data directory will be retained as a backup." || { echo "Cancelled."; return 0; }
 
   local stopped=() id
   for id in "${running[@]}"; do
@@ -307,44 +321,54 @@ pods_move() {
   else
     echo
     echo "Copying data (rsync progress):"
-    # Run as root so protected database directories (for example PostgreSQL data) can be read.
-    if ! sudo rsync --archive --no-owner --no-group --human-readable --info=progress2 --stats "$source/" "$destination/"; then
+    if ! sudo rsync --archive --no-owner --no-group --human-readable --info=progress2 --stats "$physical_source/" "$destination/"; then
       failed=1
     fi
   fi
   if (( failed )); then
-    # Remove only the partial copy created by this attempt; preserve a pre-existing empty destination.
     if [[ -d "$destination" ]]; then
       sudo find "$destination" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + || true
       (( destination_preexisting == 1 )) || rmdir "$destination" 2>/dev/null || true
     fi
-    echo "Data copy failed. Original data remains at $source; partial destination copy cleaned up. Attempting to restart stopped containers." >&2
+    echo "Data copy failed. Original data remains at $physical_source; partial destination copy cleaned up. Attempting to restart stopped containers." >&2
     for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
     die "Storage move aborted."
   fi
 
-  # Ensure the install administrator owns the copied tree for rootless Podman.
   if ! sudo chown -R "$USER:$(id -gn)" "$destination"; then
     echo "Could not set destination ownership. Original data remains intact." >&2
     for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
     die "Storage move aborted."
   fi
 
-  local backup="${source}.lyd-move-backup-$(date +%Y%m%d%H%M%S)"
-  if ! mv "$source" "$backup" || ! ln -s "$destination" "$source"; then
-    echo "Could not switch standardized folder to the new location. Data backup is at $backup." >&2
+  # Keep the previous physical directory as a recoverable backup. When moving
+  # again, this is beside the old target rather than beside the standardized symlink.
+  local backup="${physical_source}.lyd-move-backup-$(date +%Y%m%d%H%M%S)"
+  local link_tmp="${source}.lyd-link-$$"
+  if ! mv -- "$physical_source" "$backup"; then
+    echo "Could not retain the previous data directory as a backup: $backup" >&2
+    for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
+    die "Storage move aborted; original data remains at $physical_source."
+  fi
+  if ! ln -s -- "$destination" "$link_tmp" || ! mv -Tf -- "$link_tmp" "$source"; then
+    rm -f -- "$link_tmp" 2>/dev/null || true
+    if [[ ! -e "$physical_source" && ! -L "$physical_source" ]]; then
+      mv -- "$backup" "$physical_source" || echo "WARNING: restore the data manually from $backup" >&2
+    fi
+    echo "Could not switch $source to the new destination. Previous data backup: $backup" >&2
     for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
     die "Storage move incomplete; manual recovery may be required."
   fi
-  echo "Original directory retained as: $backup"
+
+  echo "Previous data directory retained as: $backup"
   for id in "${stopped[@]}"; do
     podman start "$id" >/dev/null || { echo "Warning: could not restart container $id." >&2; failed=1; }
   done
   (( failed == 0 )) || die "Storage moved, but one or more containers did not restart."
   echo
   echo "SUCCESS: $folder storage move completed."
-  printf 'Standardized folder: %s -> %s\\n' "$source" "$destination"
-  printf 'Accessible through:  %s -> %s\\n' "${source/\/var\/lydsrv/\/lydsrv}" "$destination"
+  printf 'Standardized folder: %s -> %s\n' "$source" "$destination"
+  printf 'Accessible through:  %s -> %s\n' "${source/\/var\/lydsrv/\/lydsrv}" "$destination"
   echo "Finished. Your standardized folder now uses the new drive location."
 }
 
