@@ -18,6 +18,10 @@ EDITIONS = {
         "ghcr.io/lydiaperspective/lyd-atomic-server:latest",
         "Server",
     ),
+    "htpc": (
+        "ghcr.io/lydiaperspective/lyd-atomic-htpc:latest",
+        "HTPC (Plasma Bigscreen)",
+    ),
 }
 
 
