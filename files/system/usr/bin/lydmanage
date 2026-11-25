@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.6"
+VERSION="1.5.7"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -373,6 +373,42 @@ drive_uuid_timeout() {
   fi
 }
 
+drive_is_usb_device() {
+  local device="$1" transport="" parent=""
+  transport="$(lsblk -ndo TRAN "$device" 2>/dev/null | head -n1 || true)"
+  if [[ -z "$transport" ]]; then
+    parent="$(lsblk -ndo PKNAME "$device" 2>/dev/null | head -n1 || true)"
+    [[ -n "$parent" ]] && transport="$(lsblk -ndo TRAN "/dev/$parent" 2>/dev/null | head -n1 || true)"
+  fi
+  [[ "$transport" == usb ]]
+}
+
+drive_usb_rule_file="/etc/udev/rules.d/99-lyd-usb-mount.rules"
+
+drive_usb_rule_enabled() {
+  sudo grep -Fq "ENV{ID_FS_UUID}==\"$1\"" "$drive_usb_rule_file" 2>/dev/null
+}
+
+drive_usb_rule_set() {
+  local uuid="$1" target="$2" enabled="$3" unit tmp
+  [[ "$uuid" =~ ^[A-Fa-f0-9-]+$ ]] || die "Invalid filesystem UUID for USB connection rule."
+  unit="$(systemd-escape --path --suffix=mount "$target")"
+  tmp="$(mktemp)"
+  if sudo test -f "$drive_usb_rule_file"; then
+    sudo grep -Fv "ENV{ID_FS_UUID}==\"$uuid\"" "$drive_usb_rule_file" > "$tmp" || true
+  fi
+  if [[ "$enabled" == yes ]]; then
+    printf 'ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", SUBSYSTEMS=="usb", ENV{ID_FS_UUID}=="%s", TAG+="systemd", ENV{SYSTEMD_WANTS}+="%s"\\n' "$uuid" "$unit" >> "$tmp"
+  fi
+  if [[ -s "$tmp" ]]; then
+    sudo install -D -m 0644 "$tmp" "$drive_usb_rule_file"
+  else
+    sudo rm -f "$drive_usb_rule_file"
+  fi
+  rm -f "$tmp"
+  sudo udevadm control --reload-rules
+}
+
 drive_target() {
   [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || die "Invalid drive mount name."
   printf '/var/lydsrv/Mnt/%s\n' "$1"
@@ -395,7 +431,7 @@ drive_add() {
   need_sudo
   command -v jq >/dev/null 2>&1 || die "jq is required."
   local -a rows=()
-  local row dev uuid fs label size mounted choice name target auto opts uid gid admin device_timeout
+  local row dev uuid fs label size mounted choice name target auto opts uid gid admin device_timeout connect usb_connect=no
   local existing_src existing_target existing_fs existing_opts active_mount
   while IFS= read -r row; do rows+=("$row"); done < <(
     lsblk --json --paths --output NAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS |
@@ -446,6 +482,12 @@ drive_add() {
   else
     opts="$opts,noauto,nofail"
   fi
+  if drive_is_usb_device "$dev"; then
+    echo
+    echo "USB drive detected."
+    read -r -p "Mount automatically whenever this USB drive is connected, including after boot? [y/N] " connect
+    [[ "$connect" =~ ^[Yy]$ ]] && usb_connect=yes
+  fi
   printf 'Device: %s\nFilesystem: %s\nUUID: %s\nMount path: %s\nAutomount: %s\n' "$dev" "$fs" "$uuid" "$target" "$([[ "$auto" =~ ^[Yy]$ ]] && echo yes || echo no)"
   confirm "Configure this existing filesystem without formatting it?" || { echo "Cancelled."; return 0; }
 
@@ -473,7 +515,10 @@ drive_add() {
   sudo install -m 0644 "$tmp" /etc/fstab
   rm -f "$tmp"
   sudo systemctl daemon-reload
-  if [[ "$auto" =~ ^[Yy]$ ]]; then
+  if [[ "$usb_connect" == yes ]]; then
+    drive_usb_rule_set "$uuid" "$target" yes
+  fi
+  if [[ "$auto" =~ ^[Yy]$ || "$usb_connect" == yes ]]; then
     sudo mount "$target" || die "Mount failed; fstab entry retained for troubleshooting."
     case "$fs" in
       vfat|fat|msdos|exfat|ntfs|ntfs3) ;;
@@ -498,11 +543,13 @@ drive_umount() {
 drive_rm() {
   need_user; need_sudo
   [[ $# -eq 1 ]] || die "Usage: lydmanage drives rm <name>"
-  local target tmp unit
+  local target tmp unit uuid
   target="$(drive_target "$1")"; drive_entry "$target" >/dev/null || die "No configured drive named $1."
+  uuid="$(awk -v t="$target" '$2==t {sub(/^UUID=/,"",$1); print $1}' /etc/fstab)"
   confirm "Remove $target from /etc/fstab? Drive data will remain untouched." || return 0
   unit="$(systemd-escape --path --suffix=automount "$target")"
   sudo systemctl stop "$unit" 2>/dev/null || true
+  drive_usb_rule_set "$uuid" "$target" no
   if findmnt -rn -M "$target" >/dev/null 2>&1; then sudo umount -- "$target" || die "Could not unmount $target."; fi
   tmp="$(mktemp)"; awk -v t="$target" '/^[[:space:]]*#/ || $2!=t {print}' /etc/fstab > "$tmp"
   sudo cp -a /etc/fstab "/etc/fstab.lyd-backup.$(date +%Y%m%d%H%M%S)"
@@ -513,13 +560,27 @@ drive_rm() {
 drive_edit() {
   need_user; need_sudo
   [[ $# -eq 1 ]] || die "Usage: lydmanage drives edit <name>"
-  local old entry src fs opts uuid name new auto newopts tmp was=0 device_timeout
+  local old entry src fs opts uuid name new auto newopts tmp was=0 device_timeout connect usb_connect=no device
   old="$(drive_target "$1")"; entry="$(drive_entry "$old")" || die "No configured drive named $1."
   read -r src _ fs opts <<< "$entry"; uuid="${src#UUID=}"
   read -r -p "New mount folder name (blank keeps '$1'): " name; [[ -n "$name" ]] || name="$1"
   new="$(drive_target "$name")"
   [[ "$new" == "$old" || ( ! -e "$new" && ! -L "$new" ) ]] || die "New mount path already exists."
   read -r -p "Enable systemd automount? [y/N] " auto
+  device="$(blkid -U "$uuid" 2>/dev/null || true)"
+  if [[ -n "$device" ]] && drive_is_usb_device "$device"; then
+    echo "USB drive detected."
+    if drive_usb_rule_enabled "$uuid"; then
+      read -r -p "Mount automatically whenever this USB drive is connected? [Y/n] " connect
+      [[ "$connect" =~ ^[Nn]$ ]] || usb_connect=yes
+    else
+      read -r -p "Mount automatically whenever this USB drive is connected, including after boot? [y/N] " connect
+      [[ "$connect" =~ ^[Yy]$ ]] && usb_connect=yes
+    fi
+  elif drive_usb_rule_enabled "$uuid"; then
+    echo "Existing USB connection trigger found for this UUID; retaining it."
+    usb_connect=yes
+  fi
   newopts="$opts"; newopts="${newopts//,x-systemd.automount/}"; newopts="${newopts//,noauto/}"; newopts="${newopts//,nofail/}"; newopts="$(sed -E 's/,x-systemd\.device-timeout=[^,]+//g' <<< "$newopts")"
   if [[ "$auto" =~ ^[Yy]$ ]]; then device_timeout="$(drive_uuid_timeout "$uuid")"; newopts="$newopts,x-systemd.automount,nofail,x-systemd.device-timeout=$device_timeout"; else newopts="$newopts,noauto,nofail"; fi
   confirm "Change mount to $new with automount $([[ "$auto" =~ ^[Yy]$ ]] && echo enabled || echo disabled)?" || return 0
@@ -529,8 +590,9 @@ drive_edit() {
   printf 'UUID=%s %s %s %s 0 2\n' "$uuid" "$new" "$fs" "$newopts" >> "$tmp"
   sudo cp -a /etc/fstab "/etc/fstab.lyd-backup.$(date +%Y%m%d%H%M%S)"
   sudo install -m 0644 "$tmp" /etc/fstab; rm -f "$tmp"; sudo systemctl daemon-reload
+  drive_usb_rule_set "$uuid" "$new" "$usb_connect"
   [[ "$old" == "$new" ]] || rmdir "$old" 2>/dev/null || true
-  if [[ "$auto" =~ ^[Yy]$ || "$was" == 1 ]]; then sudo mount "$new" || die "Configuration saved but mount failed."; fi
+  if [[ "$auto" =~ ^[Yy]$ || "$was" == 1 || "$usb_connect" == yes ]]; then sudo mount "$new" || die "Configuration saved but mount failed."; fi
   echo "Drive configuration updated."
 }
 drive_help() {
@@ -551,7 +613,7 @@ Commands:
       List drives configured by lydm and whether each is mounted.
 
   lydm drives edit <name>
-      Change the mount folder name and automount setting.
+      Change the mount folder name, automount and USB connection behavior.
 
   lydm drives umount <name>
       Unmount a configured drive. The fstab entry is kept.
@@ -579,6 +641,7 @@ Important:
     formatted or erased.
   - Choose a unique, simple mount name such as MediaDrive or BackupDisk.
   - Automount makes systemd mount the drive when its mount path is accessed.
+  - USB drives can also be configured to mount automatically whenever connected, including after boot.
     Without automount, it is configured with noauto and must be mounted
     manually using: sudo mount /var/lydsrv/Mnt/<name>
   - Before removing or unmounting a drive, stop applications and containers
