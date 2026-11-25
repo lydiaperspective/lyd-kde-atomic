@@ -92,11 +92,30 @@ firewall_port_remove() {
 
 firewall_port_list() {
   need_user; need_sudo; need_firewalld
-  local zone ports
+  local zone ports port label line config_zone comment
+  local -A port_labels=()
+  if [[ -r "$FIREWALL_CONFIG" ]]; then
+    config_zone=""
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line#" ${line%%[![:space:]]*}"}"
+      if [[ "$line" =~ ^\[([a-zA-Z0-9_-]+)\]$ ]]; then
+        config_zone="${BASH_REMATCH[1]}"
+      elif [[ -n "$config_zone" && "$line" =~ ^port[[:space:]]*=[[:space:]]*([^[:space:]#]+)[[:space:]]*(#(.*))?$ ]]; then
+        port="${BASH_REMATCH[1]}"
+        comment="${BASH_REMATCH[3]:-}"
+        comment="${comment#" ${comment%%[![:space:]]*}"}"
+        [[ -n "$comment" ]] && port_labels["$config_zone|$port"]="$comment"
+      fi
+    done < "$FIREWALL_CONFIG"
+  fi
   printf '%-16s %-18s %s\n' "ZONE" "PORT" "PURPOSE"
   for zone in $(sudo firewall-cmd --get-zones); do
     ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
-    [[ -n "$ports" ]] && printf '%-20s %s\n' "$zone" "$ports"
+    for port in $ports; do
+      label="${port_labels["$zone|$port"]:-}"
+      [[ -n "$label" ]] || label="-"
+      printf '%-16s %-18s %s\n' "$zone" "$port" "$label"
+    done
   done
 }
 
