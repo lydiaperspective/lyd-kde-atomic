@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.5"
+VERSION="1.5.6"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -349,6 +349,30 @@ pods_move() {
 }
 
 
+drive_device_timeout() {
+  # USB transport can be reported on the partition or only on its parent disk.
+  local device="$1" transport="" parent=""
+  transport="$(lsblk -ndo TRAN "$device" 2>/dev/null | head -n1 || true)"
+  if [[ -z "$transport" ]]; then
+    parent="$(lsblk -ndo PKNAME "$device" 2>/dev/null | head -n1 || true)"
+    if [[ -n "$parent" ]]; then
+      transport="$(lsblk -ndo TRAN "/dev/$parent" 2>/dev/null | head -n1 || true)"
+    fi
+  fi
+  if [[ "$transport" == usb ]]; then printf '30s\\n'; else printf '10s\\n'; fi
+}
+
+drive_uuid_timeout() {
+  local uuid="$1" device
+  device="$(blkid -U "$uuid" 2>/dev/null || true)"
+  if [[ -n "$device" && -b "$device" ]]; then
+    drive_device_timeout "$device"
+  else
+    # Keep a longer window for removable media that is not connected while editing.
+    printf '30s\\n'
+  fi
+}
+
 drive_target() {
   [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || die "Invalid drive mount name."
   printf '/var/lydsrv/Mnt/%s\n' "$1"
@@ -371,7 +395,7 @@ drive_add() {
   need_sudo
   command -v jq >/dev/null 2>&1 || die "jq is required."
   local -a rows=()
-  local row dev uuid fs label size mounted choice name target auto opts uid gid admin
+  local row dev uuid fs label size mounted choice name target auto opts uid gid admin device_timeout
   local existing_src existing_target existing_fs existing_opts active_mount
   while IFS= read -r row; do rows+=("$row"); done < <(
     lsblk --json --paths --output NAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS |
@@ -417,7 +441,8 @@ drive_add() {
     *) opts=defaults ;;
   esac
   if [[ "$auto" =~ ^[Yy]$ ]]; then
-    opts="$opts,x-systemd.automount,nofail,x-systemd.device-timeout=10s"
+    device_timeout="$(drive_device_timeout "$dev")"
+    opts="$opts,x-systemd.automount,nofail,x-systemd.device-timeout=$device_timeout"
   else
     opts="$opts,noauto,nofail"
   fi
@@ -488,15 +513,15 @@ drive_rm() {
 drive_edit() {
   need_user; need_sudo
   [[ $# -eq 1 ]] || die "Usage: lydmanage drives edit <name>"
-  local old entry src fs opts uuid name new auto newopts tmp was=0
+  local old entry src fs opts uuid name new auto newopts tmp was=0 device_timeout
   old="$(drive_target "$1")"; entry="$(drive_entry "$old")" || die "No configured drive named $1."
   read -r src _ fs opts <<< "$entry"; uuid="${src#UUID=}"
   read -r -p "New mount folder name (blank keeps '$1'): " name; [[ -n "$name" ]] || name="$1"
   new="$(drive_target "$name")"
   [[ "$new" == "$old" || ( ! -e "$new" && ! -L "$new" ) ]] || die "New mount path already exists."
   read -r -p "Enable systemd automount? [y/N] " auto
-  newopts="$opts"; newopts="${newopts//,x-systemd.automount/}"; newopts="${newopts//,noauto/}"; newopts="${newopts//,nofail/}"; newopts="${newopts//,x-systemd.device-timeout=10s/}"
-  if [[ "$auto" =~ ^[Yy]$ ]]; then newopts="$newopts,x-systemd.automount,nofail,x-systemd.device-timeout=10s"; else newopts="$newopts,noauto,nofail"; fi
+  newopts="$opts"; newopts="${newopts//,x-systemd.automount/}"; newopts="${newopts//,noauto/}"; newopts="${newopts//,nofail/}"; newopts="$(sed -E 's/,x-systemd\.device-timeout=[^,]+//g' <<< "$newopts")"
+  if [[ "$auto" =~ ^[Yy]$ ]]; then device_timeout="$(drive_uuid_timeout "$uuid")"; newopts="$newopts,x-systemd.automount,nofail,x-systemd.device-timeout=$device_timeout"; else newopts="$newopts,noauto,nofail"; fi
   confirm "Change mount to $new with automount $([[ "$auto" =~ ^[Yy]$ ]] && echo enabled || echo disabled)?" || return 0
   if findmnt -rn -M "$old" >/dev/null 2>&1; then was=1; sudo umount "$old" || die "Could not unmount $old."; fi
   sudo install -d -m 2775 "$new"
