@@ -18,6 +18,8 @@ systemctl enable bluetooth.service
 systemctl enable sddm.service
 systemctl enable lyd-htpc-autologin.service
 systemctl enable lyd-htpc-remote.service
+systemctl enable lyd-systemd-daemon-reload.service
+systemctl enable lyd-htpc-updates.timer
 modprobe uinput || true
 
 if ! flatpak remote-list --system --columns=name | grep -Fxq flathub; then
