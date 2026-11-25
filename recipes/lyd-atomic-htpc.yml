@@ -55,6 +55,7 @@ modules:
           - com.unicornsonlsd.finamp
           - com.spotify.Client
           - org.fcast.Receiver
+          - app.grayjay.Grayjay
   - type: files
     files:
       - source: system
