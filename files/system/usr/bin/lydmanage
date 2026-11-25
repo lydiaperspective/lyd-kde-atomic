@@ -415,13 +415,22 @@ drive_target() {
 }
 drive_list() {
   need_user
-  local src target fs opts status found=0
+  local src target fs opts status found=0 uuid automount_unit
   printf '%-18s %-28s %-10s %s\n' NAME DEVICE TYPE STATUS
   while read -r src target fs opts; do
     [[ "$target" == /var/lydsrv/Mnt/* && "$target" != /var/lydsrv/Mnt/*/* ]] || continue
     found=1
-    if findmnt -rn -M "$target" >/dev/null 2>&1; then status=mounted; else status=unmounted; fi
+    uuid="${src#UUID=}"
+    automount_unit="$(systemd-escape --path --suffix=automount "$target")"
+    if findmnt -rn -M "$target" -o FSTYPE 2>/dev/null | grep -Fxq "$fs"; then
+      status=mounted
+    elif [[ ",$opts," == *,x-systemd.automount,* ]] && systemctl is-active --quiet "$automount_unit"; then
+      status=waiting
+    else
+      status=unmounted
+    fi
     [[ ",$opts," == *,x-systemd.automount,* ]] && status="$status (automount)"
+    drive_usb_rule_enabled "$uuid" && status="$status (USB connect)"
     printf '%-18s %-28s %-10s %s\n' "${target##*/}" "$src" "$fs" "$status"
   done < <(awk '!/^[[:space:]]*#/ && NF >= 4 {print $1,$2,$3,$4}' /etc/fstab)
   (( found )) || echo "No Lyd-managed drives configured."
@@ -515,9 +524,7 @@ drive_add() {
   sudo install -m 0644 "$tmp" /etc/fstab
   rm -f "$tmp"
   sudo systemctl daemon-reload
-  if [[ "$usb_connect" == yes ]]; then
-    drive_usb_rule_set "$uuid" "$target" yes
-  fi
+  drive_usb_rule_set "$uuid" "$target" "$usb_connect"
   if [[ "$auto" =~ ^[Yy]$ || "$usb_connect" == yes ]]; then
     sudo mount "$target" || die "Mount failed; fstab entry retained for troubleshooting."
     case "$fs" in
@@ -641,9 +648,11 @@ Important:
     formatted or erased.
   - Choose a unique, simple mount name such as MediaDrive or BackupDisk.
   - Automount makes systemd mount the drive when its mount path is accessed.
-  - USB drives can also be configured to mount automatically whenever connected, including after boot.
-    Without automount, it is configured with noauto and must be mounted
-    manually using: sudo mount /var/lydsrv/Mnt/<name>
+  - USB drives can optionally be configured to mount automatically whenever connected,
+    including when connected after the system has booted. This is separate from
+    on-access automount and works even when the drive is configured with noauto.
+  - If neither option is enabled, mount the drive manually using:
+       sudo mount /var/lydsrv/Mnt/<name>
   - Before removing or unmounting a drive, stop applications and containers
     that are using it.
 HELP
