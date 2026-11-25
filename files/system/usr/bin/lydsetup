@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -16,15 +16,21 @@ need_firewalld() {
 valid_zone() {
   local requested="$1" zone
   for zone in $(sudo firewall-cmd --permanent --get-zones); do
-    [[ "$zone" == "$requested" ]] && return 0
+    [[ "$zone" == "$requested" ]] && { printf '%s' "$requested"; return 0; }
   done
-  die "Unknown firewalld zone: $requested. Available zones: $(sudo firewall-cmd --get-zones)"
+
+  # Accept an interface name (for example tailscale0) and resolve its
+  # permanent firewalld zone. An interface must already be assigned to a zone.
+  zone="$(sudo firewall-cmd --permanent --get-zone-of-interface="$requested" 2>/dev/null || true)"
+  if [[ -n "$zone" && "$zone" != "no zone" ]]; then
+    printf '%s' "$zone"
+    return 0
+  fi
+  die "Unknown firewalld zone or unassigned interface: $requested. Available zones: $(sudo firewall-cmd --permanent --get-zones)"
 }
-valid_port_spec() {
-  local spec="$1" port proto
-  [[ "$spec" == */tcp || "$spec" == */udp ]] || die "Port must use <port>/tcp or <port>/udp (for example 8123/tcp)."
-  port="${spec%/*}"
-  proto="${spec##*/}"
+
+valid_port_number() {
+  local port="$1"
   [[ "$port" =~ ^[0-9]+(-[0-9]+)?$ ]] || die "Invalid port or port range: $port"
   if [[ "$port" == *-* ]]; then
     local first="${port%-*}" last="${port#*-}"
@@ -32,29 +38,56 @@ valid_port_spec() {
   else
     (( port >= 1 && port <= 65535 )) || die "Port must be between 1 and 65535."
   fi
-  [[ "$proto" == tcp || "$proto" == udp ]] || die "Protocol must be tcp or udp."
+}
+
+parse_port_args() {
+  # Results are returned through PORT_SPECS and PORT_TARGET.
+  local action="$1"; shift
+  local port="$1" protocol="" target
+  if [[ "$port" == */* ]]; then
+    protocol="${port##*/}"
+    port="${port%/*}"
+    [[ "$protocol" == tcp || "$protocol" == udp ]] || die "Protocol must be tcp or udp."
+    [[ $# -eq 2 ]] || die "Usage: lydsetup firewall port $action <port>[/tcp|/udp] <zone|interface>"
+    target="$2"
+  elif [[ $# -eq 3 ]]; then
+    protocol="$2"
+    [[ "$protocol" == tcp || "$protocol" == udp ]] || die "Protocol must be tcp or udp."
+    target="$3"
+  elif [[ $# -eq 2 ]]; then
+    target="$2"
+  else
+    die "Usage: lydsetup firewall port $action <port> [tcp|udp] <zone|interface>"
+  fi
+  valid_port_number "$port"
+  PORT_TARGET="$(valid_zone "$target")"
+  if [[ -n "$protocol" ]]; then
+    PORT_SPECS=("$port/$protocol")
+  else
+    PORT_SPECS=("$port/tcp" "$port/udp")
+  fi
 }
 
 firewall_port_add() {
   need_user; need_sudo; need_firewalld
-  [[ $# -eq 2 ]] || die "Usage: lydsetup firewall port add <port/tcp|port/udp> <zoneName>"
-  local spec="$1" zone="$2"
-  valid_port_spec "$spec"
-  valid_zone "$zone"
-  sudo firewall-cmd --permanent --zone="$zone" --add-port="$spec"
+  local spec
+  parse_port_args add "$@"
+  for spec in "${PORT_SPECS[@]}"; do
+    sudo firewall-cmd --permanent --zone="$PORT_TARGET" --add-port="$spec"
+  done
   sudo firewall-cmd --reload
-  echo "Allowed $spec in firewalld zone '$zone'."
+  printf 'Allowed %s in firewalld zone %s.\n' "${PORT_SPECS[*]}" "$PORT_TARGET"
 }
 
 firewall_port_remove() {
   need_user; need_sudo; need_firewalld
-  [[ $# -eq 2 ]] || die "Usage: lydsetup firewall port remove <port/tcp|port/udp> <zoneName>"
-  local spec="$1" zone="$2"
-  valid_port_spec "$spec"
-  valid_zone "$zone"
-  sudo firewall-cmd --permanent --zone="$zone" --remove-port="$spec"
+  local spec
+  parse_port_args remove "$@"
+  for spec in "${PORT_SPECS[@]}"; do
+    sudo firewall-cmd --permanent --zone="$PORT_TARGET" --remove-port="$spec"
+  done
   sudo firewall-cmd --reload
-  echo "Removed $spec from firewalld zone '$zone'."
+  printf 'Removed %s from firewalld zone %s.\n' "${PORT_SPECS[*]}" "$PORT_TARGET"
 }
 
 firewall_port_list() {
@@ -106,23 +139,43 @@ Usage:
   lydsetup tailscale enable
       Enable and start tailscaled; configure the tailscale firewalld zone if firewalld is running.
 
-  lydsetup firewall port add <port/tcp|port/udp> <zoneName>
-      Permanently allow a port or port range in a firewalld zone, then reload firewalld.
+  lydsetup firewall
+      Show all firewall subcommands.
 
-  lydsetup firewall port remove <port/tcp|port/udp> <zoneName>
-      Permanently remove a port or port range from a firewalld zone, then reload firewalld.
+  lydsetup firewall port
+      Show port management subcommands.
+
+  lydsetup firewall port add <port> <zone|interface>
+      Permanently allow both TCP and UDP for the port (default).
+
+  lydsetup firewall port add <port> tcp|udp <zone|interface>
+      Permanently allow only the selected protocol.
+
+  lydsetup firewall port add <port/tcp|port/udp> <zone|interface>
+      Alternative explicit-protocol syntax.
+
+  lydsetup firewall port remove <port> [tcp|udp] <zone|interface>
+      Remove both protocols by default, or only the selected protocol.
 
   lydsetup firewall port list
       List permanently configured ports in all firewalld zones.
 
+Targets can be firewalld zone names (such as public) or interfaces already
+assigned to a zone (such as tailscale0).
+
 Examples:
   lydsetup tailscale enable
-  lydsetup firewall port add 8123/tcp public
-  lydsetup firewall port remove 8123/tcp public
+  lydsetup firewall
+  lydsetup firewall port
+  lydsetup firewall port add 8123 public
+  lydsetup firewall port add 8123 tailscale0
+  lydsetup firewall port add 8123 tcp public
+  lydsetup firewall port add 8123/udp public
+  lydsetup firewall port remove 8123 public
+  lydsetup firewall port remove 8123 udp tailscale0
   lydsetup firewall port list
 HELP
 }
-
 main() {
   case "${1:-}" in
     tailscale)
@@ -130,12 +183,20 @@ main() {
       tailscale_enable
       ;;
     firewall)
-      [[ "${2:-}" == port ]] || die "Usage: lydsetup firewall port {add|remove|list}"
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        usage
+        exit 0
+      fi
+      [[ "${2:-}" == port ]] || die "Usage: lydsetup firewall {port}"
+      if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
+        usage
+        exit 0
+      fi
       case "${3:-}" in
         add) shift 3; firewall_port_add "$@" ;;
-        remove) shift 3; firewall_port_remove "$@" ;;
+        remove|rm) shift 3; firewall_port_remove "$@" ;;
         list) [[ $# -eq 3 ]] || die "Usage: lydsetup firewall port list"; firewall_port_list ;;
-        *) die "Usage: lydsetup firewall port {add|remove|list}" ;;
+        *) usage >&2; die "Unknown firewall port command: ${3:-}" ;;
       esac
       ;;
     --version) echo "$VERSION" ;;
@@ -143,5 +204,4 @@ main() {
     *) usage >&2; die "Unknown command: $1" ;;
   esac
 }
-
 main "$@"
