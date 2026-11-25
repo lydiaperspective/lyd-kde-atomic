@@ -268,6 +268,53 @@ tailscale_enable() {
   echo "Authenticate this machine if it has not been connected yet: sudo tailscale up"
 }
 
+
+tailscale_serve_name() {
+  local name="$1"
+  name="${name#svc:}"
+  [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]] || die "Invalid Tailscale Service name: $1"
+  printf 'svc:%s' "$name"
+}
+
+tailscale_serve_add() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  [[ $# -ge 2 && $# -le 3 ]] || die "Usage: lydsetup tailscale serve add <service-name> <local-port> [--tcp]"
+  local service local_port mode="https"
+  service="$(tailscale_serve_name "$1")"
+  local_port="$2"
+  valid_port_number "$local_port"
+  [[ "$local_port" != *-* ]] || die "A single local port is required."
+  if [[ $# -eq 3 ]]; then
+    [[ "$3" == "--tcp" ]] || die "The only supported optional flag is --tcp."
+    mode="tcp"
+  fi
+  if [[ "$mode" == "tcp" ]]; then
+    echo "Configuring raw TCP forwarding for $service: $local_port -> 127.0.0.1:$local_port"
+    tailscale serve --service="$service" --tcp="$local_port" "tcp://127.0.0.1:$local_port"
+  else
+    echo "Configuring HTTPS for $service:443 -> 127.0.0.1:$local_port"
+    tailscale serve --service="$service" --https=443 "127.0.0.1:$local_port"
+  fi
+  echo "Tailscale Serve configuration submitted for $service."
+  echo "Check service approval and endpoint status with: lydsetup tailscale serve list"
+}
+
+tailscale_serve_remove() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  [[ $# -eq 1 ]] || die "Usage: lydsetup tailscale serve remove <service-name>"
+  local service
+  service="$(tailscale_serve_name "$1")"
+  echo "Removing all Serve endpoint mappings for $service..."
+  tailscale serve clear "$service"
+}
+
+tailscale_serve_list() {
+  need_user
+  command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
+  tailscale serve status
+}
 usage() {
   cat <<HELP
 lydsetup $VERSION
@@ -338,11 +385,33 @@ main() {
     tailscale)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
         echo "Tailscale commands:"
-        echo "  lydsetup tailscale enable    Enable tailscaled and configure its firewalld zone"
+        echo "  lydsetup tailscale enable          Enable tailscaled and configure its firewalld zone"
+        echo "  lydsetup tailscale serve           Show Service serving subcommands"
         exit 0
       fi
-      [[ "${2:-}" == enable && $# -eq 2 ]] || die "Usage: lydsetup tailscale enable"
-      tailscale_enable
+      case "${2:-}" in
+        enable)
+          [[ $# -eq 2 ]] || die "Usage: lydsetup tailscale enable"
+          tailscale_enable
+          ;;
+        serve)
+          if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
+            echo "Tailscale Service serving commands:"
+            echo "  lydsetup tailscale serve add <service-name> <local-port> [--tcp]"
+            echo "  lydsetup tailscale serve list"
+            echo "  lydsetup tailscale serve remove <service-name>"
+            echo "Use an existing Tailscale Service; the svc: prefix is optional."
+            exit 0
+          fi
+          case "${3:-}" in
+            add) shift 3; tailscale_serve_add "$@" ;;
+            list|status) [[ $# -eq 3 ]] || die "Usage: lydsetup tailscale serve list"; tailscale_serve_list ;;
+            remove|rm) shift 3; tailscale_serve_remove "$@" ;;
+            *) die "Unknown Tailscale Serve command: ${3:-}" ;;
+          esac
+          ;;
+        *) die "Usage: lydsetup tailscale {enable|serve}" ;;
+      esac
       ;;
     firewalld)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
