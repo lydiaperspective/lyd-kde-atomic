@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Lyd HTPC Remote</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#17191f;color:#f4f4f5;font:16px system-ui;display:flex;flex-direction:column;height:100dvh}
+header{display:flex;gap:8px;padding:12px;background:#242832}button{border:0;border-radius:12px;padding:13px 16px;background:#383e4c;color:white;font-size:16px}
+header button{flex:1}.pad{flex:1;margin:12px;border:2px solid #414958;border-radius:18px;display:grid;place-items:center;touch-action:none;color:#9ca3af;user-select:none}
+footer{padding:12px;display:flex;gap:8px}footer input{min-width:0;flex:1;padding:13px;border-radius:10px;border:0;font-size:17px}
+#pair{background:#a8c7fa;color:#151922}small{color:#9ca3af}
+</style>
+<header><button onclick="send('home')">⌂ Home</button><button onclick="send('back')">← Back</button><button onclick="send('apps')">▦ Apps</button><button id="pair" onclick="pair()">Pair</button></header>
+<div class="pad" id="pad">Touchpad · drag to move · tap to click</div>
+<footer><input id="text" placeholder="Phone keyboard…" autocomplete="off"><button onclick="sendText()">Send</button></footer>
+<script>
+let token=localStorage.getItem('lyd-token')||'';
+async function api(path,body,method='POST'){return fetch(path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined})}
+async function send(action){if(!token){alert('Pair this phone first.');return}await api('/api/control',{action})}
+async function sendText(){const i=document.querySelector('#text');if(!token){alert('Pair this phone first.');return}await api('/api/text',{text:i.value});i.value='';}
+let pad=document.querySelector('#pad'),last=null;
+pad.addEventListener('pointerdown',e=>{pad.setPointerCapture(e.pointerId);last=[e.clientX,e.clientY]});
+pad.addEventListener('pointermove',e=>{if(!last)return;let dx=e.clientX-last[0],dy=e.clientY-last[1];last=[e.clientX,e.clientY];if(Math.abs(dx)+Math.abs(dy)>0)api('/api/control',{action:'move',dx:Math.round(dx*1.8),dy:Math.round(dy*1.8)});});
+pad.addEventListener('pointerup',e=>{if(last){if(Math.abs(e.clientX-last[0])+Math.abs(e.clientY-last[1])<8)send('click');last=null}});
+async function pair(){let r=await api('/api/pair/start',{}),d=await r.json();let code=prompt('Start pairing on the TV, then enter the code shown there. Pairing code expires in 3 minutes.');if(!code)return;let p=await api('/api/pair/finish',{code,name:navigator.userAgent.includes('iPhone')?'iPhone remote':'Phone remote'});if(!p.ok){alert('Pairing failed. Check the code and try again.');return}let v=await p.json();token=v.token;localStorage.setItem('lyd-token',token);alert('Phone paired.');}
+</script></html>
