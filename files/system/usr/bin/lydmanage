@@ -318,27 +318,42 @@ drive_add() {
   need_sudo
   command -v jq >/dev/null 2>&1 || die "jq is required."
   local -a rows=()
-  local row dev uuid fs label size choice name target auto opts uid gid admin
+  local row dev uuid fs label size mounted choice name target auto opts uid gid admin
+  local existing_src existing_target existing_fs existing_opts active_mount
   while IFS= read -r row; do rows+=("$row"); done < <(
     lsblk --json --paths --output NAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS |
-      jq -r '.blockdevices[] as $d | ($d.children // [])[] | select(.type=="part" and .uuid!=null and .fstype!=null and ((.mountpoints // [])|all(.==null))) | [.name,.uuid,.fstype,(.label // "-"),.size] | @tsv'
+      jq -r '.blockdevices[] as $d | ($d.children // [])[] | select(.type=="part" and .uuid!=null and .fstype!=null) | [.name,.uuid,.fstype,(.label // "-"),.size,([.mountpoints[]? // empty] | join(","))] | @tsv'
   )
-  (("${#rows[@]}" > 0)) || die "No unmounted, formatted partitions with UUIDs found. Nothing will be formatted."
-  echo "Available existing partitions (no formatting or erasing):"
+  (("${#rows[@]}" > 0)) || die "No formatted partitions with filesystem UUIDs found. Nothing will be formatted."
+  echo "Available existing partitions (mounted and unmounted; no formatting or erasing):"
   local i=1
   for row in "${rows[@]}"; do
-    IFS=$'\t' read -r dev uuid fs label size <<< "$row"
-    printf ' %d) %s  %s  %s  %s  UUID=%s\n' "$i" "$dev" "$size" "$fs" "$label" "$uuid"
+    IFS=$'\t' read -r dev uuid fs label size mounted <<< "$row"
+    printf ' %d) %s  %s  %s  %s  UUID=%s  Mounts=%s\n' "$i" "$dev" "$size" "$fs" "$label" "$uuid" "${mounted:--}"
     ((i+=1))
   done
   read -r -p "Choose a partition number: " choice
   [[ "$choice" =~ ^[0-9]+$ ]] && ((choice>=1 && choice<=${#rows[@]})) || die "Invalid selection."
-  IFS=$'\t' read -r dev uuid fs label size <<< "${rows[$((choice-1))]}"
+  IFS=$'\t' read -r dev uuid fs label size mounted <<< "${rows[$((choice-1))]}"
   read -r -p "Mount folder name under /var/lydsrv/Mnt: " name
   target="$(drive_target "$name")"
   [[ ! -e "$target" && ! -L "$target" ]] || die "Mount path already exists."
   awk -v t="$target" '$2==t {found=1} END {exit !found}' /etc/fstab && die "Mount path already configured."
-  awk -v u="UUID=$uuid" '$1==u {found=1} END {exit !found}' /etc/fstab && die "Filesystem UUID already configured."
+
+  existing_src=""; existing_target=""; existing_fs=""; existing_opts=""
+  if read -r existing_src existing_target existing_fs existing_opts < <(
+    awk -v u="UUID=$uuid" '!/^[[:space:]]*#/ && $1==u {print $1,$2,$3,$4; found=1} END {if(found>1) exit 2}' /etc/fstab
+  ); then
+    echo
+    echo "This filesystem UUID is already configured by another mount entry:"
+    printf '  Device: %s\n  Existing mount: %s\n  Filesystem: %s\n  Options: %s\n' "$dev" "$existing_target" "$existing_fs" "$existing_opts"
+    echo "The existing entry will be replaced with the Lyd-managed mount path."
+    confirm "Replace the existing Cockpit/fstab entry with $target?" || { echo "Cancelled."; return 0; }
+  else
+    local lookup_status=$?
+    (( lookup_status == 2 )) && die "More than one /etc/fstab entry uses UUID=$uuid. Resolve the duplicate entries manually first."
+  fi
+
   read -r -p "Enable systemd automount when the path is accessed? [y/N] " auto
   admin="$(sudo cat /var/lib/lyd/admin-user 2>/dev/null || true)"
   [[ "$admin" == "$USER" ]] || die "Only the recorded storage administrator can add drives."
@@ -355,10 +370,31 @@ drive_add() {
     opts="$opts,noauto,nofail"
   fi
   printf 'Device: %s\nFilesystem: %s\nUUID: %s\nMount path: %s\nAutomount: %s\n' "$dev" "$fs" "$uuid" "$target" "$([[ "$auto" =~ ^[Yy]$ ]] && echo yes || echo no)"
-  confirm "Add this existing filesystem without formatting it?" || { echo "Cancelled."; return 0; }
+  confirm "Configure this existing filesystem without formatting it?" || { echo "Cancelled."; return 0; }
+
+  if [[ -n "$existing_target" && "$existing_target" != "$target" ]]; then
+    if findmnt -rn -M "$existing_target" >/dev/null 2>&1; then
+      echo "The filesystem is currently mounted at $existing_target."
+      confirm "Unmount it from the old location so it can be mounted at $target?" || { echo "Cancelled."; return 0; }
+      sudo umount -- "$existing_target" || die "Could not unmount $existing_target. Stop applications using it and retry."
+    fi
+  elif [[ -z "$existing_target" && -n "$mounted" ]]; then
+    echo "The selected filesystem is currently mounted at: $mounted"
+    die "Unmount this partition from its current location first, then run 'lydm drives add' again."
+  fi
+
   sudo install -d -o "$uid" -g "$gid" -m 2775 "$target"
   sudo cp -a /etc/fstab "/etc/fstab.lyd-backup.$(date +%Y%m%d%H%M%S)"
-  printf 'UUID=%s %s %s %s 0 2\n' "$uuid" "$target" "$fs" "$opts" | sudo tee -a /etc/fstab >/dev/null
+  local tmp
+  tmp="$(mktemp)"
+  if [[ -n "$existing_target" ]]; then
+    awk -v u="UUID=$uuid" '!/^[[:space:]]*#/ && $1==u {next} {print}' /etc/fstab > "$tmp"
+  else
+    cat /etc/fstab > "$tmp"
+  fi
+  printf 'UUID=%s %s %s %s 0 2\n' "$uuid" "$target" "$fs" "$opts" >> "$tmp"
+  sudo install -m 0644 "$tmp" /etc/fstab
+  rm -f "$tmp"
   sudo systemctl daemon-reload
   if [[ "$auto" =~ ^[Yy]$ ]]; then
     sudo mount "$target" || die "Mount failed; fstab entry retained for troubleshooting."
