@@ -13,8 +13,8 @@ ln -sfn /dev/null /etc/systemd/system/systemd-remount-fs.service
 
 
 chmod 0755 /usr/libexec/lyd/htpc-autologin-setup
-# Enable Wi-Fi networking in the installed HTPC image.
-systemctl enable NetworkManager.service
+# Enable wireless networking and Bluetooth at every boot. The image includes
+# NetworkManager's Wi-Fi backend, wpa_supplicant, BlueZ, and KDE Bluedevil.
 systemctl enable NetworkManager.service
 systemctl enable bluetooth.service
 systemctl enable sddm.service
