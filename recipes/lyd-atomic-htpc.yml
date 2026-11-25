@@ -1,0 +1,51 @@
+---
+name: lyd-atomic-htpc
+description: Lightweight KDE Plasma Bigscreen HTPC with controller-friendly navigation and living-room media apps.
+base-image: quay.io/fedora-ostree-desktops/kinoite
+image-version: "45"
+modules:
+  - type: dnf
+    install:
+      packages:
+        - plasma-bigscreen
+        - plasma-bigscreen-wayland
+        - plasma-workspace-wayland
+        - sddm
+        - flatpak
+        - xdg-desktop-portal
+        - xdg-desktop-portal-kde
+        - pipewire
+        - pipewire-alsa
+        - pipewire-pulseaudio
+        - wireplumber
+        - bluez
+        - bluez-tools
+        - game-devices-udev
+        - steam-devices
+        - evtest
+        - libva-intel-driver
+        - libva-utils
+        - mesa-va-drivers
+        - ffmpeg-free
+        - curl
+        - jq
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+          url: https://flathub.org/repo/flathub.flatpakrepo
+        install:
+          - org.jellyfin.JellyfinDesktop
+          - com.unicornsonlsd.finamp
+          - com.spotify.Client
+          - org.fcast.Receiver
+  - type: files
+    files:
+      - source: system
+        destination: /
+  - type: script
+    scripts:
+      - configure-htpc.sh
