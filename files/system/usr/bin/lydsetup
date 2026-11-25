@@ -447,7 +447,7 @@ tailscale_cockpit_status() {
   echo
   if sudo test -r /etc/cockpit/cockpit.conf; then
     echo "Cockpit WebService configuration:"
-    sudo sed -n '/^\[WebService\]/,/^\[/p' /etc/cockpit/cockpit.conf | sed '$d'
+    sudo awk '/^\[WebService\]$/ { in_section=1; print; next } /^\[/ && in_section { exit } in_section { print }' /etc/cockpit/cockpit.conf
   else
     echo "No /etc/cockpit/cockpit.conf file exists."
   fi
@@ -606,6 +606,7 @@ main() {
         echo "Tailscale commands:"
         echo "  lydsetup tailscale enable          Enable tailscaled and configure its firewalld zone"
         echo "  lydsetup tailscale serve           Show Service serving subcommands"
+        echo "  lydsetup tailscale cockpit        Configure Cockpit over Tailscale Serve"
         echo "  lydsetup tailscale forward         Manage direct Tailscale-IP port access"
         exit 0
       fi
