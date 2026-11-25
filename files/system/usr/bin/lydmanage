@@ -359,7 +359,7 @@ drive_device_timeout() {
       transport="$(lsblk -ndo TRAN "/dev/$parent" 2>/dev/null | head -n1 || true)"
     fi
   fi
-  if [[ "$transport" == usb ]]; then printf '30s\\n'; else printf '10s\\n'; fi
+  if [[ "$transport" == usb ]]; then printf '30s\n'; else printf '10s\n'; fi
 }
 
 drive_uuid_timeout() {
@@ -369,7 +369,7 @@ drive_uuid_timeout() {
     drive_device_timeout "$device"
   else
     # Keep a longer window for removable media that is not connected while editing.
-    printf '30s\\n'
+    printf '30s\n'
   fi
 }
 
