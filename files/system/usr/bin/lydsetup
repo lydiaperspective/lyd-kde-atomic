@@ -112,6 +112,10 @@ firewall_config_save() {
     printf '# Lyd Atomic firewalld configuration\n'
     printf '# Edit services and ports, then run: lydsetup firewalld load\n'
     printf '# Each section is a firewalld zone. Lists are space-separated.\n'
+    printf '# Port entries must include a protocol: PORT/tcp or PORT/udp.\n'
+    printf '# Mixed-protocol example: ports=8123/tcp 5353/udp 25565/tcp 25565/udp\n'
+    printf '# To allow one port over BOTH protocols, list it twice: 8123/tcp 8123/udp\n'
+    printf '# Multiple ports can be separated by spaces. Port ranges are also supported.\n'
     while IFS= read -r zone; do
       services="$(sudo firewall-cmd --permanent --zone="$zone" --list-services)"
       ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
@@ -130,37 +134,37 @@ firewall_config_load() {
   local -A cfg_services=() cfg_ports=() seen_zones=()
   # Parse a deliberately simple INI format. Never source or eval this file.
   while IFS= read -r line || [[ -n "$line" ]]; do
-    line="\${line%%#*}"
-    line="\${line#"\${line%%[![:space:]]*}"}"
-    line="\${line%"\${line##*[![:space:]]}"}"
+    line="${line%%#*}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
     [[ -z "$line" ]] && continue
     if [[ "$line" =~ ^\[([a-zA-Z0-9_-]+)\]$ ]]; then
-      zone="\${BASH_REMATCH[1]}"
-      [[ -z "\${seen_zones[$zone]+x}" ]] || die "Duplicate zone section [$zone] in $FIREWALL_CONFIG."
+      zone="${BASH_REMATCH[1]}"
+      [[ -z "${seen_zones[$zone]+x}" ]] || die "Duplicate zone section [$zone] in $FIREWALL_CONFIG."
       seen_zones["$zone"]=1
       cfg_services["$zone"]=""
       cfg_ports["$zone"]=""
     elif [[ "$line" =~ ^(services|ports)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
       [[ -n "$zone" ]] || die "Found a setting before the first [zone] section."
-      key="\${BASH_REMATCH[1]}"; value="\${BASH_REMATCH[2]}"
+      key="${BASH_REMATCH[1]}"; value="${BASH_REMATCH[2]}"
       if [[ "$key" == services ]]; then cfg_services["$zone"]="$value"; else cfg_ports["$zone"]="$value"; fi
     else
       die "Invalid line in $FIREWALL_CONFIG: $line"
     fi
   done < "$FIREWALL_CONFIG"
 
-  ((\${#seen_zones[@]} > 0)) || die "No zone sections found in $FIREWALL_CONFIG."
+  ((${#seen_zones[@]} > 0)) || die "No zone sections found in $FIREWALL_CONFIG."
   available_zones=" $(sudo firewall-cmd --permanent --get-zones) "
   available_services=" $(sudo firewall-cmd --permanent --get-services) "
-  for zone in "\${!seen_zones[@]}"; do
+  for zone in "${!seen_zones[@]}"; do
     [[ "$available_zones" == *" $zone "* ]] || die "Unknown firewalld zone in config: $zone"
-    for token in \${cfg_services[$zone]}; do
+    for token in ${cfg_services[$zone]}; do
       [[ "$token" =~ ^[a-zA-Z0-9_.+-]+$ ]] || die "Invalid service name: $token"
       [[ "$available_services" == *" $token "* ]] || die "Unknown firewalld service '$token' in zone [$zone]."
     done
-    for token in \${cfg_ports[$zone]}; do
+    for token in ${cfg_ports[$zone]}; do
       [[ "$token" =~ ^([0-9]+(-[0-9]+)?)/(tcp|udp)$ ]] || die "Invalid port entry '$token' in zone [$zone]. Use PORT/tcp or PORT/udp."
-      valid_port_number "\${token%/*}"
+      valid_port_number "${token%/*}"
     done
   done
 
@@ -169,7 +173,7 @@ firewall_config_load() {
   sudo tar -czf "$backup" -C / etc/firewalld
   printf 'Backed up current firewalld configuration to %s\n' "$backup"
   echo "Applying services and ports for zones listed in $FIREWALL_CONFIG..."
-  for zone in "\${!seen_zones[@]}"; do
+  for zone in "${!seen_zones[@]}"; do
     # Synchronize only services and ports. Interfaces, sources, rich rules,
     # policies, masquerading and all other settings are left untouched.
     for token in $(sudo firewall-cmd --permanent --zone="$zone" --list-services); do
@@ -178,10 +182,10 @@ firewall_config_load() {
     for token in $(sudo firewall-cmd --permanent --zone="$zone" --list-ports); do
       sudo firewall-cmd --permanent --zone="$zone" --remove-port="$token" >/dev/null
     done
-    for token in \${cfg_services[$zone]}; do
+    for token in ${cfg_services[$zone]}; do
       sudo firewall-cmd --permanent --zone="$zone" --add-service="$token" >/dev/null
     done
-    for token in \${cfg_ports[$zone]}; do
+    for token in ${cfg_ports[$zone]}; do
       sudo firewall-cmd --permanent --zone="$zone" --add-port="$token" >/dev/null
     done
   done
@@ -236,6 +240,16 @@ Usage:
 
   lydsetup firewalld load
       Synchronize services and ports for zones in the config file, then reload firewalld.
+
+Port configuration examples (inside a zone section):
+  ports=8123/tcp 5353/udp
+      Allow TCP 8123 and UDP 5353.
+
+  ports=8123/tcp 8123/udp
+      Allow port 8123 over both TCP and UDP.
+
+  ports=8000-8010/tcp 9000/udp
+      Allow a TCP range and a separate UDP port.
 
   lydsetup firewall port
       Show port management subcommands.
