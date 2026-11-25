@@ -11,6 +11,8 @@ modules:
       packages:
         - plasma-bigscreen
         - plasma-bigscreen-wayland
+        - plasma-discover
+        - plasma-discover-flatpak
         - plasma-workspace-wayland
         - plasma-nm
         - sddm
