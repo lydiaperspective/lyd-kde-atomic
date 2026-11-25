@@ -1,0 +1,12 @@
+[Unit]
+Description=Lyd Atomic systemd daemon-reload after boot
+Documentation=man:systemctl(1)
+After=local-fs.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl daemon-reload
+
+[Install]
+WantedBy=multi-user.target
