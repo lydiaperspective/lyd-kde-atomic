@@ -1,0 +1,10 @@
+[Unit]
+Description=Lyd HTPC weekly Flatpak and bootc updates
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/usr/bin/bootc
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /usr/libexec/lyd/htpc-auto-update
+TimeoutStartSec=6h
