@@ -43,4 +43,15 @@ if ! flatpak remote-list --system --columns=name | grep -Fxq flathub; then
     flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 fi
 
+# Install the custom FCast build produced by the build-fcast workflow.
+fcast_bundle=/usr/share/lyd/flatpaks/fcast-htpc.flatpak
+if [[ ! -f "$fcast_bundle" ]]; then
+    echo "The patched FCast Flatpak bundle is missing: $fcast_bundle" >&2
+    exit 1
+fi
+flatpak install --system --noninteractive --assumeyes --bundle "$fcast_bundle"
+
+# Tailscale is available but intentionally disabled until configured.
+systemctl disable tailscaled.service 2>/dev/null || true
+
 echo "Lyd HTPC configuration complete."
