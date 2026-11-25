@@ -1,7 +1,7 @@
 ---
 name: lyd-atomic-htpc
 description: Lightweight KDE Plasma Bigscreen HTPC with controller-friendly navigation and living-room media apps.
-base-image: quay.io/fedora-ostree-desktops/kinoite
+base-image: quay.io/fedora/fedora-bootc
 image-version: "45"
 modules:
   - type: dnf
@@ -13,6 +13,14 @@ modules:
         - plasma-bigscreen-wayland
         - plasma-workspace-wayland
         - sddm
+        - sddm-breeze
+        - breeze-icon-theme
+        - hicolor-icon-theme
+        - NetworkManager
+        - NetworkManager-wifi
+        - wpa_supplicant
+        - wireless-regdb
+        - linux-firmware
         - flatpak
         - xdg-desktop-portal
         - xdg-desktop-portal-kde
@@ -26,7 +34,7 @@ modules:
         - evtest
         - libva-intel-driver
         - libva-utils
-        - mesa-va-drivers
+        - mesa-dri-drivers
         - ffmpeg-free
         - curl
         - jq
