@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.3"
+VERSION="1.5.4"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -76,6 +76,37 @@ systemd_reload() {
   echo "Reloading systemd unit files and generated configuration..."
   sudo systemctl daemon-reload
   echo "Systemd manager configuration reloaded."
+}
+
+systemd_reload_auto_enable() {
+  need_user
+  need_sudo
+  systemctl cat lyd-systemd-daemon-reload.service >/dev/null 2>&1 ||
+    die "The automatic reload service is not installed. Update to a Lyd Atomic image that includes it first."
+  echo "Enabling automatic systemd daemon-reload at boot..."
+  sudo systemctl daemon-reload
+  sudo systemctl enable lyd-systemd-daemon-reload.service
+  echo "Automatic daemon-reload is enabled."
+  echo "It will run on each boot after local filesystems are mounted, before multi-user.target."
+}
+
+systemd_reload_auto_disable() {
+  need_user
+  need_sudo
+  sudo systemctl disable lyd-systemd-daemon-reload.service
+  echo "Automatic boot-time daemon-reload is disabled."
+}
+
+systemd_reload_auto_status() {
+  need_user
+  if systemctl is-enabled --quiet lyd-systemd-daemon-reload.service 2>/dev/null; then
+    echo "Automatic boot-time daemon-reload: enabled"
+  else
+    echo "Automatic boot-time daemon-reload: disabled"
+  fi
+  systemctl show lyd-systemd-daemon-reload.service -p LoadState -p ActiveState -p Result 2>/dev/null || true
+  systemctl list-dependencies multi-user.target --plain --no-pager 2>/dev/null |
+    grep -F lyd-systemd-daemon-reload.service || true
 }
 
 system_rollback() {
@@ -672,11 +703,20 @@ main() {
     systemd)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
         echo "Systemd commands:"
-        echo "  lydm systemd reload    Reload unit files and generated configuration"
+        echo "  lydm systemd reload          Run a manual daemon-reload now"
+        echo "  lydm systemd reload enable   Enable automatic daemon-reload on every boot"
+        echo "  lydm systemd reload disable  Disable automatic boot-time daemon-reload"
+        echo "  lydm systemd reload status   Show automatic daemon-reload status"
         exit 0
       fi
-      [[ "${2:-}" == reload && $# -eq 2 ]] || die "Usage: lydm systemd reload"
-      systemd_reload
+      [[ "${2:-}" == reload ]] || die "Usage: lydm systemd reload {enable|disable|status}"
+      case "${3:-}" in
+        "") [[ $# -eq 2 ]] || die "Usage: lydm systemd reload"; systemd_reload ;;
+        enable) [[ $# -eq 3 ]] || die "Usage: lydm systemd reload enable"; systemd_reload_auto_enable ;;
+        disable) [[ $# -eq 3 ]] || die "Usage: lydm systemd reload disable"; systemd_reload_auto_disable ;;
+        status) [[ $# -eq 3 ]] || die "Usage: lydm systemd reload status"; systemd_reload_auto_status ;;
+        *) die "Usage: lydm systemd reload {enable|disable|status}" ;;
+      esac
       ;;
     rollback)
       if [[ $# -gt 1 ]]; then echo "Usage: lydm rollback"; echo "Stage the previous bootc deployment for the next boot."; exit 0; fi
