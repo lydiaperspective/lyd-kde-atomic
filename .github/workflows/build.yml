@@ -56,7 +56,7 @@ jobs:
           manifest = Path("/tmp/fcast-flatpak/org.fcast.Receiver.yaml")
           text = manifest.read_text()
           needle = "        commit: 54b70120c44733140ed8a958603d6dbb71030b38\n"
-          replacement = needle + "        patches:\n          - type: file\n            path: fcast-htpc-autoshow.patch\n"
+          replacement = needle + "      - type: patch\n        path: fcast-htpc-autoshow.patch\n"
           if needle not in text:
               raise SystemExit("Pinned FCast source commit was not found in the Flathub manifest")
           manifest.write_text(text.replace(needle, replacement, 1))
@@ -64,7 +64,7 @@ jobs:
       - name: Build FCast Flatpak
         working-directory: /tmp/fcast-flatpak
         run: |
-          flatpak-builder --force-clean --repo=repo build-dir org.fcast.Receiver.yaml --install-deps-from=flathub
+          flatpak-builder --user --force-clean --repo=repo build-dir org.fcast.Receiver.yaml --install-deps-from=flathub
           flatpak build-bundle repo fcast-htpc.flatpak org.fcast.Receiver
       - uses: actions/upload-artifact@v4
         with:
