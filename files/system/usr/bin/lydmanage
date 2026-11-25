@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.2"
+VERSION="1.5.3"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -225,7 +225,10 @@ pods_move() {
   [[ "$destination" == /* && "$destination" != "/" ]] || die "Destination must be an absolute path."
   [[ "$destination" != *"/../"* && "$destination" != */.. && "$destination" != *"/./"* ]] || die "Destination must not contain . or .. path components."
   [[ ! -L "$source" && -d "$source" ]] || die "$source must currently be a real directory, not a symlink."
-  [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist."
+  # Resolve aliases such as /lydsrv -> /var/lydsrv before validating the mount path.
+  destination="$(realpath -m -- "$destination")"
+  [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist: $(dirname "$destination")"
+  command -v rsync >/dev/null 2>&1 || die "rsync is required for a progress-reporting storage move."
   [[ ! -e "$destination" ]] || die "Destination already exists: $destination"
   [[ "$destination" == /var/lydsrv/Mnt/* ]] || die "Destination must be under /var/lydsrv/Mnt/<diskMountFolderName>/."
   local destination_relative="${destination#/var/lydsrv/Mnt/}"
@@ -265,8 +268,12 @@ pods_move() {
   local failed=0
   if ! install -d -m 2775 "$destination"; then
     failed=1
-  elif ! cp -a --no-preserve=ownership "$source/." "$destination/"; then
-    failed=1
+  else
+    echo
+    echo "Copying data (rsync progress):"
+    if ! rsync --archive --no-owner --no-group --human-readable --info=progress2 --stats "$source/" "$destination/"; then
+      failed=1
+    fi
   fi
   if (( failed )); then
     echo "Data copy failed. Original data remains at $source; attempting to restart stopped containers." >&2
@@ -292,7 +299,11 @@ pods_move() {
     podman start "$id" >/dev/null || { echo "Warning: could not restart container $id." >&2; failed=1; }
   done
   (( failed == 0 )) || die "Storage moved, but one or more containers did not restart."
-  echo "$source now points to $destination."
+  echo
+  echo "SUCCESS: $folder storage move completed."
+  printf 'Standardized folder: %s -> %s\\n' "$source" "$destination"
+  printf 'Accessible through:  %s -> %s\\n' "${source/\/var\/lydsrv/\/lydsrv}" "$destination"
+  echo "Finished. Your standardized folder now uses the new drive location."
 }
 
 
