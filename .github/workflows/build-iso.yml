@@ -12,6 +12,7 @@ on:
           - workstation
           - nvidia-gaming
           - server
+          - htpc
       image_tag:
         description: Published image tag to convert
         required: true
@@ -53,6 +54,7 @@ jobs:
             workstation) IMAGE_NAME="lyd-atomic-workstation" ;;
             nvidia-gaming) IMAGE_NAME="lyd-atomic-nvidia-gaming" ;;
             server) IMAGE_NAME="lyd-atomic-server" ;;
+            htpc) IMAGE_NAME="lyd-atomic-htpc" ;;
             *) echo "Unknown image flavour: $IMAGE_FLAVOUR" >&2; exit 1 ;;
           esac
           IMAGE="ghcr.io/lydiaperspective/$IMAGE_NAME:$IMAGE_TAG"
