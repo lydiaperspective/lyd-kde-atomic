@@ -55,8 +55,8 @@ jobs:
           from pathlib import Path
           manifest = Path("/tmp/fcast-flatpak/org.fcast.Receiver.yaml")
           text = manifest.read_text()
-          needle = "        commit: 54b70120c44733140ed8a958603d6dbb71030b38\\n"
-          replacement = needle + "        patches:\\n          - type: file\\n            path: fcast-htpc-autoshow.patch\\n"
+          needle = "        commit: 54b70120c44733140ed8a958603d6dbb71030b38\n"
+          replacement = needle + "        patches:\n          - type: file\n            path: fcast-htpc-autoshow.patch\n"
           if needle not in text:
               raise SystemExit("Pinned FCast source commit was not found in the Flathub manifest")
           manifest.write_text(text.replace(needle, replacement, 1))
