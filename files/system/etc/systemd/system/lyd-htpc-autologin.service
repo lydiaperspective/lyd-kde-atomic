@@ -1,0 +1,13 @@
+[Unit]
+Description=Configure Lyd HTPC Plasma Bigscreen autologin
+After=local-fs.target
+Before=sddm.service
+ConditionPathExists=!/var/lib/lyd-htpc/autologin-configured
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/lyd/htpc-autologin-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
