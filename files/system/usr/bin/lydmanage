@@ -2,7 +2,7 @@
 # Lyd Atomic system and application management.
 set -Eeuo pipefail
 
-VERSION="1.5.4"
+VERSION="1.5.5"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydmanage as your regular user, not with sudo."; }
@@ -260,7 +260,9 @@ pods_move() {
   destination="$(realpath -m -- "$destination")"
   [[ -d "$(dirname "$destination")" ]] || die "Destination parent directory does not exist: $(dirname "$destination")"
   command -v rsync >/dev/null 2>&1 || die "rsync is required for a progress-reporting storage move."
+  local destination_preexisting=0
   if [[ -e "$destination" ]]; then
+    destination_preexisting=1
     [[ -d "$destination" && ! -L "$destination" ]] || die "Destination exists and is not a regular directory: $destination"
     [[ -z "$(find "$destination" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "Destination directory is not empty: $destination. Choose an empty folder so existing data is not overwritten."
   fi
@@ -305,12 +307,18 @@ pods_move() {
   else
     echo
     echo "Copying data (rsync progress):"
-    if ! rsync --archive --no-owner --no-group --human-readable --info=progress2 --stats "$source/" "$destination/"; then
+    # Run as root so protected database directories (for example PostgreSQL data) can be read.
+    if ! sudo rsync --archive --no-owner --no-group --human-readable --info=progress2 --stats "$source/" "$destination/"; then
       failed=1
     fi
   fi
   if (( failed )); then
-    echo "Data copy failed. Original data remains at $source; attempting to restart stopped containers." >&2
+    # Remove only the partial copy created by this attempt; preserve a pre-existing empty destination.
+    if [[ -d "$destination" ]]; then
+      sudo find "$destination" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + || true
+      (( destination_preexisting == 1 )) || rmdir "$destination" 2>/dev/null || true
+    fi
+    echo "Data copy failed. Original data remains at $source; partial destination copy cleaned up. Attempting to restart stopped containers." >&2
     for id in "${stopped[@]}"; do podman start "$id" >/dev/null || true; done
     die "Storage move aborted."
   fi
