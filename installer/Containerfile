@@ -13,7 +13,10 @@ RUN dnf5 install -y \
     wpa_supplicant \
     wireless-regdb \
     iw \
+    rfkill \
     linux-firmware \
+    iwlwifi-mvm-firmware \
+    iwlwifi-dvm-firmware \
     net-tools \
     grub2-efi-x64-cdboot \
     plymouth \
@@ -33,7 +36,13 @@ RUN dnf5 install -y \
     && dnf5 clean all
 
 # Ensure wireless networking is available in the live installer environment.
-RUN systemctl enable NetworkManager.service
+# Anaconda boots anaconda.target rather than multi-user.target, so explicitly
+# pull NetworkManager into that target as well.
+COPY installer/lyd-installer-wifi.service /usr/lib/systemd/system/lyd-installer-wifi.service
+RUN systemctl enable NetworkManager.service && \
+    mkdir -p /etc/systemd/system/anaconda.target.wants && \
+    ln -sfn /usr/lib/systemd/system/NetworkManager.service /etc/systemd/system/anaconda.target.wants/NetworkManager.service && \
+    ln -sfn /usr/lib/systemd/system/lyd-installer-wifi.service /etc/systemd/system/anaconda.target.wants/lyd-installer-wifi.service
 
 RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
 
