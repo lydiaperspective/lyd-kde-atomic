@@ -386,7 +386,7 @@ drive_is_usb_device() {
 drive_usb_rule_file="/etc/udev/rules.d/99-lyd-usb-mount.rules"
 
 drive_usb_rule_enabled() {
-  sudo grep -Fq "ENV{ID_FS_UUID}==\"$1\"" "$drive_usb_rule_file" 2>/dev/null
+  grep -Fq "ENV{ID_FS_UUID}==\"$1\"" "$drive_usb_rule_file" 2>/dev/null
 }
 
 drive_usb_rule_set() {
