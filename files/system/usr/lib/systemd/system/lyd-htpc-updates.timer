@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Lyd HTPC automatic updates and reboot
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00
+Persistent=true
+AccuracySec=1min
+Unit=lyd-htpc-updates.service
+
+[Install]
+WantedBy=timers.target
