@@ -206,13 +206,14 @@ main() {
             echo "Omit the protocol to apply the operation to both TCP and UDP."
             exit 0
           fi
-          local_action="${3}"
+          local local_action="${3}"
           shift 3
           if [[ "$local_action" == add ]]; then firewall_port_add "$@"; else firewall_port_remove "$@"; fi
           ;;
         list) [[ $# -eq 3 ]] || die "Usage: lydsetup firewall port list"; firewall_port_list ;;
         *) usage >&2; die "Unknown firewall port command: ${3:-}" ;;
       esac
+      ;;
     --version) echo "$VERSION" ;;
     --help|-h|"") usage ;;
     *) usage >&2; die "Unknown command: $1" ;;
