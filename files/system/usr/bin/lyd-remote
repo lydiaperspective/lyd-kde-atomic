@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+case "${1:-}" in
+  status) systemctl status lyd-htpc-remote.service --no-pager ;;
+  start) sudo systemctl start lyd-htpc-remote.service ;;
+  stop) sudo systemctl stop lyd-htpc-remote.service ;;
+  restart) sudo systemctl restart lyd-htpc-remote.service ;;
+  url) hostname -f 2>/dev/null || hostname; printf ' :8765\n' ;;
+  *) cat <<'EOF'
+Lyd HTPC Web Remote
+Usage: lyd-remote <command>
+  status   Show remote service status
+  start    Start the LAN remote
+  stop     Stop the LAN remote
+  restart  Restart the LAN remote
+  url      Show the host name and port
+EOF
+     ;;
+esac
