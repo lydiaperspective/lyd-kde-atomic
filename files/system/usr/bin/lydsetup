@@ -100,6 +100,95 @@ firewall_port_list() {
   done
 }
 
+
+FIREWALL_CONFIG="/var/lydsrv/System/Config/firewalld.conf"
+
+firewall_config_save() {
+  need_user; need_sudo; need_firewalld
+  sudo install -d -o "$(id -u)" -g "$(id -g)" -m 2775 "$(dirname "$FIREWALL_CONFIG")"
+  local tmp zone services ports
+  tmp="$(mktemp)"
+  {
+    printf '# Lyd Atomic firewalld configuration\n'
+    printf '# Edit services and ports, then run: lydsetup firewalld load\n'
+    printf '# Each section is a firewalld zone. Lists are space-separated.\n'
+    while IFS= read -r zone; do
+      services="$(sudo firewall-cmd --permanent --zone="$zone" --list-services)"
+      ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
+      printf '\n[%s]\nservices=%s\nports=%s\n' "$zone" "$services" "$ports"
+    done < <(sudo firewall-cmd --permanent --get-zones)
+  } > "$tmp"
+  sudo install -o "$(id -u)" -g "$(id -g)" -m 0664 "$tmp" "$FIREWALL_CONFIG"
+  rm -f "$tmp"
+  printf 'Saved permanent firewalld services and ports to %s\n' "$FIREWALL_CONFIG"
+}
+
+firewall_config_load() {
+  need_user; need_sudo; need_firewalld
+  [[ -f "$FIREWALL_CONFIG" ]] || die "Configuration not found: $FIREWALL_CONFIG. Run 'lydsetup firewalld save' first."
+  local zone="" line key value token available_zones available_services backup
+  local -A cfg_services=() cfg_ports=() seen_zones=()
+  # Parse a deliberately simple INI format. Never source or eval this file.
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="\${line%%#*}"
+    line="\${line#"\${line%%[![:space:]]*}"}"
+    line="\${line%"\${line##*[![:space:]]}"}"
+    [[ -z "$line" ]] && continue
+    if [[ "$line" =~ ^\[([a-zA-Z0-9_-]+)\]$ ]]; then
+      zone="\${BASH_REMATCH[1]}"
+      [[ -z "\${seen_zones[$zone]+x}" ]] || die "Duplicate zone section [$zone] in $FIREWALL_CONFIG."
+      seen_zones["$zone"]=1
+      cfg_services["$zone"]=""
+      cfg_ports["$zone"]=""
+    elif [[ "$line" =~ ^(services|ports)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+      [[ -n "$zone" ]] || die "Found a setting before the first [zone] section."
+      key="\${BASH_REMATCH[1]}"; value="\${BASH_REMATCH[2]}"
+      if [[ "$key" == services ]]; then cfg_services["$zone"]="$value"; else cfg_ports["$zone"]="$value"; fi
+    else
+      die "Invalid line in $FIREWALL_CONFIG: $line"
+    fi
+  done < "$FIREWALL_CONFIG"
+
+  ((\${#seen_zones[@]} > 0)) || die "No zone sections found in $FIREWALL_CONFIG."
+  available_zones=" $(sudo firewall-cmd --permanent --get-zones) "
+  available_services=" $(sudo firewall-cmd --permanent --get-services) "
+  for zone in "\${!seen_zones[@]}"; do
+    [[ "$available_zones" == *" $zone "* ]] || die "Unknown firewalld zone in config: $zone"
+    for token in \${cfg_services[$zone]}; do
+      [[ "$token" =~ ^[a-zA-Z0-9_.+-]+$ ]] || die "Invalid service name: $token"
+      [[ "$available_services" == *" $token "* ]] || die "Unknown firewalld service '$token' in zone [$zone]."
+    done
+    for token in \${cfg_ports[$zone]}; do
+      [[ "$token" =~ ^([0-9]+(-[0-9]+)?)/(tcp|udp)$ ]] || die "Invalid port entry '$token' in zone [$zone]. Use PORT/tcp or PORT/udp."
+      valid_port_number "\${token%/*}"
+    done
+  done
+
+  backup="/var/lydsrv/System/Config/firewalld-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+  sudo install -d -m 0755 "$(dirname "$backup")"
+  sudo tar -czf "$backup" -C / etc/firewalld
+  printf 'Backed up current firewalld configuration to %s\n' "$backup"
+  echo "Applying services and ports for zones listed in $FIREWALL_CONFIG..."
+  for zone in "\${!seen_zones[@]}"; do
+    # Synchronize only services and ports. Interfaces, sources, rich rules,
+    # policies, masquerading and all other settings are left untouched.
+    for token in $(sudo firewall-cmd --permanent --zone="$zone" --list-services); do
+      sudo firewall-cmd --permanent --zone="$zone" --remove-service="$token" >/dev/null
+    done
+    for token in $(sudo firewall-cmd --permanent --zone="$zone" --list-ports); do
+      sudo firewall-cmd --permanent --zone="$zone" --remove-port="$token" >/dev/null
+    done
+    for token in \${cfg_services[$zone]}; do
+      sudo firewall-cmd --permanent --zone="$zone" --add-service="$token" >/dev/null
+    done
+    for token in \${cfg_ports[$zone]}; do
+      sudo firewall-cmd --permanent --zone="$zone" --add-port="$token" >/dev/null
+    done
+  done
+  sudo firewall-cmd --reload
+  echo "Firewalld configuration loaded and reloaded successfully."
+}
+
 tailscale_enable() {
   need_user; need_sudo
   command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
@@ -142,6 +231,12 @@ Usage:
   lydsetup firewall
       Show all firewall subcommands.
 
+  lydsetup firewalld save
+      Export permanent allowed services and ports to /var/lydsrv/System/Config/firewalld.conf.
+
+  lydsetup firewalld load
+      Synchronize services and ports for zones in the config file, then reload firewalld.
+
   lydsetup firewall port
       Show port management subcommands.
 
@@ -174,6 +269,8 @@ Examples:
   lydsetup firewall port remove 8123 public
   lydsetup firewall port remove 8123 udp tailscale0
   lydsetup firewall port list
+  lydsetup firewalld save
+  lydsetup firewalld load
 HELP
 }
 main() {
@@ -186,6 +283,20 @@ main() {
       fi
       [[ "${2:-}" == enable && $# -eq 2 ]] || die "Usage: lydsetup tailscale enable"
       tailscale_enable
+      ;;
+    firewalld)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Firewalld configuration commands:"
+        echo "  lydsetup firewalld save    Export current permanent services and ports"
+        echo "  lydsetup firewalld load    Apply services and ports from $FIREWALL_CONFIG"
+        exit 0
+      fi
+      [[ $# -eq 2 ]] || die "Usage: lydsetup firewalld {save|load}"
+      case "$2" in
+        save) firewall_config_save ;;
+        load) firewall_config_load ;;
+        *) die "Unknown firewalld command: $2. Use save or load." ;;
+      esac
       ;;
     firewall)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
