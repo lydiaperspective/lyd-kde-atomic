@@ -420,14 +420,68 @@ drive_edit() {
   if [[ "$auto" =~ ^[Yy]$ || "$was" == 1 ]]; then sudo mount "$new" || die "Configuration saved but mount failed."; fi
   echo "Drive configuration updated."
 }
+drive_help() {
+  cat <<'HELP'
+Lyd Atomic drive management
+
+Drives are mounted below:
+  /var/lydsrv/Mnt/<name>
+
+Commands:
+  lydm drives add
+      Guided setup for an existing, formatted, unmounted partition.
+      It displays eligible partitions, then asks you to choose one,
+      name its mount folder, and choose whether to enable automount.
+      This command does not format, partition, or erase a drive.
+
+  lydm drives list
+      List drives configured by lydm and whether each is mounted.
+
+  lydm drives edit <name>
+      Change the mount folder name and automount setting.
+
+  lydm drives umount <name>
+      Unmount a configured drive. The fstab entry is kept.
+
+  lydm drives rm <name>
+      Remove the drive's /etc/fstab configuration. Drive data is kept.
+
+Finding a drive's ID (UUID):
+  1. Connect the drive.
+  2. Run:
+       lsblk -f
+  3. Find the correct PARTITION row (for example, /dev/sdb1 or
+     /dev/nvme1n1p1). Read its UUID column. That UUID is the stable
+     filesystem ID used in /etc/fstab; it is not the disk name.
+  4. Check the device and UUID in more detail with:
+       lsblk -o NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINTS
+       sudo blkid
+
+Important:
+  - Select the partition that contains the filesystem, not the whole disk
+    (for example, /dev/sdb1 rather than /dev/sdb).
+  - The guided add command lists eligible unmounted partitions and shows
+    each partition's UUID, so you normally do not need to copy the UUID.
+  - Only already-formatted partitions with a UUID are offered. Nothing is
+    formatted or erased.
+  - Choose a unique, simple mount name such as MediaDrive or BackupDisk.
+  - Automount makes systemd mount the drive when its mount path is accessed.
+    Without automount, it is configured with noauto and must be mounted
+    manually using: sudo mount /var/lydsrv/Mnt/<name>
+  - Before removing or unmounting a drive, stop applications and containers
+    that are using it.
+HELP
+}
+
 drive_command() {
   case "${1:-}" in
-    add) [[ $# -eq 1 ]] || die "Usage: lydmanage drives add"; drive_add ;;
-    list) [[ $# -eq 1 ]] || die "Usage: lydmanage drives list"; drive_list ;;
+    add) [[ $# -eq 1 ]] || die "Usage: lydm drives add"; drive_add ;;
+    list) [[ $# -eq 1 ]] || die "Usage: lydm drives list"; drive_list ;;
+    edit) [[ $# -eq 2 ]] || die "Usage: lydm drives edit <name>"; drive_edit "$2" ;;
     umount) shift; drive_umount "$@" ;;
     rm) shift; drive_rm "$@" ;;
-    edit) shift; drive_edit "$@" ;;
-    *) die "Usage: lydmanage drives {add|list|umount|rm|edit}" ;;
+    help|--help|-h|"") [[ $# -le 1 ]] || die "Usage: lydm drives help"; drive_help ;;
+    *) die "Usage: lydm drives {add|list|edit|umount|rm|help}" ;;
   esac
 }
 lact_enable() {
@@ -525,6 +579,12 @@ Usage:
   lydmanage flatpak update          Update installed Flatpak applications
   lydmanage firmware update        Refresh and install available firmware updates
   lydmanage lact enable            Enable and start the LACT daemon (NVIDIA images)
+  lydmanage drives help          Show drive setup, UUID and command help
+  lydmanage drives add           Add an existing partition as a mounted drive
+  lydmanage drives list          List configured Lyd-managed drives
+  lydmanage drives edit <name>   Edit a configured drive
+  lydmanage drives umount <name> Unmount a configured drive
+  lydmanage drives rm <name>     Remove drive configuration (keeps data)
   lydmanage pods <folder> mv <path> Move standardized server storage to a mounted drive
   lydmanage updates auto enable     Enable weekly automatic updates
   lydmanage updates auto disable    Disable weekly automatic updates
