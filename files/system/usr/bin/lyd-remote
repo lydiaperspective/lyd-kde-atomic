@@ -5,15 +5,18 @@ case "${1:-}" in
   start) sudo systemctl start lyd-htpc-remote.service ;;
   stop) sudo systemctl stop lyd-htpc-remote.service ;;
   restart) sudo systemctl restart lyd-htpc-remote.service ;;
-  url) hostname -f 2>/dev/null || hostname; printf ' :8765\n' ;;
-  *) cat <<'EOF'
+  url) printf 'Remote: http://%s:8765/\nTV pairing screen: http://%s:8765/tv\n' "$(hostname -f 2>/dev/null || hostname)" "$(hostname -f 2>/dev/null || hostname)" ;;
+  tv) xdg-open http://127.0.0.1:8765/tv ;;
+  *)
+    cat <<'EOF'
 Lyd HTPC Web Remote
 Usage: lyd-remote <command>
   status   Show remote service status
   start    Start the LAN remote
   stop     Stop the LAN remote
   restart  Restart the LAN remote
-  url      Show the host name and port
+  url      Show remote and TV pairing URLs
+  tv       Open the TV pairing page in the default browser
 EOF
-     ;;
+    ;;
 esac
