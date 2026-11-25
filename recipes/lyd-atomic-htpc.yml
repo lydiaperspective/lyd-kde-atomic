@@ -12,6 +12,7 @@ modules:
         - plasma-bigscreen
         - plasma-bigscreen-wayland
         - plasma-workspace-wayland
+        - plasma-nm
         - sddm
         - sddm-breeze
         - breeze-icon-theme
