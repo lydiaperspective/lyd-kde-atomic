@@ -315,6 +315,36 @@ tailscale_serve_list() {
   command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
   tailscale serve status
 }
+
+tailscale_forward_add() {
+  need_user
+  [[ $# -ge 1 && $# -le 2 ]] || die "Usage: lydsetup tailscale forward add <port> [tcp|udp]"
+  if [[ $# -eq 1 ]]; then
+    firewall_port_add "$1" tailscale0
+  else
+    firewall_port_add "$1" "$2" tailscale0
+  fi
+  echo "Direct tailnet access is now allowed on the node's Tailscale interface."
+  echo "Connect to this node's Tailscale IP and port; no HTTPS or Serve URL is involved."
+}
+
+tailscale_forward_remove() {
+  need_user
+  [[ $# -ge 1 && $# -le 2 ]] || die "Usage: lydsetup tailscale forward remove <port> [tcp|udp]"
+  if [[ $# -eq 1 ]]; then
+    firewall_port_remove "$1" tailscale0
+  else
+    firewall_port_remove "$1" "$2" tailscale0
+  fi
+}
+
+tailscale_forward_list() {
+  need_user; need_sudo; need_firewalld
+  local zone
+  zone="$(valid_zone tailscale0)"
+  printf 'Direct tailnet ports in firewalld zone %s:\n' "$zone"
+  sudo firewall-cmd --permanent --zone="$zone" --list-ports
+}
 usage() {
   cat <<HELP
 lydsetup $VERSION
@@ -332,6 +362,16 @@ Usage:
 
   lydsetup tailscale serve remove <service-name>
       Remove all Serve endpoint mappings for the named Service.
+
+  lydsetup tailscale forward add <port> [tcp|udp]
+      Allow direct access to this node's Tailscale IP on the given port.
+      Omit the protocol to allow both TCP and UDP.
+
+  lydsetup tailscale forward list
+      List direct ports allowed through the Tailscale firewalld zone.
+
+  lydsetup tailscale forward remove <port> [tcp|udp]
+      Remove direct port access; omit the protocol to remove both.
 
   lydsetup firewall
       Show all firewall subcommands.
@@ -381,6 +421,9 @@ Examples:
   lydsetup tailscale serve add minecraft 25565 --tcp
   lydsetup tailscale serve list
   lydsetup tailscale serve remove immich
+  lydsetup tailscale forward add 25566 tcp
+  lydsetup tailscale forward list
+  lydsetup tailscale forward remove 25566 tcp
   lydsetup firewall
   lydsetup firewall port
   lydsetup firewall port add 8123 public
@@ -401,6 +444,7 @@ main() {
         echo "Tailscale commands:"
         echo "  lydsetup tailscale enable          Enable tailscaled and configure its firewalld zone"
         echo "  lydsetup tailscale serve           Show Service serving subcommands"
+        echo "  lydsetup tailscale forward         Manage direct Tailscale-IP port access"
         exit 0
       fi
       case "${2:-}" in
@@ -424,7 +468,23 @@ main() {
             *) die "Unknown Tailscale Serve command: ${3:-}" ;;
           esac
           ;;
-        *) die "Usage: lydsetup tailscale {enable|serve}" ;;
+        forward)
+          if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
+            echo "Direct Tailscale-IP port forwarding commands:"
+            echo "  lydsetup tailscale forward add <port> [tcp|udp]"
+            echo "  lydsetup tailscale forward list"
+            echo "  lydsetup tailscale forward remove <port> [tcp|udp]"
+            echo "Omit the protocol to allow or remove both TCP and UDP."
+            exit 0
+          fi
+          case "${3:-}" in
+            add) shift 3; tailscale_forward_add "$@" ;;
+            list|status) [[ $# -eq 3 ]] || die "Usage: lydsetup tailscale forward list"; tailscale_forward_list ;;
+            remove|rm) shift 3; tailscale_forward_remove "$@" ;;
+            *) die "Unknown Tailscale forward command: ${3:-}" ;;
+          esac
+          ;;
+        *) die "Usage: lydsetup tailscale {enable|serve|forward}" ;;
       esac
       ;;
     firewalld)
