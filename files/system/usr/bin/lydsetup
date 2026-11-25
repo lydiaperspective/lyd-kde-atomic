@@ -93,7 +93,7 @@ firewall_port_remove() {
 firewall_port_list() {
   need_user; need_sudo; need_firewalld
   local zone ports
-  printf '%-20s %s\n' "ZONE" "PERMANENT PORTS"
+  printf '%-16s %-18s %s\n' "ZONE" "PORT" "PURPOSE"
   for zone in $(sudo firewall-cmd --get-zones); do
     ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
     [[ -n "$ports" ]] && printf '%-20s %s\n' "$zone" "$ports"
