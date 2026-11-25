@@ -40,6 +40,7 @@ modules:
         - wget
         - git
         - jq
+        - rsync
         - python3
         - bash-completion
         - htop
