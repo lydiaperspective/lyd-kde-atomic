@@ -318,6 +318,7 @@ tailscale_serve_list() {
 
 
 tailscale_cockpit_hostname() {
+  command -v python3 >/dev/null 2>&1 || die "python3 is required to read the Tailscale device name."
   local hostname
   hostname="$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Self", {}).get("DNSName", "").rstrip("."))')" \
     || die "Could not read this device's Tailscale DNS name."
@@ -437,7 +438,7 @@ PYCOCKPIT
 }
 
 tailscale_cockpit_status() {
-  need_user
+  need_user; need_sudo
   command -v tailscale >/dev/null 2>&1 || die "Tailscale is not installed."
   local hostname
   hostname="$(tailscale_cockpit_hostname)"
