@@ -26,6 +26,17 @@ modules:
         - iw
         - rfkill
         - linux-firmware
+        - atheros-firmware
+        - brcmfmac-firmware
+        - iwlbluetooth-firmware
+        - iwlegacy-firmware
+        - iwlwifi-mld-firmware
+        - libertas-firmware
+        - mediatek-firmware
+        - mt7xxx-firmware
+        - nxpwireless-firmware
+        - realtek-firmware
+        - tiwilink-firmware
         - iwlwifi-mvm-firmware
         - iwlwifi-dvm-firmware
         - flatpak
@@ -36,6 +47,8 @@ modules:
         - pipewire-pulseaudio
         - wireplumber
         - bluez
+        - bluez-obexd
+        - bluedevil
         - bluez-tools
         - steam-devices
         - evtest
