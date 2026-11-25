@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+echo "===== Lyd HTPC weekly update: $(date --iso-8601=seconds) ====="
+
+# Update system-scoped Flatpaks before staging the next bootc deployment.
+# A Flatpak failure is logged but does not prevent the OS update.
+if command -v flatpak >/dev/null 2>&1; then
+    echo "===== Flatpak system updates ====="
+    flatpak update --system --assumeyes || echo "WARNING: Flatpak updates failed; continuing with bootc update."
+fi
+
+if ! command -v bootc >/dev/null 2>&1; then
+    echo "ERROR: bootc is unavailable; refusing to reboot." >&2
+    exit 1
+fi
+
+echo "===== bootc image update ====="
+bootc update
+
+echo "Update check completed successfully. Rebooting to activate the latest deployment."
+systemctl reboot
