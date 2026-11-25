@@ -398,7 +398,7 @@ drive_usb_rule_set() {
     sudo grep -Fv "ENV{ID_FS_UUID}==\"$uuid\"" "$drive_usb_rule_file" > "$tmp" || true
   fi
   if [[ "$enabled" == yes ]]; then
-    printf 'ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", SUBSYSTEMS=="usb", ENV{ID_FS_UUID}=="%s", TAG+="systemd", ENV{SYSTEMD_WANTS}+="%s"\\n' "$uuid" "$unit" >> "$tmp"
+    printf 'ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", SUBSYSTEMS=="usb", ENV{ID_FS_UUID}=="%s", TAG+="systemd", ENV{SYSTEMD_WANTS}+="%s"\n' "$uuid" "$unit" >> "$tmp"
   fi
   if [[ -s "$tmp" ]]; then
     sudo install -D -m 0644 "$tmp" "$drive_usb_rule_file"
