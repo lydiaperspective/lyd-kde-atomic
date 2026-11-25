@@ -341,17 +341,16 @@ drive_add() {
   awk -v t="$target" '$2==t {found=1} END {exit !found}' /etc/fstab && die "Mount path already configured."
 
   existing_src=""; existing_target=""; existing_fs=""; existing_opts=""
-  if read -r existing_src existing_target existing_fs existing_opts < <(
-    awk -v u="UUID=$uuid" '!/^[[:space:]]*#/ && $1==u {print $1,$2,$3,$4; found=1} END {if(found>1) exit 2}' /etc/fstab
-  ); then
+  local -a existing_entries=()
+  mapfile -t existing_entries < <(awk -v u="UUID=$uuid" '!/^[[:space:]]*#/ && $1==u {print $1,$2,$3,$4}' /etc/fstab)
+  (("${#existing_entries[@]}" <= 1)) || die "More than one /etc/fstab entry uses UUID=$uuid. Resolve the duplicate entries manually first."
+  if (("${#existing_entries[@]}" == 1)); then
+    read -r existing_src existing_target existing_fs existing_opts <<< "${existing_entries[0]}"
     echo
     echo "This filesystem UUID is already configured by another mount entry:"
-    printf '  Device: %s\n  Existing mount: %s\n  Filesystem: %s\n  Options: %s\n' "$dev" "$existing_target" "$existing_fs" "$existing_opts"
+    printf '  Device: %s\\n  Existing mount: %s\\n  Filesystem: %s\\n  Options: %s\\n' "$dev" "$existing_target" "$existing_fs" "$existing_opts"
     echo "The existing entry will be replaced with the Lyd-managed mount path."
     confirm "Replace the existing Cockpit/fstab entry with $target?" || { echo "Cancelled."; return 0; }
-  else
-    local lookup_status=$?
-    (( lookup_status == 2 )) && die "More than one /etc/fstab entry uses UUID=$uuid. Resolve the duplicate entries manually first."
   fi
 
   read -r -p "Enable systemd automount when the path is accessed? [y/N] " auto
