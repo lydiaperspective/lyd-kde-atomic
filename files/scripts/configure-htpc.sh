@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 
 chmod 0755 /usr/libexec/lyd/htpc-autologin-setup
+systemctl enable NetworkManager.service
+systemctl enable bluetooth.service
 systemctl enable sddm.service
 systemctl enable lyd-htpc-autologin.service
 
