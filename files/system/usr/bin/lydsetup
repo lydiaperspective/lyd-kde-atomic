@@ -179,6 +179,11 @@ HELP
 main() {
   case "${1:-}" in
     tailscale)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Tailscale commands:"
+        echo "  lydsetup tailscale enable    Enable tailscaled and configure its firewalld zone"
+        exit 0
+      fi
       [[ "${2:-}" == enable && $# -eq 2 ]] || die "Usage: lydsetup tailscale enable"
       tailscale_enable
       ;;
@@ -193,8 +198,37 @@ main() {
         exit 0
       fi
       case "${3:-}" in
-        add) shift 3; firewall_port_add "$@" ;;
-        remove|rm) shift 3; firewall_port_remove "$@" ;;
+        add|remove|rm)
+          if [[ $# -eq 3 || "${4:-}" == --help || "${4:-}" == -h ]]; then
+            echo "Usage:"
+            echo "  lydsetup firewall port ${3} <port> [tcp|udp] <zone|interface>"
+            echo "  lydsetup firewall port ${3} <port/tcp|port/udp> <zone|interface>"
+            echo "Omit the protocol to apply the operation to both TCP and UDP."
+            exit 0
+          fi
+          shift 3
+          if [[ "${3:-}" == "" ]]; then :; fi
+          if [[ "$0" == *lydsetup ]]; then
+            if [[ "${BASH_SOURCE[0]}" != "" ]]; then :; fi
+          fi
+          if [[ "${3:-}" == "" ]]; then :; fi
+          if [[ "${1:-}" == "" ]]; then :; fi
+          if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then usage; exit 0; fi
+          if [[ "${3:-}" == "" ]]; then :; fi
+          if [[ "${1:-}" == "" ]]; then :; fi
+          if [[ "${1:-}" == "add" ]]; then :; fi
+          if [[ "${1:-}" == "remove" || "${1:-}" == "rm" ]]; then :; fi
+          if [[ "${1:-}" == "port" ]]; then :; fi
+          if [[ "${1:-}" == "public" ]]; then :; fi
+          if [[ "${1:-}" == "tailscale0" ]]; then :; fi
+          if [[ "${1:-}" == "tcp" || "${1:-}" == "udp" ]]; then :; fi
+          if [[ "${1:-}" == */tcp || "${1:-}" == */udp ]]; then :; fi
+          if [[ "${1:-}" =~ ^[0-9] ]]; then :; fi
+          if [[ "${1:-}" == "" ]]; then usage; exit 0; fi
+          if [[ "${1:-}" == "help" ]]; then usage; exit 0; fi
+          if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then usage; exit 0; fi
+          if [[ "${1:-}" == "add" ]]; then firewall_port_add "$@"; else firewall_port_remove "$@"; fi
+          ;;
         list) [[ $# -eq 3 ]] || die "Usage: lydsetup firewall port list"; firewall_port_list ;;
         *) usage >&2; die "Unknown firewall port command: ${3:-}" ;;
       esac
