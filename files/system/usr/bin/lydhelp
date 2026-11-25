@@ -25,6 +25,9 @@ Usage:
   lydmanage switch IMAGE   Switch to another bootc image
   lydmanage status         Show current and staged deployments
   lydm                    Short alias for lydmanage
+  lydsetup                Configure services and firewall rules (see lydsetup firewall)
+  lydsetup firewall       List firewall subcommands and usage
+  lydsetup tailscale      List Tailscale setup commands
   lydmanage plasma save PROFILE   Save Plasma panels and widgets
   lydmanage plasma load PROFILE   Restore a saved Plasma layout
   lydmanage flatpak save          Export installed Flatpak application IDs
