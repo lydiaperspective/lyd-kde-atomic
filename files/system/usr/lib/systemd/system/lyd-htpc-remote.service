@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/libexec/lyd/remote-server.py
+ExecStartPre=/usr/sbin/modprobe uinput\nExecStart=/usr/libexec/lyd/remote-server.py
 Restart=on-failure
 RestartSec=3
 StateDirectory=lyd-remote
