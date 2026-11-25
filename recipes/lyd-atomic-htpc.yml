@@ -6,7 +6,7 @@ image-version: "45"
 modules:
   - type: dnf
     repos:
-      free: rpmfusion
+      nonfree: rpmfusion
     install:
       packages:
         - plasma-bigscreen
@@ -37,7 +37,10 @@ modules:
         - mesa-dri-drivers
         - ffmpeg-free
         - curl
-        - jq\n        - python3-aiohttp\n        - python3-evdev\n        - qrencode
+        - jq
+        - python3-aiohttp
+        - python3-evdev
+        - qrencode
   - type: default-flatpaks
     configurations:
       - scope: system
