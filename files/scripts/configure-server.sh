@@ -74,4 +74,12 @@ test -f /etc/systemd/system/lyd-setup-server-storage.service || {
 chmod 0755 /usr/libexec/lyd/setup-server-storage
 ln -sfn /etc/systemd/system/lyd-setup-server-storage.service /etc/systemd/system/multi-user.target.wants/lyd-setup-server-storage.service
 
+# Keep the server on the Lyd Atomic weekly update schedule rather than the
+# generic bootc timer. The shared runner updates system Flatpaks, stages bootc,
+# reloads systemd after staging, and checks firmware; it does not reboot.
+systemctl disable bootc-fetch-apply-updates.timer 2>/dev/null || true
+systemctl enable lydmanage-updates.timer
+systemctl enable lyd-systemd-daemon-reload.service
+
+
 echo "Server image configured: headless target, sleep disabled, Cockpit socket, rootless Podman restart, persistent user lingering, and standardized /var/lydsrv storage."
