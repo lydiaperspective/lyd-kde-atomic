@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable Wi-Fi radios in the Lyd Atomic live installer
+Wants=NetworkManager.service
+After=NetworkManager.service
+Before=anaconda.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/rfkill unblock wifi
+ExecStart=/usr/bin/nmcli radio wifi on
+RemainAfterExit=yes
+
+[Install]
+WantedBy=anaconda.target
