@@ -643,37 +643,55 @@ main() {
   case "${1:-}" in
     switch)
       shift
+      [[ $# -eq 0 || "${1:-}" == --help || "${1:-}" == -h ]] && { echo "Usage: lydm switch <image-alias|OCI-image>"; echo "Aliases: workstation, nvidia-gaming, server, base, nvidia-base, nvidia-open"; exit 0; }
       switch_image "$@"
       ;;
     update)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage update"
+      [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]] || die "Usage: lydm update"
+      [[ $# -eq 1 ]] || { echo "Usage: lydm update"; echo "Stage an update from the configured bootc image source."; exit 0; }
       system_update
       ;;
     status)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage status"
+      [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]] || die "Usage: lydm status"
       system_status
       ;;
     systemd)
-      [[ "${2:-}" == "reload" && $# -eq 2 ]] || die "Usage: lydmanage systemd reload"
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Systemd commands:"
+        echo "  lydm systemd reload    Reload unit files and generated configuration"
+        exit 0
+      fi
+      [[ "${2:-}" == reload && $# -eq 2 ]] || die "Usage: lydm systemd reload"
       systemd_reload
       ;;
     rollback)
-      [[ $# -eq 1 ]] || die "Usage: lydmanage rollback"
+      [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]] || die "Usage: lydm rollback"
       system_rollback
       ;;
     plasma)
       case "${2:-}" in
+        ""|--help|-h)
+          echo "Plasma commands:"
+          echo "  lydm plasma save <profile>    Save the current Plasma layout"
+          echo "  lydm plasma load <profile>    Restore a saved Plasma layout"
+          exit 0 ;;
         save) shift 2; plasma_save "$@" ;;
         load) shift 2; plasma_load "$@" ;;
-        *) die "Usage: lydmanage plasma {save|load} <profilename>" ;;
+        *) die "Usage: lydm plasma {save|load} <profile>" ;;
       esac
       ;;
     flatpak)
       case "${2:-}" in
-        update) [[ $# -eq 2 ]] || die "Usage: lydmanage flatpak update"; need_user; flatpak_update ;;
+        ""|--help|-h)
+          echo "Flatpak commands:"
+          echo "  lydm flatpak save [file]      Export installed application IDs"
+          echo "  lydm flatpak load [file]      Restore applications from a saved list"
+          echo "  lydm flatpak update           Update installed Flatpak applications"
+          exit 0 ;;
+        update) [[ $# -eq 2 ]] || die "Usage: lydm flatpak update"; need_user; flatpak_update ;;
         save) shift 2; flatpak_save "$@" ;;
         load) shift 2; flatpak_load "$@" ;;
-        *) die "Usage: lydmanage flatpak {save|load|update} [file]" ;;
+        *) die "Usage: lydm flatpak {save|load|update} [file]" ;;
       esac
       ;;
     drives)
@@ -681,33 +699,61 @@ main() {
       drive_command "$@"
       ;;
     pods)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Server storage commands:"
+        echo "  lydm pods <folder> mv <absolute-path>"
+        echo "Move a standardized folder (Media, Pictures, Backups, Storage or Config)"
+        echo "to a directory inside an active drive mount under /var/lydsrv/Mnt/."
+        exit 0
+      fi
       shift
       pods_move "$@"
       ;;
     lact)
-      [[ "${2:-}" == "enable" && $# -eq 2 ]] || die "Usage: lydmanage lact enable"
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "LACT commands (NVIDIA images):"
+        echo "  lydm lact enable    Enable and start the LACT daemon"
+        exit 0
+      fi
+      [[ "${2:-}" == enable && $# -eq 2 ]] || die "Usage: lydm lact enable"
       lact_enable
       ;;
     firmware)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Firmware commands:"
+        echo "  lydm firmware update    Refresh firmware metadata and install available updates"
+        exit 0
+      fi
       need_user
-      [[ "${2:-}" == "update" && $# -eq 2 ]] || die "Usage: lydmanage firmware update"
+      [[ "${2:-}" == update && $# -eq 2 ]] || die "Usage: lydm firmware update"
       firmware_update
       ;;
     updates)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Update scheduling commands:"
+        echo "  lydm updates auto enable     Enable weekly automatic updates"
+        echo "  lydm updates auto disable    Disable automatic updates"
+        echo "  lydm updates auto status     Show automatic update timer status"
+        exit 0
+      fi
       case "${2:-}" in
         auto)
+          if [[ $# -eq 2 || "${3:-}" == --help || "${3:-}" == -h ]]; then
+            echo "Automatic update commands:"
+            echo "  lydm updates auto enable"
+            echo "  lydm updates auto disable"
+            echo "  lydm updates auto status"
+            exit 0
+          fi
           case "${3:-}" in
-            enable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto enable"; auto_enable ;;
-            disable) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto disable"; auto_disable ;;
-            status) [[ $# -eq 3 ]] || die "Usage: lydmanage updates auto status"; auto_status ;;
-            *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
+            enable) [[ $# -eq 3 ]] || die "Usage: lydm updates auto enable"; auto_enable ;;
+            disable) [[ $# -eq 3 ]] || die "Usage: lydm updates auto disable"; auto_disable ;;
+            status) [[ $# -eq 3 ]] || die "Usage: lydm updates auto status"; auto_status ;;
+            *) die "Usage: lydm updates auto {enable|disable|status}" ;;
           esac
           ;;
-        run)
-          [[ $# -eq 2 ]] || die "Invalid internal update invocation."
-          run_automatic_updates
-          ;;
-        *) die "Usage: lydmanage updates auto {enable|disable|status}" ;;
+        run) [[ $# -eq 2 ]] || die "Invalid internal update invocation."; run_automatic_updates ;;
+        *) die "Usage: lydm updates auto {enable|disable|status}" ;;
       esac
       ;;
     --help|-h|"") usage ;;
@@ -715,6 +761,5 @@ main() {
     *) usage >&2; die "Unknown command: $1" ;;
   esac
 }
-
 main "$@"
 
