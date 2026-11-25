@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=FCast Receiver (background)
+Comment=Keep the FCast receiver ready for incoming casts
+Exec=flatpak run --system org.fcast.Receiver --no-main-window
+Icon=org.fcast.Receiver
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
