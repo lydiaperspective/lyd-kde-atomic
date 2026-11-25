@@ -1,0 +1,22 @@
+[Unit]
+Description=Lyd HTPC LAN Web Remote
+After=network-online.target graphical.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/lyd/remote-server.py
+Restart=on-failure
+RestartSec=3
+StateDirectory=lyd-remote
+StateDirectoryMode=0700
+DeviceAllow=/dev/uinput rw
+SupplementaryGroups=input
+NoNewPrivileges=no
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lyd-remote
+PrivateDevices=false
+
+[Install]
+WantedBy=multi-user.target
