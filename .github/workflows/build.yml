@@ -37,9 +37,36 @@ jobs:
           maximize_build_space: true
           build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
 
+  build-fcast:
+    name: Build patched FCast Receiver Flatpak
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Flatpak build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Fetch pinned Flathub manifest
+        run: |
+          git clone --depth 1 https://github.com/flathub/org.fcast.Receiver.git /tmp/fcast-flatpak
+          cp files/patches/fcast-htpc-autoshow.patch /tmp/fcast-flatpak/
+          sed -i '/commit: 54b70120c44733140ed8a958603d6dbb71030b38/a\\        patches:\\n          - type: file\\n            path: fcast-htpc-autoshow.patch' /tmp/fcast-flatpak/org.fcast.Receiver.yaml
+      - name: Build FCast Flatpak
+        working-directory: /tmp/fcast-flatpak
+        run: |
+          flatpak-builder --force-clean --repo=repo build-dir org.fcast.Receiver.yaml --install-deps-from=flathub
+          flatpak build-bundle repo fcast-htpc.flatpak org.fcast.Receiver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fcast-htpc-flatpak
+          path: /tmp/fcast-flatpak/fcast-htpc.flatpak
+          if-no-files-found: error
+          retention-days: 7
+
   build-components:
     name: Build ${{ matrix.flavour }} component image
-    needs: build-base
+    needs: [build-base, build-fcast]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -54,6 +81,13 @@ jobs:
           - flavour: htpc
             recipe: lyd-atomic-htpc.yml
     steps:
+      - uses: actions/checkout@v4
+      - name: Download patched FCast Flatpak for HTPC
+        if: matrix.flavour == 'htpc'
+        uses: actions/download-artifact@v4
+        with:
+          name: fcast-htpc-flatpak
+          path: files/system/usr/share/lyd/flatpaks
       - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
