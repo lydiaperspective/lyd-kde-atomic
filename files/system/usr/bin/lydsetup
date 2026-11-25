@@ -266,14 +266,16 @@ Usage:
       Synchronize services and ports for zones in the config file, then reload firewalld.
 
 Port configuration examples (inside a zone section):
-  ports=8123/tcp 5353/udp
-      Allow TCP 8123 and UDP 5353.
+  port=8123/tcp # Home Assistant web interface
+  port=5353/udp # Local service discovery
+      One port per line; text after # labels the port in 'firewall port list'.
 
-  ports=8123/tcp 8123/udp
-      Allow port 8123 over both TCP and UDP.
+  port=25565/tcp # Game server connections
+  port=25565/udp # Game server discovery
+      Add the same port twice to allow both TCP and UDP.
 
-  ports=8000-8010/tcp 9000/udp
-      Allow a TCP range and a separate UDP port.
+  port=8000-8010/tcp # Application port range
+      Port ranges are supported.
 
   lydsetup firewall port
       Show port management subcommands.
