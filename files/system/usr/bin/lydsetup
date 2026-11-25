@@ -323,6 +323,16 @@ Usage:
   lydsetup tailscale enable
       Enable and start tailscaled; configure the tailscale firewalld zone if firewalld is running.
 
+  lydsetup tailscale serve add <service-name> <local-port> [--tcp]
+      Serve an existing svc:<service-name> at HTTPS port 443, or use --tcp
+      to forward raw TCP on the same port as the local application.
+
+  lydsetup tailscale serve list
+      Show current Tailscale Serve and Service endpoint status.
+
+  lydsetup tailscale serve remove <service-name>
+      Remove all Serve endpoint mappings for the named Service.
+
   lydsetup firewall
       Show all firewall subcommands.
 
@@ -367,6 +377,10 @@ assigned to a zone (such as tailscale0).
 
 Examples:
   lydsetup tailscale enable
+  lydsetup tailscale serve add immich 2283
+  lydsetup tailscale serve add minecraft 25565 --tcp
+  lydsetup tailscale serve list
+  lydsetup tailscale serve remove immich
   lydsetup firewall
   lydsetup firewall port
   lydsetup firewall port add 8123 public
