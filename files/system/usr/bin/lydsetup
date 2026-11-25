@@ -116,7 +116,7 @@ firewall_config_save() {
       services="$(sudo firewall-cmd --permanent --zone="$zone" --list-services)"
       ports="$(sudo firewall-cmd --permanent --zone="$zone" --list-ports)"
       printf '\n[%s]\nservices=%s\nports=%s\n' "$zone" "$services" "$ports"
-    done < <(sudo firewall-cmd --permanent --get-zones)
+    done < <(sudo firewall-cmd --permanent --get-zones | tr ' ' '\n' | sed '/^$/d')
   } > "$tmp"
   sudo install -o "$(id -u)" -g "$(id -g)" -m 0664 "$tmp" "$FIREWALL_CONFIG"
   rm -f "$tmp"
