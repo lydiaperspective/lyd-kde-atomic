@@ -3,7 +3,7 @@ name: Build Lyd Atomic
 on:
   push:
     branches: [main]
-    paths-ignore: ["**.md", "docs/**"]
+    paths-ignore: ["**.md", "docs/**", "VERSION"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
@@ -21,7 +21,25 @@ jobs:
   build-base:
     name: Build shared workstation base
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.image-version.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+      - name: Prepare successful-build version
+        id: image-version
+        shell: bash
+        run: |
+          current="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "$current" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "VERSION must contain a semantic version (MAJOR.MINOR.PATCH)." >&2
+            exit 1
+          fi
+          IFS=. read -r major minor patch <<< "$current"
+          next="$major.$minor.$((patch + 1))"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          mkdir -p files/system/etc
+          printf '%s\\n' "$next" > files/system/etc/lyd-atomic-version
+          echo "Building Lyd Atomic v$next"
       - name: Build and publish lyd-atomic-base
         uses: blue-build/github-action@v1
         with:
@@ -55,6 +73,12 @@ jobs:
             recipe: lyd-atomic-htpc.yml
     steps:
       - uses: actions/checkout@v4
+      - name: Set image version
+        env:
+          LYD_ATOMIC_VERSION: ${{ needs.build-base.outputs.version }}
+        run: |
+          mkdir -p files/system/etc
+          printf '%s\\n' "$LYD_ATOMIC_VERSION" > files/system/etc/lyd-atomic-version
       - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
@@ -98,3 +122,21 @@ jobs:
           push: true
           maximize_build_space: true
           build_opts: ${{ (secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PUBLIC_KEY != '') && '' || '--no-sign' }}
+
+  record-successful-version:
+    name: Record successful image version
+    needs: [build-base, build-components, build-final]
+    if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Commit successful version
+        env:
+          LYD_ATOMIC_VERSION: ${{ needs.build-base.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf '%s\\n' "$LYD_ATOMIC_VERSION" > VERSION
+          git add VERSION
+          git commit -m "chore: record successful Lyd Atomic v$LYD_ATOMIC_VERSION build"
+          git push
