@@ -1,39 +1,60 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-# Distrobox 1.8.2.5 concatenates ":ro" and ":rslave" as separate
-# volume-option fields. Podman requires these options to be comma-separated.
-# Upstream fixed this in Distrobox 1.8.2.6.
+# Fedora's workstation image must contain Distrobox before this compatibility
+# patch runs. Keep this patch idempotent so newer upstream releases are safe.
 
-distrobox_create="$(readlink -f /usr/bin/distrobox-create)"
+command -v python3 >/dev/null 2>&1 || {
+    echo "ERROR: python3 is required to patch Distrobox." >&2
+    exit 1
+}
 
+distrobox_create="/usr/bin/distrobox-create"
+if [[ ! -e "$distrobox_create" ]]; then
+    echo "ERROR: Distrobox is not installed; expected $distrobox_create." >&2
+    exit 1
+fi
+
+distrobox_create="$(readlink -f "$distrobox_create")"
 if [[ ! -f "$distrobox_create" ]]; then
-    echo "ERROR: /usr/bin/distrobox-create was not found." >&2
+    echo "ERROR: Could not resolve the Distrobox create script." >&2
     exit 1
 fi
 
-broken='--volume ${rootdir}:/run/host${rootdir}:ro${rslave}"'
-fixed='--volume ${rootdir}:/run/host${rootdir}:ro,rslave"'
+python3 - "$distrobox_create" <<'PY'
+from pathlib import Path
+import sys
 
-if grep -Fq -- "$fixed" "$distrobox_create" ||
-   { grep -Fq 'rorslave=":ro,rslave"' "$distrobox_create" &&
-     grep -Fq '${rootdir}${rorslave}' "$distrobox_create"; }; then
-    echo "Distrobox read-only mount options are already fixed."
-    exit 0
-fi
+path = Path(sys.argv[1])
+text = path.read_text()
 
-matches="$(grep -Fc -- "$broken" "$distrobox_create" || true)"
-if [[ "$matches" -ne 1 ]]; then
-    echo "ERROR: Expected exactly one Distrobox 1.8.2.5 read-only mount expression; found $matches." >&2
-    echo "Refusing to modify an unknown Distrobox version." >&2
-    exit 1
-fi
+# Current upstream syntax: the mount propagation option is part of the
+# same comma-separated Podman volume option list.
+fixed = '--volume ${rootdir}:/run/host${rootdir}:ro,rslave"'
+upstream_fixed = (
+    'rorslave=":ro,rslave"' in text
+    and '${rootdir}${rorslave}' in text
+)
 
-sed -i "s|${broken}|${fixed}|" "$distrobox_create"
+if fixed in text or upstream_fixed:
+    print("Distrobox read-only mount options are already fixed.")
+    raise SystemExit(0)
 
-if ! grep -Fq -- "$fixed" "$distrobox_create"; then
-    echo "ERROR: Distrobox mount-option patch verification failed." >&2
-    exit 1
-fi
+broken = '--volume ${rootdir}:/run/host${rootdir}:ro${rslave}"'
+count = text.count(broken)
+if count != 1:
+    print(
+        f"ERROR: Expected one known Distrobox read-only mount expression; "
+        f"found {count}. Refusing to modify an unknown version.",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 
-echo "Patched Distrobox read-only bind mounts to use Podman's valid ':ro,rslave' syntax."
+path.write_text(text.replace(broken, fixed, 1))
+verified = path.read_text()
+if fixed not in verified:
+    print("ERROR: Distrobox mount-option patch verification failed.", file=sys.stderr)
+    raise SystemExit(1)
+
+print("Patched Distrobox read-only bind mounts to use ':ro,rslave'.")
+PY
