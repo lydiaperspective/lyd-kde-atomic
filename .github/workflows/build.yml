@@ -38,7 +38,7 @@ jobs:
           next="$major.$minor.$((patch + 1))"
           echo "version=$next" >> "$GITHUB_OUTPUT"
           mkdir -p files/system/etc
-          printf '%s\\n' "$next" > files/system/etc/lyd-atomic-version
+          printf '%s\n' "$next" > files/system/etc/lyd-atomic-version
           echo "Building Lyd Atomic v$next"
       - name: Build and publish lyd-atomic-base
         uses: blue-build/github-action@v1
@@ -78,7 +78,7 @@ jobs:
           LYD_ATOMIC_VERSION: ${{ needs.build-base.outputs.version }}
         run: |
           mkdir -p files/system/etc
-          printf '%s\\n' "$LYD_ATOMIC_VERSION" > files/system/etc/lyd-atomic-version
+          printf '%s\n' "$LYD_ATOMIC_VERSION" > files/system/etc/lyd-atomic-version
       - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
         with:
@@ -136,7 +136,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          printf '%s\\n' "$LYD_ATOMIC_VERSION" > VERSION
+          printf '%s\n' "$LYD_ATOMIC_VERSION" > VERSION
           git add VERSION
           git commit -m "chore: record successful Lyd Atomic v$LYD_ATOMIC_VERSION build"
           git push
