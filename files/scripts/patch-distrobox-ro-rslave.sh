@@ -15,7 +15,9 @@ fi
 broken='--volume ${rootdir}:/run/host${rootdir}:ro${rslave}"'
 fixed='--volume ${rootdir}:/run/host${rootdir}:ro,rslave"'
 
-if grep -Fq -- "$fixed" "$distrobox_create"; then
+if grep -Fq -- "$fixed" "$distrobox_create" ||
+   { grep -Fq 'rorslave=":ro,rslave"' "$distrobox_create" &&
+     grep -Fq '${rootdir}${rorslave}' "$distrobox_create"; }; then
     echo "Distrobox read-only mount options are already fixed."
     exit 0
 fi
