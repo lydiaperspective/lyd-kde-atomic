@@ -58,6 +58,9 @@ system_update() {
   echo "Checking the configured image source and staging any available update..."
   echo "The running system will not be changed. Reboot to activate the staged deployment."
   sudo bootc update
+  echo "Reloading systemd unit files after the image update check..."
+  sudo systemctl daemon-reload
+  echo "Systemd manager configuration reloaded."
 }
 
 system_status() {
