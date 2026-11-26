@@ -12,17 +12,23 @@ lyd_banner_version() {
   printf '%s' "${version:-not installed}"
 }
 
-purple=$'\033[1;35m'
-cyan=$'\033[1;36m'
-muted=$'\033[0;37m'
-reset=$'\033[0m'
+atomic_version="development"
+if [[ -r /etc/lyd-atomic-version ]]; then
+  IFS= read -r atomic_version < /etc/lyd-atomic-version || true
+fi
 
-printf '\n%s╭──────────────────────────────────────────────────────────╮%s\n' "$purple" "$reset"
-printf '%s│%s  %sLYD ATOMIC%s  %sCustom system commands%s\n' "$purple" "$reset" "$cyan" "$reset" "$muted" "$reset"
-printf '%s├──────────────────────────────────────────────────────────┤%s\n' "$purple" "$reset"
-printf '%s│%s  %slydhelp%s     v%-10s Linux command reference\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydhelp)"
-printf '%s│%s  %slydsetup%s    v%-10s Optional feature manager\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydsetup)"
-printf '%s│%s  %slydmanage%s   v%-10s System, Flatpak and firmware updates\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydmanage)"
-printf '%s├──────────────────────────────────────────────────────────┤%s\n' "$purple" "$reset"
-printf '%s│%s  Run %slydhelp%s, %slydsetup%s or %slydmanage --help%s to get started.\n' "$purple" "$reset" "$cyan" "$reset" "$cyan" "$reset" "$cyan" "$reset"
-printf '%s╰──────────────────────────────────────────────────────────╯%s\n\n' "$purple" "$reset"
+purple=$'\\033[1;35m'
+cyan=$'\\033[1;36m'
+muted=$'\\033[0;37m'
+reset=$'\\033[0m'
+
+printf '\\n%s╭──────────────────────────────────────────────────────────╮%s\\n' "$purple" "$reset"
+printf '%s│%s  %sLyd Atomic v%s%s\\n' "$purple" "$reset" "$cyan" "$atomic_version" "$reset"
+printf '%s│%s  %sLYD ATOMIC%s  %sCustom system commands%s\\n' "$purple" "$reset" "$cyan" "$reset" "$muted" "$reset"
+printf '%s├──────────────────────────────────────────────────────────┤%s\\n' "$purple" "$reset"
+printf '%s│%s  %slydhelp%s     v%-10s Linux command reference\\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydhelp)"
+printf '%s│%s  %slydsetup%s    v%-10s Optional feature manager\\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydsetup)"
+printf '%s│%s  %slydmanage%s   v%-10s System, Flatpak and firmware updates\\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydmanage)"
+printf '%s├──────────────────────────────────────────────────────────┤%s\\n' "$purple" "$reset"
+printf '%s│%s  Run %slydhelp%s, %slydsetup%s or %slydmanage --help%s to get started.\\n' "$purple" "$reset" "$cyan" "$reset" "$cyan" "$reset" "$cyan" "$reset"
+printf '%s╰──────────────────────────────────────────────────────────╯%s\\n\\n' "$purple" "$reset"
