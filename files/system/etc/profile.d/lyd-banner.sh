@@ -23,7 +23,7 @@ muted=$'\033[0;37m'
 reset=$'\033[0m'
 
 printf '\n%s╭──────────────────────────────────────────────────────────╮%s\n' "$purple" "$reset"
-printf '%s│%s  %sLyd Atomic v%s%s\n' "$purple" "$reset" "$cyan" "$atomic_version" "$reset"
+printf '%s│%s  %sLyd Atomic dev v%s%s\n' "$purple" "$reset" "$cyan" "$atomic_version" "$reset"
 printf '%s│%s  %sLYD ATOMIC%s  %sCustom system commands%s\n' "$purple" "$reset" "$cyan" "$reset" "$muted" "$reset"
 printf '%s├──────────────────────────────────────────────────────────┤%s\n' "$purple" "$reset"
 printf '%s│%s  %slydhelp%s     v%-10s Linux command reference\n' "$purple" "$reset" "$cyan" "$reset" "$(lyd_banner_version lydhelp)"
