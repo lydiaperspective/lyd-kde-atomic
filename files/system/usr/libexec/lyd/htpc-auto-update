@@ -18,5 +18,8 @@ fi
 echo "===== bootc image update ====="
 bootc update
 
+echo "Reloading systemd unit files after the image update..."
+systemctl daemon-reload
+
 echo "Update check completed successfully. Rebooting to activate the latest deployment."
 systemctl reboot
