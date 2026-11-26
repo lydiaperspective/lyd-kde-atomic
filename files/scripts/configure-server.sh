@@ -11,6 +11,16 @@ set -Eeuo pipefail
 install -d /etc/systemd/system
 ln -sfn /dev/null /etc/systemd/system/systemd-remount-fs.service
 
+# Sleep is intentionally disabled only for the headless server edition.
+install -d /etc/systemd/sleep.conf.d
+cat > /etc/systemd/sleep.conf.d/10-disable-sleep.conf <<'SLEEP'
+[Sleep]
+AllowSuspend=no
+AllowHibernation=no
+AllowSuspendThenHibernate=no
+AllowHybridSleep=no
+SLEEP
+
 
 # Keep the server image headless even if the base image's default target changes.
 mkdir -p /etc/systemd/system
