@@ -8,4 +8,8 @@ modules:
   - from-file: feature-development.yml
   - from-file: feature-steam.yml
   - from-file: feature-gaming.yml
+  - type: dnf
+    install:
+      packages:
+        - gamemode
   - from-file: feature-mystic.yml
