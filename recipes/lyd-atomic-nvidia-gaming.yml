@@ -12,4 +12,5 @@ modules:
     install:
       packages:
         - gamemode
+        - plasma-bigscreen
   - from-file: feature-mystic.yml
