@@ -81,6 +81,7 @@
                     <property name="can-focus">False</property>
                     <property name="label">KDE Workstation: Standard graphics, virtualization, development tools and the Mystical theme. Includes printing/scanning, Waterfox and SyncThingy.
 NVIDIA Gaming Workstation: Proprietary NVIDIA 580 driver, Steam, GameMode, MangoHud, Gamescope, Lutris, Heroic, ProtonPlus, virtualization, development tools and the Mystical theme.
+Steam Deck: Bazzite Deck based handheld image with Steam Gaming Mode (Gamescope) and Deck hardware support.
 Server: Headless Fedora bootc server with Podman, Cockpit and KVM/libvirt.
 HTPC: Lightweight Plasma Bigscreen living-room interface with first-user autologin, controller navigation, Jellyfin Desktop, Finamp, Spotify and FCast Receiver. Includes legacy Intel VA-API support for older integrated graphics.</property>
                     <property name="wrap">True</property>

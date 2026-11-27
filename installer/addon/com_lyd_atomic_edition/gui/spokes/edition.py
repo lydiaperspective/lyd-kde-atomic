@@ -14,6 +14,10 @@ EDITIONS = {
         "ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest",
         "NVIDIA Gaming Workstation",
     ),
+    "steamdeck": (
+        "ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest",
+        "Steam Deck",
+    ),
     "server": (
         "ghcr.io/lydiaperspective/lyd-atomic-server:latest",
         "Server",

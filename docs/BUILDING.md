@@ -94,6 +94,8 @@ The installer offers:
 - **KDE Workstation** — standard graphics, printing/scanning, Waterfox, SyncThingy, virtualization, development tools and Mystical theme.
 - **NVIDIA Gaming Workstation** — proprietary NVIDIA 580, Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris, Heroic, virtualization, development tools and Mystical theme.
 - **Server** — headless Fedora bootc server with Podman, Cockpit, SSH, firewalld and KVM/libvirt.
+- **HTPC (Plasma Bigscreen)** — living-room interface with controller navigation and media apps.
+- **Steam Deck** — Bazzite Deck based handheld image with Steam Gaming Mode (Gamescope) and Deck hardware support.
 
 The selected image is downloaded from GHCR during installation; the operating-system images are not embedded in the ISO. An internet connection is required. Test the ISO in a UEFI virtual machine before physical installation and verify edition selection, storage layout, user creation, login, updates and rollback.
 

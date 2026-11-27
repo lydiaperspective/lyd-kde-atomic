@@ -43,7 +43,7 @@ The server image is independent of the KDE workstation chain. It includes rootle
 
 Pushes to `main` build the reusable base/driver/server images first, then build the final desktop editions and Steam Deck image. Pull requests build the independent component recipes for validation. See [docs/BUILDING.md](docs/BUILDING.md) for local build commands and CI details.
 
-The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation and Server. It downloads the selected bootc image from GHCR during installation, so an internet connection is required. The installer defaults to the workstation image and uses Btrfs as its default filesystem selection.
+The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation, Server, HTPC (Plasma Bigscreen) and Steam Deck. It downloads the selected bootc image from GHCR during installation, so an internet connection is required. The installer defaults to the workstation image and uses Btrfs as its default filesystem selection.
 
 ## Management commands
 
