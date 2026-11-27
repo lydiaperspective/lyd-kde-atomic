@@ -58,6 +58,7 @@ The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation
 - `lydmanage flatpak update` and `lydmanage firmware update` — update applications and supported firmware.
 - `lydmanage updates auto enable|disable|status` — manage the weekly update timer.
 - `lydsetup sunshine enable|disable` — start Sunshine now and enable or disable its user service.
+- `lydsetup networkshare enable|disable` — guided Samba or NFS share setup and service control.
 - `lydm` — short alias for `lydmanage`.
 - `lydhelp` — topic-based Linux and Lyd Atomic command reference.
 - `lydhelp manage` — built-in reference for the management commands.

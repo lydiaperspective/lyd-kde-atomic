@@ -59,6 +59,9 @@ modules:
         - sane-airscan
         - ipp-usb
         - avahi
+        - firewalld
+        - samba
+        - nfs-utils
         - tuned
         - tuned-ppd
         - tailscale

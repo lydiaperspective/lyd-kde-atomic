@@ -11,6 +11,10 @@ modules:
         - plasma-bigscreen-wayland
         - git
         - librsvg2-tools
+        - xcursorgen
+        - firewalld
+        - samba
+        - nfs-utils
   - type: files
     files:
       - source: steamdeck

@@ -62,6 +62,9 @@ modules:
         - python3-evdev
         - qrencode
         - tailscale
+        - firewalld
+        - samba
+        - nfs-utils
     # Discover on this bootc image is Flatpak-only. Remove the RPM/PackageKit
     # backends inherited or pulled in by weak dependencies; they try to start
     # PackageKit, which is not a supported package-management path here.

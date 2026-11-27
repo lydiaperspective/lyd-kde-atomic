@@ -99,6 +99,10 @@ The installer offers:
 
 The selected image is downloaded from GHCR during installation; the operating-system images are not embedded in the ISO. An internet connection is required. Test the ISO in a UEFI virtual machine before physical installation and verify edition selection, storage layout, user creation, login, updates and rollback.
 
+## Network shares
+
+Run `lydsetup networkshare enable` for a guided Samba or NFS server setup. Samba shares require a password for the current user. NFS asks which client IP address or CIDR may mount the export. Both options enable the service and open only that protocol's firewalld service in the zone you choose. Run `lydsetup networkshare disable` to stop the Lyd-managed share configuration; the shared directory and Samba password remain.
+
 ## Signing
 
 For signed images, create a Cosign key pair:

@@ -29,6 +29,7 @@ Usage:
   lydsetup firewall       List firewall subcommands and usage
   lydsetup tailscale      List Tailscale setup commands
   lydsetup sunshine       Enable or disable Sunshine streaming
+  lydsetup networkshare   Set up or disable a Samba/NFS network share
   lydmanage plasma save PROFILE   Save Plasma panels and widgets
   lydmanage plasma load PROFILE   Restore a saved Plasma layout
   lydmanage flatpak save          Export installed Flatpak application IDs

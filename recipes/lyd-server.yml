@@ -25,6 +25,8 @@ modules:
         - cockpit-sosreport
         - cockpit-files
         - firewalld
+        - samba
+        - nfs-utils
         - openssh-server
         - openssh-clients
         - qemu-kvm

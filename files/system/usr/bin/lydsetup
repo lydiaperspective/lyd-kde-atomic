@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.3.0"
+VERSION="1.4.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -496,6 +496,214 @@ tailscale_forward_list() {
   printf 'Direct tailnet ports in firewalld zone %s:\n' "$zone"
   sudo firewall-cmd --permanent --zone="$zone" --list-ports
 }
+networkshare_state_write() {
+  local protocol="$1" zone="$2" firewall_service="$3" firewall_added="$4" tmp
+  tmp="$(mktemp)"
+  printf 'protocol=%s\nzone=%s\nfirewall_service=%s\nfirewall_added=%s\n' "$protocol" "$zone" "$firewall_service" "$firewall_added" > "$tmp"
+  sudo install -D -m 0644 "$tmp" /etc/lyd/networkshare.conf
+  rm -f "$tmp"
+}
+
+networkshare_prepare_path() {
+  local share_path="$1"
+  if [[ -e "$share_path" ]]; then
+    [[ -d "$share_path" ]] || die "Share path exists and is not a directory: $share_path"
+  else
+    sudo install -d -m 2770 -o "$(id -u)" -g "$(id -g)" "$share_path"
+  fi
+}
+
+networkshare_firewall_add() {
+  local zone="$1" service="$2"
+  if sudo firewall-cmd --permanent --zone="$zone" --query-service="$service" >/dev/null 2>&1; then
+    NETWORKSHARE_FIREWALL_ADDED=no
+  else
+    sudo firewall-cmd --permanent --zone="$zone" --add-service="$service" >/dev/null
+    NETWORKSHARE_FIREWALL_ADDED=yes
+  fi
+  sudo firewall-cmd --reload
+}
+
+networkshare_samba_config() {
+  local share_name="$1" share_path="$2" username="$3"
+  local config=/etc/samba/smb.conf tmp backup had_config=0
+  tmp="$(mktemp)"
+  backup="$(mktemp)"
+  if sudo test -f "$config"; then
+    had_config=1
+    sudo cp -a "$config" "$backup"
+    sudo cat "$config" | awk '
+      /^# BEGIN LYD ATOMIC NETWORK SHARE$/ { skip=1; next }
+      /^# END LYD ATOMIC NETWORK SHARE$/ { skip=0; next }
+      !skip { print }
+    ' > "$tmp"
+  else
+    printf '[global]\n   workgroup = WORKGROUP\n   security = user\n   server role = standalone server\n\n' > "$tmp"
+  fi
+
+  if grep -Fxiq -- "[$share_name]" "$tmp"; then
+    rm -f "$tmp" "$backup"
+    die "A Samba share named '$share_name' already exists in $config. Choose another name."
+  fi
+
+  cat >> "$tmp" <<SMB
+# BEGIN LYD ATOMIC NETWORK SHARE
+[$share_name]
+   path = $share_path
+   browseable = yes
+   read only = no
+   guest ok = no
+   valid users = $username
+   create mask = 0660
+   directory mask = 2770
+# END LYD ATOMIC NETWORK SHARE
+SMB
+  sudo install -D -m 0644 "$tmp" "$config"
+  if ! sudo testparm -s "$config" >/dev/null 2>&1; then
+    if (( had_config )); then sudo cp -a "$backup" "$config"; else sudo rm -f "$config"; fi
+    rm -f "$tmp" "$backup"
+    die "Samba rejected the share configuration; the previous configuration was restored."
+  fi
+  rm -f "$tmp" "$backup"
+}
+
+networkshare_disable() {
+  need_user; need_sudo
+  local state=/etc/lyd/networkshare.conf protocol zone fw_service fw_added tmp
+  sudo test -r "$state" || die "No Lyd-managed network share is configured."
+  protocol="$(sudo awk -F= '$1=="protocol" { print $2; exit }' "$state")"
+  zone="$(sudo awk -F= '$1=="zone" { print $2; exit }' "$state")"
+  fw_service="$(sudo awk -F= '$1=="firewall_service" { print $2; exit }' "$state")"
+  fw_added="$(sudo awk -F= '$1=="firewall_added" { print $2; exit }' "$state")"
+  case "$protocol" in
+    samba)
+      sudo systemctl disable --now smb.service
+      if sudo test -f /etc/samba/smb.conf; then
+        tmp="$(mktemp)"
+        sudo cat /etc/samba/smb.conf | awk '
+          /^# BEGIN LYD ATOMIC NETWORK SHARE$/ { skip=1; next }
+          /^# END LYD ATOMIC NETWORK SHARE$/ { skip=0; next }
+          !skip { print }
+        ' > "$tmp"
+        sudo install -m 0644 "$tmp" /etc/samba/smb.conf
+        rm -f "$tmp"
+      fi
+      ;;
+    nfs)
+      sudo systemctl disable --now nfs-server.service
+      sudo rm -f /etc/exports.d/lyd-networkshare.exports
+      sudo exportfs -ra || true
+      ;;
+    *) die "Unknown protocol in $state. Refusing to change services or firewall rules." ;;
+  esac
+
+  if [[ "$fw_added" == yes ]] && command -v firewall-cmd >/dev/null 2>&1 &&
+     sudo firewall-cmd --state >/dev/null 2>&1; then
+    sudo firewall-cmd --permanent --zone="$zone" --remove-service="$fw_service" >/dev/null 2>&1 || true
+    sudo firewall-cmd --reload
+  fi
+  sudo rm -f "$state"
+  echo "Lyd-managed $protocol network sharing is disabled."
+  echo "The shared directory and Samba password were left unchanged."
+}
+
+networkshare_enable() {
+  need_user; need_sudo
+  local state=/etc/lyd/networkshare.conf protocol choice share_path share_name zone fw_service service client_range
+  if sudo test -r "$state"; then
+    local old_protocol
+    old_protocol="$(sudo awk -F= '$1=="protocol" { print $2; exit }' "$state")"
+    read -r -p "A Lyd-managed $old_protocol share exists. Replace it? [y/N] " choice
+    [[ "$choice" =~ ^[Yy]$ ]] || { echo "Cancelled."; return 0; }
+    networkshare_disable
+  fi
+
+  command -v firewall-cmd >/dev/null 2>&1 || die "firewalld is not installed in this image."
+  echo "Starting firewalld so the selected share can be opened in one firewall zone..."
+  sudo systemctl enable --now firewalld.service
+  need_firewalld
+
+  echo "Choose the network share type:"
+  echo "  1) Samba (SMB, for Windows and most desktop clients)"
+  echo "  2) NFS (for Linux and Unix clients)"
+  read -r -p "Share type [1/2]: " choice
+  case "\${choice,,}" in
+    1|s|samba|smb) protocol=samba ;;
+    2|n|nfs) protocol=nfs ;;
+    *) die "Choose 1 for Samba or 2 for NFS." ;;
+  esac
+
+  read -r -p "Directory to share [/srv/lyd-networkshare]: " share_path
+  share_path="\${share_path:-/srv/lyd-networkshare}"
+  [[ "$share_path" =~ ^/[A-Za-z0-9._/-]+$ ]] ||
+    die "Use an absolute path containing only letters, numbers, dots, underscores, slashes and hyphens."
+  [[ "$share_path" != "/" && "$share_path" != *"//"* && "$share_path" != *"/../"* && "$share_path" != */.. && "$share_path" != *"/./"* ]] ||
+    die "The share path cannot be / or contain empty, . or .. path components."
+  networkshare_prepare_path "$share_path"
+
+  read -r -p "Firewalld zone for client access [public]: " zone
+  zone="\${zone:-public}"
+  zone="$(valid_zone "$zone")"
+
+  case "$protocol" in
+    samba)
+      command -v smbpasswd >/dev/null 2>&1 || die "Samba is not installed in this image."
+      systemctl cat smb.service >/dev/null 2>&1 || die "smb.service is not installed in this image."
+      read -r -p "Samba share name [Shared]: " share_name
+      share_name="\${share_name:-Shared}"
+      [[ "$share_name" =~ ^[A-Za-z0-9_-]+$ ]] || die "Share names may contain only letters, numbers, underscores and hyphens."
+      sudo -u "$USER" test -w "$share_path" ||
+        die "The current user cannot write to $share_path. Adjust its ownership or permissions before enabling the share."
+      if sudo pdbedit -L 2>/dev/null | cut -d: -f1 | grep -Fxq -- "$USER"; then
+        echo "A Samba account already exists for $USER; keeping its current Samba password."
+        echo "To change it later, run: sudo smbpasswd $USER"
+      else
+        echo "Set a Samba password for your current account ($USER)."
+        sudo smbpasswd -a "$USER"
+      fi
+      networkshare_samba_config "$share_name" "$share_path" "$USER"
+      fw_service=samba
+      service=smb.service
+      ;;
+    nfs)
+      systemctl cat nfs-server.service >/dev/null 2>&1 || die "nfs-server.service is not installed in this image."
+      command -v python3 >/dev/null 2>&1 || die "python3 is required to validate the NFS client network."
+      read -r -p "Client IP address or CIDR allowed to mount this share (required): " client_range
+      [[ -n "$client_range" ]] || die "An NFS client address or network is required."
+      client_range="$(python3 - "$client_range" <<'PY'
+import ipaddress
+import sys
+try:
+    print(ipaddress.ip_network(sys.argv[1], strict=False))
+except ValueError as exc:
+    print(exc, file=sys.stderr)
+    raise SystemExit(1)
+PY
+      )" || die "Enter a valid NFS client IP address or CIDR, such as 192.168.1.0/24."
+      local exports_tmp
+      exports_tmp="$(mktemp)"
+      printf '%s %s(rw,sync,no_subtree_check,root_squash)\n' "$share_path" "$client_range" > "$exports_tmp"
+      sudo install -D -m 0644 "$exports_tmp" /etc/exports.d/lyd-networkshare.exports
+      rm -f "$exports_tmp"
+      sudo exportfs -ra
+      fw_service=nfs
+      service=nfs-server.service
+      ;;
+  esac
+
+  networkshare_firewall_add "$zone" "$fw_service"
+  networkshare_state_write "$protocol" "$zone" "$fw_service" "$NETWORKSHARE_FIREWALL_ADDED"
+  sudo systemctl enable --now "$service"
+  echo "$protocol network share is enabled."
+  echo "Shared directory: $share_path"
+  echo "Firewall zone: $zone"
+  if [[ "$protocol" == nfs ]]; then
+    echo "Allowed NFS clients: $client_range"
+  else
+    echo "Samba user: $USER (connect using this account's Samba password)"
+  fi
+}
+
 sunshine_enable() {
   need_user
   systemctl --user enable --now app-dev.lizardbyte.app.Sunshine.service
@@ -514,6 +722,12 @@ usage() {
 lydsetup $VERSION
 
 Usage:
+  lydsetup networkshare enable
+      Guided setup for a Samba or NFS share; configures its service and firewall.
+
+  lydsetup networkshare disable
+      Disable the Lyd-managed share. Shared files and Samba passwords are kept.
+
   lydsetup sunshine enable
       Enable and start Sunshine for this user, and start it automatically on login.
 
@@ -621,6 +835,20 @@ HELP
 }
 main() {
   case "${1:-}" in
+    networkshare)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Network share commands:"
+        echo "  lydsetup networkshare enable   Set up a guided Samba or NFS share"
+        echo "  lydsetup networkshare disable  Stop and remove the Lyd-managed share"
+        exit 0
+      fi
+      [[ $# -eq 2 ]] || die "Usage: lydsetup networkshare {enable|disable}"
+      case "$2" in
+        enable) networkshare_enable ;;
+        disable) networkshare_disable ;;
+        *) die "Usage: lydsetup networkshare {enable|disable}" ;;
+      esac
+      ;;
     sunshine)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
         echo "Sunshine commands:"
