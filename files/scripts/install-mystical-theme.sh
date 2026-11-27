@@ -46,13 +46,19 @@ Current=breeze
 SDDM_CONFIG
 install -m 0644 "$SOURCE/colors/Mystical.colors" /usr/share/color-schemes/Mystical.colors
 cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" /usr/share/plasma/look-and-feel/
+# Keep the desktop look and feel while leaving icon and cursor choices to KDE.
+sed -i '/^\[kdeglobals\]\[Icons\]$/,/^$/d' /usr/share/plasma/look-and-feel/org.lydark.mystical.desktop/contents/defaults
 cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" /usr/share/plasma/desktoptheme/
 cp -a "$SOURCE/wallpaper" /usr/share/wallpapers/org.lydark.mystical.wallpaper
 # The custom Mystical icon theme is intentionally disabled for now.
 # Use Breeze Dark icons with the dark Mystical desktop until custom artwork is ready.
-# Add coordinated GRUB, animated Plymouth and Xcursor assets. Record the
+# Add coordinated GRUB and animated Plymouth assets. Record the
 # exact source revision so the boot setup service can detect image updates.
 bash "$WORK/theme/scripts/install-mystical-boot-assets.sh"
+# The shared theme installer also stages its optional Xcursor theme. Keep the
+# GRUB and Plymouth artwork, but leave KDE's cursor theme at its Breeze default.
+rm -rf /usr/share/icons/Mystical/cursors
+rm -f /etc/xdg/kcminputrc
 printf '%s\n' "$THEME_COMMIT" > /usr/share/lyd/mystical-theme-version
 systemctl enable lyd-mystical-boot-setup.service
 
@@ -71,53 +77,6 @@ Exec=/usr/libexec/lyd/lyd-mystical-first-login
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=2
 EOF
-
-# Set Breeze Dark icons as the system default, migrate existing Plasma profiles at
-# login, and configure the separate SDDM greeter icon theme.
-install -d /etc/xdg /etc/xdg/autostart /usr/libexec/lyd /etc/sddm.conf.d /usr/share/sddm/themes/breeze
-kwriteconfig6 --file /etc/xdg/kdeglobals --group Icons --key Theme breeze-dark
-
-install -D -m 0755 /dev/null /usr/libexec/lyd/lyd-set-breeze-icons
-cat > /usr/libexec/lyd/lyd-set-breeze-icons <<'ICON_HELPER'
-#!/usr/bin/env bash
-set -u
-config_file="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
-command -v kwriteconfig6 >/dev/null 2>&1 || exit 0
-mkdir -p "$(dirname "$config_file")" || exit 0
-kwriteconfig6 --file "$config_file" --group Icons --key Theme breeze-dark >/dev/null 2>&1 || exit 0
-ICON_HELPER
-chmod 0755 /usr/libexec/lyd/lyd-set-breeze-icons
-
-cat > /etc/xdg/autostart/lyd-set-breeze-icons.desktop <<'AUTOSTART'
-[Desktop Entry]
-Type=Application
-Name=Lyd Breeze Dark Icons
-Comment=Apply Breeze Dark icons to Plasma and the lock screen
-Exec=/usr/bin/bash /usr/libexec/lyd/lyd-set-breeze-icons
-TryExec=/usr/bin/bash
-OnlyShowIn=KDE;
-X-KDE-autostart-phase=1
-X-KDE-autostart-enabled=true
-NoDisplay=true
-AUTOSTART
-
-# SDDM is a separate Qt greeter: its theme configuration must select the icon
-# theme explicitly; the Plasma kdeglobals setting does not configure SDDM.
-sddm_theme_config=/usr/share/sddm/themes/breeze/theme.conf.user
-if [[ ! -f "$sddm_theme_config" ]]; then
-  printf '[General]\n' > "$sddm_theme_config"
-fi
-sed -i '/^iconTheme[[:space:]]*=/d' "$sddm_theme_config"
-if grep -q '^\[General\]' "$sddm_theme_config"; then
-  sed -i '/^\[General\]/a iconTheme=breeze-dark' "$sddm_theme_config"
-else
-  printf '\n[General]\niconTheme=breeze-dark\n' >> "$sddm_theme_config"
-fi
-cat > /etc/sddm.conf.d/20-lyd-breeze.conf <<'SDDM'
-[Theme]
-Current=breeze
-SDDM
-
 
 # Konsole's matching colour scheme and profile are maintained in the theme repo.
 KONSOLE="$WORK/theme/konsole"
@@ -139,8 +98,6 @@ BrowserApplication=net.waterfox.waterfox.desktop
 LookAndFeelPackage=org.lydark.mystical.desktop
 widgetStyle=Breeze
 
-[Icons]
-Theme=breeze-dark
 EOF
 cat > /etc/xdg/plasmarc <<'EOF'
 [Theme]
