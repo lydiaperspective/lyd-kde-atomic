@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.4.1"
+VERSION="1.4.2"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -542,7 +542,8 @@ networkshare_samba_config() {
   fi
 
   if grep -Fxiq -- "[$share_name]" "$tmp"; then
-    rm -f "$tmp" "$backup"
+    rm -f "$tmp"
+    sudo rm -f "$backup"
     die "A Samba share named '$share_name' already exists in $config. Choose another name."
   fi
 
@@ -561,10 +562,12 @@ SMB
   sudo install -D -m 0644 "$tmp" "$config"
   if ! sudo testparm -s "$config" >/dev/null 2>&1; then
     if (( had_config )); then sudo cp -a "$backup" "$config"; else sudo rm -f "$config"; fi
-    rm -f "$tmp" "$backup"
+    rm -f "$tmp"
+    sudo rm -f "$backup"
     die "Samba rejected the share configuration; the previous configuration was restored."
   fi
-  rm -f "$tmp" "$backup"
+  rm -f "$tmp"
+    sudo rm -f "$backup"
 }
 
 networkshare_disable() {
