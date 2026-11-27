@@ -92,13 +92,13 @@ modules:
           - org.kde.haruna
           - org.kde.gwenview
           - com.vixalien.sticky
+  - type: files
+    files:
+      - source: system
+        destination: /
   - type: systemd
     system:
       enabled:
         - cups.service
         - avahi-daemon.service
         - lyd-systemd-daemon-reload.service
-  - type: files
-    files:
-      - source: system
-        destination: /
