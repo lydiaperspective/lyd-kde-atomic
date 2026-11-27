@@ -97,6 +97,7 @@ modules:
       enabled:
         - cups.service
         - avahi-daemon.service
+        - lyd-systemd-daemon-reload.service
   - type: files
     files:
       - source: system

@@ -75,3 +75,6 @@ x-scheme-handler/http=net.waterfox.waterfox.desktop
 x-scheme-handler/https=net.waterfox.waterfox.desktop
 MIMEAPPS
 install -m 0644 /usr/share/applications/mimeapps.list /etc/skel/.config/mimeapps.list
+
+# Match the server and HTPC images by reloading unit files at every boot.
+systemctl enable lyd-systemd-daemon-reload.service
