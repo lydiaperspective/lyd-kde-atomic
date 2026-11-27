@@ -64,3 +64,14 @@ Terminal=false
 Categories=System;
 DESKTOP
 install -m 0755 /usr/share/applications/lyd-switch-to-gamescope.desktop /etc/skel/Desktop/lyd-switch-to-gamescope.desktop
+
+# Set Waterfox as the browser for new users and as the system fallback.
+mkdir -p /etc/skel/.config
+cat > /usr/share/applications/mimeapps.list <<'MIMEAPPS'
+[Default Applications]
+text/html=net.waterfox.waterfox.desktop
+application/xhtml+xml=net.waterfox.waterfox.desktop
+x-scheme-handler/http=net.waterfox.waterfox.desktop
+x-scheme-handler/https=net.waterfox.waterfox.desktop
+MIMEAPPS
+install -m 0644 /usr/share/applications/mimeapps.list /etc/skel/.config/mimeapps.list

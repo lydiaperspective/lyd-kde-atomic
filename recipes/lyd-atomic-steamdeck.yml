@@ -1,6 +1,6 @@
 ---
 name: lyd-atomic-steamdeck
-description: Steam Deck LCD image with Gamescope, Plasma Bigscreen desktop mode, Lyd tools and the Mystical theme.
+description: Steam Deck LCD image with Gamescope, Plasma Bigscreen desktop mode, Tailscale, Waterfox as the default browser, Lyd tools and the Mystical theme.
 base-image: ghcr.io/ublue-os/bazzite-deck
 image-version: stable
 modules:
@@ -15,6 +15,17 @@ modules:
         - firewalld
         - samba
         - nfs-utils
+        - tailscale
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        repo:
+          name: flathub
+          title: Flathub
+          url: https://flathub.org/repo/flathub.flatpakrepo
+        install:
+          - net.waterfox.waterfox
   - type: files
     files:
       - source: steamdeck
