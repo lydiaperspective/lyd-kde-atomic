@@ -59,11 +59,11 @@ RUN git clone --quiet --filter=blob:none https://github.com/lydiaperspective/lyd
     git -C /tmp/lyd-kde-themes checkout --quiet 9fd97cf008e3fad169e8b61c612e736a7c16686d && \
     bash /tmp/lyd-kde-themes/scripts/install-mystical-boot-assets.sh && \
     install -d /usr/share/lyd && \
-    printf '%s\\n' '9fd97cf008e3fad169e8b61c612e736a7c16686d' > /usr/share/lyd/mystical-theme-version && \
+    printf '%s\n' '9fd97cf008e3fad169e8b61c612e736a7c16686d' > /usr/share/lyd/mystical-theme-version && \
     plymouth-set-default-theme lyd-mystical && \
     install -d /etc/default && \
     { grep -v '^GRUB_THEME=' /etc/default/grub 2>/dev/null || true; } > /tmp/grub-defaults && \
-    printf 'GRUB_THEME="/usr/share/grub/themes/lyd-mystical/theme.txt"\\nGRUB_TIMEOUT=5\\nGRUB_TIMEOUT_STYLE=menu\\n' >> /tmp/grub-defaults && \
+    printf 'GRUB_THEME="/usr/share/grub/themes/lyd-mystical/theme.txt"\nGRUB_TIMEOUT=5\nGRUB_TIMEOUT_STYLE=menu\n' >> /tmp/grub-defaults && \
     cat /tmp/grub-defaults > /etc/default/grub && \
     rm -rf /tmp/lyd-kde-themes /tmp/grub-defaults
 
@@ -95,5 +95,5 @@ RUN mkdir -p "$(realpath /root)" && \
       --add anaconda "/usr/lib/modules/${kernel}/initramfs.img" "${kernel}"
 
 RUN mkdir -p /etc/systemd/user/pipewire.service.d /etc/systemd/user/pipewire.socket.d && \
-    printf '[Unit]\\nConditionUser=\\n' > /etc/systemd/user/pipewire.service.d/allowroot.conf && \
-    printf '[Unit]\\nConditionUser=\\n' > /etc/systemd/user/pipewire.socket.d/allowroot.conf
+    printf '[Unit]\nConditionUser=\n' > /etc/systemd/user/pipewire.service.d/allowroot.conf && \
+    printf '[Unit]\nConditionUser=\n' > /etc/systemd/user/pipewire.socket.d/allowroot.conf
