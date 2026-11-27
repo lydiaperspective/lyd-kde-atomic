@@ -63,6 +63,15 @@ Published final images:
 
 The standard workstation is derived from `lyd-atomic-base` and adds virtualization, development and Mystical modules. The NVIDIA gaming workstation is derived from `lyd-atomic-nvidia` and adds virtualization, development, Steam, gaming launchers and Mystical modules.
 
+### Steam Deck
+
+The Steam Deck image uses Bazzite Deck as its base, which provides Steam Gaming Mode through Gamescope and Deck handheld support. It does not use Plasma Bigscreen. The published image is `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest`.
+
+```bash
+bluebuild generate recipes/lyd-atomic-steamdeck.yml -o Containerfile
+bluebuild build recipes/lyd-atomic-steamdeck.yml
+```
+
 ### Server
 
 ```bash
@@ -74,7 +83,7 @@ Published as `ghcr.io/lydiaperspective/lyd-atomic-server:latest`.
 
 ## GitHub Actions
 
-The regular build workflow builds four independent component images first: shared workstation base, NVIDIA 580 base, NVIDIA open base and server. Once those are published, it builds the final workstation and NVIDIA gaming images. Pull requests validate the independent component recipes; final images are built on pushes because their custom parent images must already exist in GHCR.
+The regular build workflow builds four independent component images first: shared workstation base, NVIDIA 580 base, NVIDIA open base and server. Once those are published, it builds the final workstation, NVIDIA gaming and Steam Deck images. Pull requests validate the independent component recipes; final images are built on pushes because their custom parent images must already exist in GHCR.
 
 **Build all images and latest ISO** builds the complete set and then creates an ISO for the selected final edition. **Build unified installer ISO** builds the Anaconda installer ISO with the edition selector. **Build installable ISO** converts one already-published final image to a single-edition ISO.
 

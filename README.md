@@ -11,6 +11,7 @@ A modular Fedora bootc / KDE Plasma operating system built with BlueBuild.
 | `ghcr.io/lydiaperspective/lyd-atomic-nvidia-open:latest` | Shared workstation base with the current NVIDIA open kernel module driver |
 | `ghcr.io/lydiaperspective/lyd-atomic-workstation:latest` | Final standard-graphics workstation with virtualization, development tools and Mystical theme |
 | `ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest` | Final NVIDIA 580 gaming workstation with Steam, gaming launchers, virtualization, development tools and Mystical theme |
+| `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest` | Steam Deck LCD image with Steam Gaming Mode (Gamescope), based on Bazzite Deck |
 | `ghcr.io/lydiaperspective/lyd-atomic-server:latest` | Headless server with Podman, Cockpit, KVM/libvirt and firewalld |
 
 The two final desktop editions share their package and feature definitions. The standard edition derives from the single `lyd-atomic-base`; the NVIDIA gaming edition derives from the NVIDIA 580 base. The NVIDIA open image is also published as a driver-specific workstation base for users who need the newer open kernel module branch.
@@ -40,7 +41,7 @@ The server image is independent of the KDE workstation chain. It includes rootle
 
 ## Build and installer
 
-Pushes to `main` build the reusable base/driver/server images first, then build the two final desktop editions. Pull requests build the independent component recipes for validation. See [docs/BUILDING.md](docs/BUILDING.md) for local build commands and CI details.
+Pushes to `main` build the reusable base/driver/server images first, then build the final desktop editions and Steam Deck image. Pull requests build the independent component recipes for validation. See [docs/BUILDING.md](docs/BUILDING.md) for local build commands and CI details.
 
 The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation and Server. It downloads the selected bootc image from GHCR during installation, so an internet connection is required. The installer defaults to the workstation image and uses Btrfs as its default filesystem selection.
 

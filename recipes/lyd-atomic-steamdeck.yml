@@ -1,0 +1,10 @@
+---
+name: lyd-atomic-steamdeck
+description: Steam Deck LCD handheld image with Steam Gaming Mode and Deck hardware support.
+base-image: ghcr.io/ublue-os/bazzite-deck
+image-version: stable
+modules:
+  - type: files
+    files:
+      - source: steamdeck
+        destination: /

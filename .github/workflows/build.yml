@@ -107,6 +107,8 @@ jobs:
             recipe: lyd-atomic-workstation.yml
           - flavour: nvidia-gaming
             recipe: lyd-atomic-nvidia-gaming.yml
+          - flavour: steamdeck
+            recipe: lyd-atomic-steamdeck.yml
     steps:
       - name: Build and publish ${{ matrix.flavour }} image
         uses: blue-build/github-action@v1
