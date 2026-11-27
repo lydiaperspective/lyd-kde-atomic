@@ -245,6 +245,11 @@ tailscale_enable() {
   echo "Enabling and starting tailscaled.service..."
   sudo systemctl enable --now tailscaled.service
 
+  # Grant the invoking non-root user Tailscale operator permissions so they can
+  # manage the daemon and Serve configuration without running tailscale as root.
+  echo "Granting Tailscale operator access to user $USER..."
+  sudo tailscale set --operator="$USER"
+
   if command -v firewall-cmd >/dev/null 2>&1 && sudo firewall-cmd --state >/dev/null 2>&1; then
     echo "Configuring firewalld for Tailscale..."
     if ! sudo firewall-cmd --permanent --get-zones | tr ' ' '\n' | grep -Fxq tailscale; then
