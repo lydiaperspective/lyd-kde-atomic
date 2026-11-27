@@ -31,6 +31,8 @@ modules:
     files:
       - source: steamdeck
         destination: /
+      - source: system/usr/lib/systemd/system/lyd-systemd-daemon-reload.service
+        destination: /usr/lib/systemd/system/lyd-systemd-daemon-reload.service
       - source: system/usr/bin/lydhelp
         destination: /usr/bin/lydhelp
       - source: system/usr/bin/lydmanage
