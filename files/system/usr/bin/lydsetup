@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.4.0"
+VERSION="1.4.1"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -627,14 +627,14 @@ networkshare_enable() {
   echo "  1) Samba (SMB, for Windows and most desktop clients)"
   echo "  2) NFS (for Linux and Unix clients)"
   read -r -p "Share type [1/2]: " choice
-  case "\${choice,,}" in
+  case "${choice,,}" in
     1|s|samba|smb) protocol=samba ;;
     2|n|nfs) protocol=nfs ;;
     *) die "Choose 1 for Samba or 2 for NFS." ;;
   esac
 
   read -r -p "Directory to share [/srv/lyd-networkshare]: " share_path
-  share_path="\${share_path:-/srv/lyd-networkshare}"
+  share_path="${share_path:-/srv/lyd-networkshare}"
   [[ "$share_path" =~ ^/[A-Za-z0-9._/-]+$ ]] ||
     die "Use an absolute path containing only letters, numbers, dots, underscores, slashes and hyphens."
   [[ "$share_path" != "/" && "$share_path" != *"//"* && "$share_path" != *"/../"* && "$share_path" != */.. && "$share_path" != *"/./"* ]] ||
@@ -642,7 +642,7 @@ networkshare_enable() {
   networkshare_prepare_path "$share_path"
 
   read -r -p "Firewalld zone for client access [public]: " zone
-  zone="\${zone:-public}"
+  zone="${zone:-public}"
   zone="$(valid_zone "$zone")"
 
   case "$protocol" in
@@ -650,7 +650,7 @@ networkshare_enable() {
       command -v smbpasswd >/dev/null 2>&1 || die "Samba is not installed in this image."
       systemctl cat smb.service >/dev/null 2>&1 || die "smb.service is not installed in this image."
       read -r -p "Samba share name [Shared]: " share_name
-      share_name="\${share_name:-Shared}"
+      share_name="${share_name:-Shared}"
       [[ "$share_name" =~ ^[A-Za-z0-9_-]+$ ]] || die "Share names may contain only letters, numbers, underscores and hyphens."
       sudo -u "$USER" test -w "$share_path" ||
         die "The current user cannot write to $share_path. Adjust its ownership or permissions before enabling the share."
