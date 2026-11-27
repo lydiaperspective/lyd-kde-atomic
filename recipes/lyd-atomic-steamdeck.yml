@@ -9,6 +9,7 @@ modules:
       packages:
         - plasma-bigscreen
         - plasma-bigscreen-wayland
+        - plasma-keyboard
         - git
         - librsvg2-tools
         - xcursorgen

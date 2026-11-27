@@ -78,3 +78,11 @@ install -m 0644 /usr/share/applications/mimeapps.list /etc/skel/.config/mimeapps
 
 # Match the server and HTPC images by reloading unit files at every boot.
 systemctl enable lyd-systemd-daemon-reload.service
+
+# Configure Plasma's Wayland virtual keyboard for Bigscreen touch input. These
+# same settings are used by Bazzite's restore-virtual-keyboard command.
+install -d /etc/xdg /etc/skel/.config
+for config in /etc/xdg/kwinrc /etc/skel/.config/kwinrc; do
+    kwriteconfig6 --file "$config" --group Wayland --key InputMethod /usr/share/applications/org.kde.plasma.keyboard.desktop
+    kwriteconfig6 --file "$config" --group Wayland --key VirtualKeyboardEnabled --type bool true
+done
