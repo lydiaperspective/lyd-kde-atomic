@@ -66,6 +66,7 @@ modules:
         - coolercontrol
         - coolercontrold
         - liquidctl
+        - lm_sensors
     remove:
       packages:
         - firefox
