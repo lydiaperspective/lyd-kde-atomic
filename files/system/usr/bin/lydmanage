@@ -66,8 +66,10 @@ system_update() {
 }
 
 system_status() {
+  need_user
   require_bootc
-  bootc status
+  need_sudo
+  sudo bootc status
 }
 
 systemd_reload() {
