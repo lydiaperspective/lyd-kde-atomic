@@ -61,11 +61,11 @@ Published final images:
 - `ghcr.io/lydiaperspective/lyd-atomic-workstation:latest`
 - `ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest`
 
-The standard workstation is derived from `lyd-atomic-base` and adds virtualization, development and Mystical modules. The NVIDIA gaming workstation is derived from `lyd-atomic-nvidia` and adds virtualization, development, Steam, gaming launchers and Mystical modules.
+The standard workstation is derived from `lyd-atomic-base` and adds virtualization, development and Mystical modules. The NVIDIA gaming workstation is derived from `lyd-atomic-nvidia` and adds virtualization, development, Steam, Sunshine, gaming launchers and Mystical modules.
 
 ### Steam Deck
 
-The Steam Deck image uses Bazzite Deck as its base, which provides Steam Gaming Mode through Gamescope and Deck handheld support. It does not use Plasma Bigscreen. The published image is `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest`.
+The Steam Deck image uses Bazzite Deck as its base for Steam Gaming Mode and Deck handheld support. Choosing **Exit to Desktop** opens Plasma Bigscreen; its **Switch to Gamescope** launcher shortcut returns to Gaming Mode. The image also includes the Lyd management tools and Mystical KDE theme. The published image is `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest`.
 
 ```bash
 bluebuild generate recipes/lyd-atomic-steamdeck.yml -o Containerfile
@@ -95,7 +95,7 @@ The installer offers:
 - **NVIDIA Gaming Workstation** — proprietary NVIDIA 580, Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris, Heroic, virtualization, development tools and Mystical theme.
 - **Server** — headless Fedora bootc server with Podman, Cockpit, SSH, firewalld and KVM/libvirt.
 - **HTPC (Plasma Bigscreen)** — living-room interface with controller navigation and media apps.
-- **Steam Deck** — Bazzite Deck based handheld image with Steam Gaming Mode (Gamescope) and Deck hardware support.
+- **Steam Deck** — Bazzite Deck based handheld image with Steam Gaming Mode (Gamescope), Plasma Bigscreen desktop mode and Deck hardware support.
 
 The selected image is downloaded from GHCR during installation; the operating-system images are not embedded in the ISO. An internet connection is required. Test the ISO in a UEFI virtual machine before physical installation and verify edition selection, storage layout, user creation, login, updates and rollback.
 
@@ -110,6 +110,8 @@ cosign generate-key-pair
 Add `cosign.key` as the Actions secret `COSIGN_PRIVATE_KEY` and `cosign.pub` as `COSIGN_PUBLIC_KEY`. Keep the private key out of the repository. Without both secrets, the workflow uses BlueBuild's `--no-sign` option.
 
 ## NVIDIA and Secure Boot
+
+The NVIDIA gaming image includes Sunshine for Moonlight streaming. Run `lydsetup sunshine enable` to start it now and on future logins, or `lydsetup sunshine disable` to stop and disable it.
 
 The proprietary NVIDIA image uses the 580.x driver branch. The open NVIDIA image uses the current open kernel module branch. Driver compatibility depends on the GPU generation; verify the card is supported by the selected branch. Secure Boot behavior depends on the upstream base image's signed modules and enrolled signing key. Test driver loading with `nvidia-smi` after installation.
 

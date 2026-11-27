@@ -28,6 +28,7 @@ Usage:
   lydsetup                Configure services and firewall rules (see lydsetup firewall)
   lydsetup firewall       List firewall subcommands and usage
   lydsetup tailscale      List Tailscale setup commands
+  lydsetup sunshine       Enable or disable Sunshine streaming
   lydmanage plasma save PROFILE   Save Plasma panels and widgets
   lydmanage plasma load PROFILE   Restore a saved Plasma layout
   lydmanage flatpak save          Export installed Flatpak application IDs

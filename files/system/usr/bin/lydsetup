@@ -2,7 +2,7 @@
 # Lyd Atomic service and firewall setup helper.
 set -Eeuo pipefail
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need_user() { [[ $EUID -ne 0 ]] || die "Run lydsetup as your regular user, not with sudo."; }
@@ -496,11 +496,30 @@ tailscale_forward_list() {
   printf 'Direct tailnet ports in firewalld zone %s:\n' "$zone"
   sudo firewall-cmd --permanent --zone="$zone" --list-ports
 }
+sunshine_enable() {
+  need_user
+  systemctl --user enable --now app-dev.lizardbyte.app.Sunshine.service
+  echo "Sunshine is enabled and running for this user."
+  echo "It will start automatically when your user session starts."
+}
+
+sunshine_disable() {
+  need_user
+  systemctl --user disable --now app-dev.lizardbyte.app.Sunshine.service
+  echo "Sunshine is stopped and disabled for this user."
+}
+
 usage() {
   cat <<HELP
 lydsetup $VERSION
 
 Usage:
+  lydsetup sunshine enable
+      Enable and start Sunshine for this user, and start it automatically on login.
+
+  lydsetup sunshine disable
+      Stop Sunshine and disable automatic startup for this user.
+
   lydsetup tailscale enable
       Enable and start tailscaled; configure the tailscale firewalld zone if firewalld is running.
 
@@ -602,6 +621,20 @@ HELP
 }
 main() {
   case "${1:-}" in
+    sunshine)
+      if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
+        echo "Sunshine commands:"
+        echo "  lydsetup sunshine enable   Enable and start Sunshine for this user"
+        echo "  lydsetup sunshine disable  Stop Sunshine and disable automatic startup"
+        exit 0
+      fi
+      [[ $# -eq 2 ]] || die "Usage: lydsetup sunshine {enable|disable}"
+      case "$2" in
+        enable) sunshine_enable ;;
+        disable) sunshine_disable ;;
+        *) die "Usage: lydsetup sunshine {enable|disable}" ;;
+      esac
+      ;;
     tailscale)
       if [[ $# -eq 1 || "${2:-}" == --help || "${2:-}" == -h ]]; then
         echo "Tailscale commands:"

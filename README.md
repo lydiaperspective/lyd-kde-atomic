@@ -10,8 +10,8 @@ A modular Fedora bootc / KDE Plasma operating system built with BlueBuild.
 | `ghcr.io/lydiaperspective/lyd-atomic-nvidia:latest` | Shared workstation base with the proprietary NVIDIA 580 driver |
 | `ghcr.io/lydiaperspective/lyd-atomic-nvidia-open:latest` | Shared workstation base with the current NVIDIA open kernel module driver |
 | `ghcr.io/lydiaperspective/lyd-atomic-workstation:latest` | Final standard-graphics workstation with virtualization, development tools and Mystical theme |
-| `ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest` | Final NVIDIA 580 gaming workstation with Steam, gaming launchers, virtualization, development tools and Mystical theme |
-| `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest` | Steam Deck LCD image with Steam Gaming Mode (Gamescope), based on Bazzite Deck |
+| `ghcr.io/lydiaperspective/lyd-atomic-nvidia-gaming:latest` | Final NVIDIA 580 gaming workstation with Steam, Sunshine, gaming launchers, virtualization, development tools and Mystical theme |
+| `ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest` | Steam Deck LCD image with Gamescope, Plasma Bigscreen desktop mode, Lyd tools and Mystical theme, based on Bazzite Deck |
 | `ghcr.io/lydiaperspective/lyd-atomic-server:latest` | Headless server with Podman, Cockpit, KVM/libvirt and firewalld |
 
 The two final desktop editions share their package and feature definitions. The standard edition derives from the single `lyd-atomic-base`; the NVIDIA gaming edition derives from the NVIDIA 580 base. The NVIDIA open image is also published as a driver-specific workstation base for users who need the newer open kernel module branch.
@@ -33,7 +33,7 @@ These are reusable BlueBuild module fragments, not independently merged OCI imag
 
 The shared workstation base includes KDE Plasma and common KDE applications, Discover/Flatpak integration, FUSE 2 and FUSE 3 support for AppImages, Breeze icons, Waterfox, SyncThingy, CUPS, SANE, AirScan, IPP-over-USB, Avahi and Skanpage. CUPS and Avahi are enabled by default.
 
-The complete workstation adds virtualization, development packages and the Mystical theme. The NVIDIA gaming workstation adds those same features plus the NVIDIA 580 driver, native Steam, GameMode, MangoHud, Gamescope, Protontricks, ProtonPlus, Lutris and Heroic.
+The complete workstation adds virtualization, development packages and the Mystical theme. The NVIDIA gaming workstation adds those same features plus the NVIDIA 580 driver, native Steam, GameMode, MangoHud, Gamescope, Sunshine, Protontricks, ProtonPlus, Lutris and Heroic.
 
 ## Server
 
@@ -50,12 +50,14 @@ The unified Anaconda installer offers KDE Workstation, NVIDIA Gaming Workstation
 - `lydmanage switch workstation` — switch to the standard workstation image.
 - `lydmanage switch nvidia-gaming` — switch to the NVIDIA gaming workstation.
 - `lydmanage switch server` — switch to the headless server.
+- `lydmanage switch steamdeck` — switch to the Steam Deck image.
 - `lydmanage switch <newImage>` — switch to any supported bootc OCI image reference.
 - `lydmanage update` — run `bootc update` and stage the latest image.
 - `lydmanage status` — show current, staged and rollback deployments.
 - `lydmanage rollback` — stage the previous deployment.
 - `lydmanage flatpak update` and `lydmanage firmware update` — update applications and supported firmware.
 - `lydmanage updates auto enable|disable|status` — manage the weekly update timer.
+- `lydsetup sunshine enable|disable` — start Sunshine now and enable or disable its user service.
 - `lydm` — short alias for `lydmanage`.
 - `lydhelp` — topic-based Linux and Lyd Atomic command reference.
 - `lydhelp manage` — built-in reference for the management commands.

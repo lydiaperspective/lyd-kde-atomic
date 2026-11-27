@@ -27,6 +27,8 @@ resolve_image() {
       printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-server:latest" ;;
     htpc)
       printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-htpc:latest" ;;
+    steamdeck)
+      printf '%s\n' "ghcr.io/lydiaperspective/lyd-atomic-steamdeck:latest" ;;
     *)
       [[ "$1" != -* && "$1" =~ ^[A-Za-z0-9._:/@+-]+$ ]] ||
         die "Invalid image reference. Use an image alias or a full OCI image reference."
@@ -798,7 +800,7 @@ Usage:
   lydmanage updates auto status     Show automatic update timer status
 
 Image aliases:
-  workstation, nvidia-gaming, server, htpc
+  workstation, nvidia-gaming, server, htpc, steamdeck
   nvidia is a shortcut for nvidia-gaming
 
 Profile and Flatpak list files are written in the current directory by default.
@@ -815,7 +817,7 @@ main() {
   case "${1:-}" in
     switch)
       shift
-      [[ $# -eq 0 || "${1:-}" == --help || "${1:-}" == -h ]] && { echo "Usage: lydm switch <image-alias|OCI-image>"; echo "Aliases: workstation, nvidia-gaming, server, htpc (nvidia = nvidia-gaming)"; exit 0; }
+      [[ $# -eq 0 || "${1:-}" == --help || "${1:-}" == -h ]] && { echo "Usage: lydm switch <image-alias|OCI-image>"; echo "Aliases: workstation, nvidia-gaming, server, htpc, steamdeck (nvidia = nvidia-gaming)"; exit 0; }
       switch_image "$@"
       ;;
     update)

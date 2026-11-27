@@ -1,6 +1,6 @@
 ---
 name: lyd-atomic-nvidia-gaming
-description: NVIDIA 580 KDE gaming workstation with virtualization, development tools, Steam and the Mystical theme.
+description: NVIDIA 580 KDE gaming workstation with Sunshine, virtualization, development tools, Steam and the Mystical theme.
 base-image: ghcr.io/lydiaperspective/lyd-atomic-nvidia
 image-version: "latest"
 modules:
@@ -9,8 +9,12 @@ modules:
   - from-file: feature-steam.yml
   - from-file: feature-gaming.yml
   - type: dnf
+    repos:
+      copr:
+        - lizardbyte/stable
     install:
       packages:
         - gamemode
         - plasma-bigscreen
+        - Sunshine
   - from-file: feature-mystic.yml

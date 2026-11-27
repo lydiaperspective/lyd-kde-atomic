@@ -2,3 +2,7 @@ Lyd Atomic Steam Deck
 Base image: Bazzite Deck stable
 Target hardware: Steam Deck LCD
 Gaming session: Steam Gaming Mode (Gamescope)
+Desktop session: Plasma Bigscreen (selected by Exit to Desktop)
+Switch to Gamescope: Switch to Gamescope app in the Bigscreen launcher
+Management: lydmanage, lydsetup, lydm, lydhelp and lydev
+Theme: Mystical KDE theme, Plymouth and GRUB artwork

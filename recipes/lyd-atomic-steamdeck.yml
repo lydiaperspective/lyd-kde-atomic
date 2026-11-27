@@ -1,10 +1,32 @@
 ---
 name: lyd-atomic-steamdeck
-description: Steam Deck LCD handheld image with Steam Gaming Mode and Deck hardware support.
+description: Steam Deck LCD image with Gamescope, Plasma Bigscreen desktop mode, Lyd tools and the Mystical theme.
 base-image: ghcr.io/ublue-os/bazzite-deck
 image-version: stable
 modules:
+  - type: dnf
+    install:
+      packages:
+        - plasma-bigscreen
+        - plasma-bigscreen-wayland
+        - git
+        - librsvg2-tools
   - type: files
     files:
       - source: steamdeck
         destination: /
+      - source: system/usr/bin/lydhelp
+        destination: /usr/bin/lydhelp
+      - source: system/usr/bin/lydmanage
+        destination: /usr/bin/lydmanage
+      - source: system/usr/bin/lydm
+        destination: /usr/bin/lydm
+      - source: system/usr/bin/lydsetup
+        destination: /usr/bin/lydsetup
+      - source: system/usr/bin/lydev
+        destination: /usr/bin/lydev
+  - type: script
+    scripts:
+      - configure-steamdeck.sh
+      - install-lyd-tools.sh
+      - install-mystical-theme.sh
